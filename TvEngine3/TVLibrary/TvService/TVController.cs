@@ -1922,7 +1922,7 @@ namespace TvService
       settings.TimeOutPMT = Int32.Parse(layer.GetSetting("timeoutPMT", "10").Value);
       settings.TimeOutSDT = Int32.Parse(layer.GetSetting("timeoutSDT", "20").Value);
       settings.TimeOutAnalog = Int32.Parse(layer.GetSetting("timeoutAnalog", "20").Value);
-      return _cards[cardId].Scanner.Scan(channel, settings);
+      return _cards[cardId].Scanner.Scan(channel, "", settings);
     }
 
     public IChannel[] ScanNIT(int cardId, IChannel channel)

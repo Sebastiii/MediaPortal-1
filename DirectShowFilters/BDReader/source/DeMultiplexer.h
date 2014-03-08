@@ -53,7 +53,7 @@ public:
   // TODO - not all of these should be puclic!
 
   HRESULT    Start();
-  void       Flush(bool pDiscardData, bool pSeeking, REFERENCE_TIME rtSeekTime);
+  void       Flush(bool pSeeking, REFERENCE_TIME rtSeekTime);
   HRESULT    FlushToChapter(UINT32 nChapter);
   Packet*    GetVideo();
   Packet*    GetAudio();
@@ -125,14 +125,19 @@ public:
   bool m_bAudioWaitForSeek;
   bool m_bAudioResetStreamPosition;
 
+  bool m_bTitleChanged;
+  REFERENCE_TIME m_rtStallTime;
+  REFERENCE_TIME m_rtTitleChangeStarted;
+
   CCritSec m_sectionRead;
 
+    REFERENCE_TIME m_rtOffset;
 
 private:
   void PacketDelivery(CAutoPtr<Packet> p);
 
   bool AudioStreamsAvailable(BLURAY_CLIP_INFO* pClip);
-  LPCTSTR StreamFormatAsString(int pStreamType);
+  char* StreamFormatAsString(int pStreamType);
   LPCTSTR StreamAudioFormatAsString(int pStreamAudioChannel);
 
   struct stAudioStream
@@ -192,7 +197,7 @@ private:
   unsigned int m_currentSubtitlePid;
   unsigned int m_iSubtitleStream;
 
-  void FlushPESBuffers(bool pDiscardData);
+  void FlushPESBuffers(bool bDiscardData, bool bSetCurrentClipFilled);
 
   bool m_bHoldAudio;
   bool m_bHoldVideo;
@@ -201,9 +206,7 @@ private:
 
   int m_loopLastSearch;
 
-  bool  m_bWaitForMediaChange;
-
-  bool m_bStarting;
+  bool m_bWaitForMediaChange;
   bool m_bReadFailed;
 
   int (CALLBACK *m_pSubUpdateCallback)(int c, void* opts, int* bi);
@@ -236,7 +239,6 @@ private:
   
   bool m_bUpdateSubtitleOffset;
 
-  REFERENCE_TIME m_rtOffset;
   REFERENCE_TIME m_rtTitleDuration;
   REFERENCE_TIME m_nMPEG2LastTitleDuration;
 

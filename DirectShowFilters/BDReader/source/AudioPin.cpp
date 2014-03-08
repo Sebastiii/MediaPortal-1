@@ -21,6 +21,8 @@
 
 #pragma warning(disable:4996)
 #pragma warning(disable:4995)
+
+#include "StdAfx.h"
 #include <afx.h>
 #include <afxwin.h>
 
@@ -51,10 +53,8 @@ CAudioPin::CAudioPin(LPUNKNOWN pUnk, CBDReaderFilter* pFilter, HRESULT* phr, CCr
   m_bSeekDone(true),
   m_bDiscontinuity(false),
   m_bUsePCM(false),
-  m_bFirstSample(true),
   m_bZeroTimeStream(false),
-  m_rtStreamTimeOffset(0),
-  m_bClipEndingNotified(false)
+  m_rtStreamTimeOffset(0)
 {
   m_bConnected = false;
   m_rtStart = 0;
@@ -324,23 +324,8 @@ HRESULT CAudioPin::FillBuffer(IMediaSample *pSample)
 
       if (!buffer)
       {
-        if (m_bFirstSample)
-          Sleep(10);
-        else 
-        {
-          if (!m_bClipEndingNotified)
-          {
-            // Deliver end of stream notification to allow audio renderer to stop buffering.
-            // This should only happen when the stream enters into paused state
-            //LogDebug("aud: FillBuffer - DeliverEndOfStream");
-            //DeliverEndOfStream();
-            m_bClipEndingNotified = true;
-          }
-          else
-            Sleep(10);
-
-          return ERROR_NO_DATA;
-        }
+        Sleep(10);
+        return ERROR_NO_DATA;
       }
       else
       {
@@ -364,7 +349,6 @@ HRESULT CAudioPin::FillBuffer(IMediaSample *pSample)
               buffer->nPlaylist, buffer->nNewSegment, buffer->rtOffset / 10000000.0, buffer->rtStart / 10000000.0, buffer->rtPlaylistTime / 10000000.0);
 
             checkPlaybackState = true;
-            m_bClipEndingNotified = false;
 
             m_demux.m_eAudioClipSeen->Set();
           }
@@ -474,13 +458,21 @@ HRESULT CAudioPin::FillBuffer(IMediaSample *pSample)
               m_rtStreamTimeOffset = buffer->rtStart - buffer->rtClipStartTime;
               m_bZeroTimeStream=false;
             }
-            // Now we have the final timestamp, set timestamp in sample
-            //REFERENCE_TIME refTime=(REFERENCE_TIME)cRefTimeStart;
-            //refTime /= m_dRateSeeking; //the if rate===1.0 makes this redundant
 
             pSample->SetSyncPoint(true); // allow all packets to be seeking targets
-            rtCorrectedStartTime = buffer->rtStart - m_rtStreamTimeOffset;//- m_rtStart;
-            rtCorrectedStopTime = buffer->rtStop - m_rtStreamTimeOffset;// - m_rtStart;
+            rtCorrectedStartTime = buffer->rtStart - m_rtStreamTimeOffset + m_demux.m_rtStallTime;
+            rtCorrectedStopTime = buffer->rtStop - m_rtStreamTimeOffset + m_demux.m_rtStallTime;
+
+            if (rtCorrectedStartTime < 0)
+            {
+              LogDebug("aud: dropping negative %6.3f corr %6.3f Playlist time %6.3f clip: %d playlist: %d", 
+                buffer->rtStart / 10000000.0, rtCorrectedStartTime / 10000000.0,
+                buffer->rtPlaylistTime / 10000000.0, buffer->nClipNumber, buffer->nPlaylist);
+
+              delete buffer;
+              return ERROR_NO_DATA;
+            }
+
             pSample->SetTime(&rtCorrectedStartTime, &rtCorrectedStopTime);
           }
           else
@@ -509,7 +501,6 @@ HRESULT CAudioPin::FillBuffer(IMediaSample *pSample)
             }
           }
 
-          m_bFirstSample = false;
           delete buffer;
         }
         else
@@ -684,8 +675,6 @@ HRESULT CAudioPin::OnThreadStartPlay()
   {
     CAutoLock lock(CSourceSeeking::m_pLock);
     m_bDiscontinuity = true;
-    m_bFirstSample = true;
-    m_bClipEndingNotified = false;
 
     if (m_demux.m_eAudioClipSeen)
       m_demux.m_eAudioClipSeen->Reset();

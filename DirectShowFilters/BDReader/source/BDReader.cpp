@@ -121,6 +121,7 @@ CBDReaderFilter::CBDReaderFilter(IUnknown *pUnk, HRESULT *phr):
   m_bFlushing(false),
   m_bRebuildOngoing(false),
   m_bChapterChangeRequested(false),
+  m_bForceTitleBasedPlayback(false),
   m_bFirstSeek(true)
 {
   // use the following line if you are having trouble setting breakpoints
@@ -529,24 +530,22 @@ DWORD WINAPI CBDReaderFilter::CommandThread()
   {
     while(1)
     {
-      //DWORD result = WaitForMultipleObjects(2, handles, false, 40);
-	    DWORD result = WaitForMultipleObjects(2, handles, false, INFINITE);
+      DWORD result = WaitForMultipleObjects(2, handles, false, 40);
       if (result == WAIT_OBJECT_0) // exit event
       {
         LogDebug("CBDReaderFilter::Command thread: closing down");
         return 0;
       }
-      /*
       else if (result == WAIT_TIMEOUT)
       {
         LONGLONG pos = 0;
         HRESULT hr = m_pMediaSeeking->GetCurrentPosition(&pos);
         if (SUCCEEDED(hr))
         {
-          lib.ProvideUserInput(CONVERT_DS_90KHz(pos), BD_VK_NONE);
+          pos = CONVERT_DS_90KHz(m_rtCurrentTime);
+          lib.SetScr(pos, m_demultiplexer.m_rtOffset);
         }
       }
-      */
       else if (result == WAIT_OBJECT_0 + 1) // command in queue
       {
         LONGLONG posEnd = 0;
@@ -722,9 +721,24 @@ STDMETHODIMP CBDReaderFilter::GetAudioChannelCount(long lIndex)
   return m_demultiplexer.GetAudioChannelCount((int)lIndex);
 }
 
+STDMETHODIMP CBDReaderFilter::GetTime(REFERENCE_TIME* pTime)
+{
+  if (!pTime)
+    return E_INVALIDARG;
+
+  if (m_pClock)
+    m_pClock->GetTime(pTime);
+  else
+    return S_FALSE;
+
+  return S_OK;
+}
+
 STDMETHODIMP CBDReaderFilter::Load(LPCOLESTR pszFileName, const AM_MEDIA_TYPE *pmt)
 {
   LogDebug("CBDReaderFilter::Load()");
+
+  CheckPointer(pszFileName, E_POINTER);
 
   wcscpy(m_fileName, pszFileName);
   char path[4096];
@@ -760,22 +774,27 @@ STDMETHODIMP CBDReaderFilter::Load(LPCOLESTR pszFileName, const AM_MEDIA_TYPE *p
     Start();
   }
 
-  return S_OK;
+  lib.Play();
+  return m_demultiplexer.Start();
 }
 
 STDMETHODIMP CBDReaderFilter::Start()
 {
-  m_bFirstPlay = true;
+  if (!m_bForceTitleBasedPlayback)
+  {
+    TriggerOnMediaChanged();
+    return S_OK;
+  }
+
+  // We need to restart the lib as initial start was done in menu mode
+  lib.CloseBluray();
+  lib.OpenBluray(m_pathToBD);
   lib.Play();
 
   HRESULT hr = m_demultiplexer.Start();
-  TriggerOnMediaChanged();
-  // Close BD so the HDVM etc. are reset completely after querying the initial data.
-  // This is required so we wont lose the initial events.
-  lib.CloseBluray();
-  m_bFirstPlay = false;
-  lib.OpenBluray(m_pathToBD);
-  lib.Play();
+
+  if (SUCCEEDED(hr))
+    TriggerOnMediaChanged();
 
   return hr;
 }
@@ -818,10 +837,11 @@ void CBDReaderFilter::Seek(REFERENCE_TIME rtAbsSeek)
   if (!m_bUpdateStreamPositionOnly)
   {
     LogDebug("CBDReaderFilter::Seek - Flush");
-    m_demultiplexer.Flush(true, true, rtAbsSeek);
+    m_demultiplexer.Flush(true, rtAbsSeek);
     lib.Seek(CONVERT_DS_90KHz(rtAbsSeek));
   }
 
+  m_demultiplexer.m_rtStallTime = 0;
   m_bUpdateStreamPositionOnly = false;
 
   if (m_pDVBSubtitle)
@@ -873,7 +893,7 @@ void CBDReaderFilter::HandleBDEvent(BD_EVENT& pEv, UINT64 pPos)
   }
 
   // Send event to the callback - filter out the none events
-  if (m_pCallback && pEv.event != BD_EVENT_NONE && !m_bFirstPlay)
+  if (m_pCallback && pEv.event != BD_EVENT_NONE)
     m_pCallback->OnBDEvent(pEv);
 }
 
@@ -1019,6 +1039,8 @@ void CBDReaderFilter::ForceTitleBasedPlayback(bool force, UINT32 pTitle)
 {
   lib.ForceTitleBasedPlayback(force);
   lib.SetTitle(pTitle);
+
+  m_bForceTitleBasedPlayback = force;
 }
 
 void CBDReaderFilter::SetD3DDevice(IDirect3DDevice9* device)
@@ -1178,13 +1200,13 @@ void CBDReaderFilter::DeliverBeginFlush()
   if (m_pAudioPin && m_pAudioPin->IsConnected())
   {
     m_pAudioPin->DeliverBeginFlush();
-    m_pVideoPin->Stop();
+    m_pAudioPin->Stop();
   }
 
   if (m_pSubtitlePin && m_pSubtitlePin->IsConnected())
   {
     m_pSubtitlePin->DeliverBeginFlush();
-    m_pVideoPin->Stop();
+    m_pSubtitlePin->Stop();
   }
 }
 

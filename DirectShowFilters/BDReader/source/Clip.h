@@ -56,7 +56,6 @@ public:
   int  nClip;
   int  nPlaylist;
   bool noAudio;
-  bool sparseVideo;
   bool bSeekTarget;
   bool clipReset;
   bool clipInterrupted;
@@ -66,7 +65,6 @@ public:
   REFERENCE_TIME clipPlaylistOffset;
   void Reset(REFERENCE_TIME totalStreamOffset);
   bool FakeAudioAvailable();
-  bool SparseVideoAvailable();
   bool HasAudio();
   bool HasVideo();
   REFERENCE_TIME Incomplete();
@@ -97,7 +95,13 @@ public:
 
   // Accurate clip starting time (when known).
   // Not set when selecting chapter from the menu
-  REFERENCE_TIME m_rtClipStartingOffset;
+  REFERENCE_TIME m_rtClipAudioStartingOffset;
+  REFERENCE_TIME m_rtClipVideoStartingOffset;
+
+  // true would indicate that this is the first audio packet
+  bool firstAudio;
+  // true would indicate that this is the first video packet
+  bool firstVideo;
 
 protected:
   typedef vector<Packet*>::iterator ivecVideoBuffers;
@@ -105,19 +109,14 @@ protected:
   vector<Packet*> m_vecClipAudioPackets;
   vector<Packet*> m_vecClipVideoPackets;
   AM_MEDIA_TYPE *m_videoPmt;
-  Packet* m_pSparseVideoPacket;
   int superceeded;
-
-  int nVideoPackets;
 
   CCritSec m_sectionRead;
   CCritSec m_sectionVectorAudio;
   CCritSec m_sectionVectorVideo;
 
-  // true would indicate that this is the first audio packet
-  bool firstAudio;
-  // true would indicate that this is the first video packet
-  bool firstVideo;
+  bool m_bCalculateAudioOffset;
+  bool m_bCalculateVideoOffset;
 
   // indicates if this is the first packet to be buffered in clip
   bool firstPacketAccepted;
@@ -125,7 +124,6 @@ protected:
   bool firstPacketReturned;
 
   Packet* GenerateFakeAudio(REFERENCE_TIME rtStart);
-  Packet* GenerateSparseVideo(REFERENCE_TIME rtStart);
 };
 
 // Silent AC3 frame

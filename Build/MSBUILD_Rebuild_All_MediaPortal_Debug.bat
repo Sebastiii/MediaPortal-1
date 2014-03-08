@@ -11,6 +11,10 @@ rem %DeployVersionGIT% /git="%GIT_ROOT%" /path="%MediaPortal%" >> %log%
 %DeployVersionGIT% /git="%GIT_ROOT%" /path="%CommonMPTV%" >> %log%
 
 echo.
+echo Building Libbluray Java...
+call ant -f %LibblurayJAR% -Dsrc_awt=:java-j2me -Dbootclasspath=:"d:/jvm/lib/btclasses.zip":"d:/jvm/lib/xmlparser.jar"
+
+echo.
 echo Building native components...
 call VS_Rebuild_Debug_DirectShowFilters.bat
 

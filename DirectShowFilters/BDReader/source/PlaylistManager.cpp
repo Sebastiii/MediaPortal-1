@@ -205,7 +205,7 @@ Packet* CPlaylistManager::GetNextAudioPacket()
       //LogDebug("playlistManager: setting audio playback playlist to %d",(*m_itCurrentAudioPlayBackPlaylist)->nPlaylist);
     }
   }
-  if (firstAudio)
+  if (ret && firstAudio)
   {
     firstAudio = false;
     ret->nNewSegment = 0;
@@ -240,6 +240,9 @@ Packet* CPlaylistManager::GetNextVideoPacket()
       //LogDebug("playlistManager: setting video playback playlist to %d",(*m_itCurrentVideoPlayBackPlaylist)->nPlaylist);
     }
   }
+  if (!ret)
+    return NULL;
+
   if (firstVideo && ret->rtStart != Packet::INVALID_TIME)
   {
     firstVideo = false;
@@ -390,6 +393,7 @@ void CPlaylistManager::CurrentClipFilled()
 {
   if (m_vecPlaylists.size())
   {
+    LogDebug("CPlaylistManager::CurrentClipFilled");
     (*m_itCurrentVideoSubmissionPlaylist)->CurrentClipFilled();
   }
 }

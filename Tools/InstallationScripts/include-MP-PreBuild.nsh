@@ -60,6 +60,7 @@
 !system '"$%WINDIR%\Microsoft.NET\Framework\v4.0.30319\MSBUILD.exe" "${git_ROOT}\Build\RestorePackages.targets"' = 0
 
 !ifdef BUILD_MediaPortal
+!system 'ant -f ${LibblurayJAR} -Dsrc_awt=:java-j2me -Dbootclasspath=:"d:/jvm/lib/btclasses.zip":"d:/jvm/lib/xmlparser.jar"' = 0
 !insertmacro PrepareBuildReport DirectShowFilters
 !system '"$%WINDIR%\Microsoft.NET\Framework\v4.0.30319\MSBUILD.exe" ${logger} /target:rebuild /property:Configuration=Release ${git_DirectShowFilters}\Filters.sln' = 0
 !insertmacro FinalizeBuildReport

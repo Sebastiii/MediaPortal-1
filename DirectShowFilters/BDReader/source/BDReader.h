@@ -195,6 +195,9 @@ public:
   STDMETHODIMP SetPositions(LONGLONG* pCurrent, DWORD dwCurrentFlags, LONGLONG* pStop, DWORD dwStopFlags);
   STDMETHODIMP SetPositionsInternal(void *caller, LONGLONG* pCurrent, DWORD dwCurrentFlags, LONGLONG* pStop, DWORD dwStopFlags);
   
+  // Extended
+  STDMETHODIMP GetTime(REFERENCE_TIME* pTime);
+
   bool IsStopping();
 
   void IssueCommand(DS_CMD_ID pCommand, REFERENCE_TIME pTime);
@@ -258,8 +261,6 @@ private:
   DWORD           m_dwThreadId;
   bool            m_bUpdateStreamPositionOnly;
 
-  bool m_bFirstPlay;
-
   REFERENCE_TIME m_rtPlaybackOffset;
   REFERENCE_TIME m_rtSeekPosition;
   REFERENCE_TIME m_rtTitleDuration;
@@ -289,6 +290,7 @@ private:
   CAMEvent m_eSeekDone;
   
   bool m_bChapterChangeRequested;
+  bool m_bForceTitleBasedPlayback;
 
   bool m_bRebuildOngoing;
   CAMEvent m_eRebuild;

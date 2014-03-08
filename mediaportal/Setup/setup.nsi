@@ -507,6 +507,7 @@ Section "MediaPortal core files (required)" SecCore
   ; libbluray
   SetOutPath "$MPdir.Base"
   File /oname=bluray.dll "${git_DirectShowFilters}\bin_Win32\libbluray\libbluray.dll"
+  File /oname=libbluray.jar "${git_Libbluray}\src\.libs\libbluray-.jar"
   ; TvLibrary for Genre
   File "${git_TVServer}\TvLibrary.Interfaces\bin\${BUILD_TYPE}\TvLibrary.Interfaces.dll"
   File "${git_MP}\LastFMLibrary\bin\${BUILD_TYPE}\LastFMLibrary.dll"
@@ -517,6 +518,10 @@ Section "MediaPortal core files (required)" SecCore
   File "${git_DirectShowFilters}\bin_Win32\avcodec-mpurlsourcesplitter-54.dll"
   File "${git_DirectShowFilters}\bin_Win32\avformat-mpurlsourcesplitter-54.dll"
   File "${git_DirectShowFilters}\bin_Win32\avutil-mpurlsourcesplitter-51.dll" 
+  
+  ; libbluray
+  SetOutPath "$MPdir.Base\lib"
+  File /nonfatal /r /x .git "${MEDIAPORTAL.BASE}\lib\*"
 
   #---------------------------------------------------------------------------
   # FILTER REGISTRATION

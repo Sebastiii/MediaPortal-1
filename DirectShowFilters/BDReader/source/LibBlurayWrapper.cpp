@@ -84,10 +84,14 @@ CLibBlurayWrapper::CLibBlurayWrapper() :
   _bd_play_title(NULL),
   _bd_menu_call(NULL),
   _bd_register_overlay_proc(NULL),
+  _bd_set_scr(NULL),
   _bd_user_input(NULL),
   _bd_mouse_select(NULL),
   _bd_get_meta(NULL),
-  _bd_get_clip_infos(NULL)
+  _bd_get_clip_infos(NULL),
+  _bd_register_argb_overlay_proc(NULL),
+  _bd_refcnt_inc(NULL),
+  _bd_refcnt_dec(NULL)
 {
   m_pOverlayRenderer = new COverlayRenderer(this);
   ZeroMemory((void*)&m_playerSettings, sizeof(bd_player_settings));
@@ -95,7 +99,7 @@ CLibBlurayWrapper::CLibBlurayWrapper() :
 
 CLibBlurayWrapper::~CLibBlurayWrapper()
 {
-  CAutoLock cRendertLock(&m_csRenderLock);
+  CAutoLock cRenderLock(&m_csRenderLock);
   CAutoLock cLibLock(&m_csLibLock);
 
   if (m_pBd)
@@ -104,25 +108,46 @@ CLibBlurayWrapper::~CLibBlurayWrapper()
     _bd_close(m_pBd);
   }
 
-  delete m_pOverlayRenderer;
-
   if (m_pTitleInfo)
-  {
     _bd_free_title_info(m_pTitleInfo);
-  }
+
+  m_pOverlayRenderer->SetD3DDevice(NULL);
+  delete m_pOverlayRenderer;
 
   FreeLibrary(m_hDLL);
 }
 
-void CLibBlurayWrapper::StaticOverlayProc(void *this_gen, const BD_OVERLAY * const ov)
+void CLibBlurayWrapper::StaticOverlayProc(void* this_gen, const BD_OVERLAY* const ov)
 {
-  CAutoLock cRendertLock(&(((CLibBlurayWrapper *)this_gen)->m_csRenderLock));
+  //CAutoLock cRendertLock(&(((CLibBlurayWrapper *)this_gen)->m_csRenderLock));
   ((CLibBlurayWrapper *)this_gen)->m_pOverlayRenderer->OverlayProc(ov);
+}
+
+void CLibBlurayWrapper::StaticARGBOverlayProc(void* this_gen, const BD_ARGB_OVERLAY* const ov)
+{
+  //CAutoLock cRendertLock(&(((CLibBlurayWrapper *)this_gen)->m_csRenderLock));
+  ((CLibBlurayWrapper *)this_gen)->m_pOverlayRenderer->ARGBOverlayProc(ov);
 }
 
 bool CLibBlurayWrapper::Initialize()
 {
   USES_CONVERSION;
+
+  if (_tputenv(_T("JAVA_HOME=")) != 0)
+  {
+    DWORD error = GetLastError();
+    LogDebug("Failed to remove the JAVA_HOME environment variable: %d", (int)error);
+
+    return false;
+  }
+
+  if (_tputenv(_T("LIBBLURAY_CP=libbluray-.jar")) != 0)
+  {
+    DWORD error = GetLastError();
+    LogDebug("Failed to set LIBBLURAY_CP environment variable: %d", (int)error);
+
+    return false;
+  }
 
   TCHAR szDirectory[MAX_PATH] = _T("");
   TCHAR szPath[MAX_PATH] = _T("");
@@ -182,9 +207,13 @@ bool CLibBlurayWrapper::Initialize()
   _bd_play_title = (API_bd_play_title)GetProcAddress(m_hDLL, "bd_play_title");
   _bd_menu_call = (API_bd_menu_call)GetProcAddress(m_hDLL, "bd_menu_call");
   _bd_register_overlay_proc = (API_bd_register_overlay_proc)GetProcAddress(m_hDLL, "bd_register_overlay_proc");
+  _bd_set_scr = (API_bd_set_scr)GetProcAddress(m_hDLL, "bd_set_scr");
   _bd_user_input = (API_bd_user_input)GetProcAddress(m_hDLL, "bd_user_input");
   _bd_mouse_select = (API_bd_mouse_select)GetProcAddress(m_hDLL, "bd_mouse_select");
   _bd_get_meta = (API_bd_get_meta)GetProcAddress(m_hDLL, "bd_get_meta");
+  _bd_register_argb_overlay_proc = (API_bd_register_argb_overlay_proc)GetProcAddress(m_hDLL, "bd_register_argb_overlay_proc");
+  _bd_refcnt_inc = (API_bd_refcnt_inc)GetProcAddress(m_hDLL, "bd_refcnt_inc");
+  _bd_refcnt_dec = (API_bd_refcnt_dec)GetProcAddress(m_hDLL, "bd_refcnt_dec");
 
   // This method is not available in the vanilla libbluray 
   _bd_get_clip_infos = (API_bd_get_clip_infos)GetProcAddress(m_hDLL, "bd_get_clip_infos");
@@ -223,10 +252,14 @@ bool CLibBlurayWrapper::Initialize()
       !_bd_play_title ||
       !_bd_menu_call ||
       !_bd_register_overlay_proc ||
+      !_bd_set_scr ||
       !_bd_user_input ||
       !_bd_mouse_select ||
       !_bd_get_meta ||
-      !_bd_get_clip_infos)
+      !_bd_get_clip_infos ||
+      !_bd_register_argb_overlay_proc ||
+      !_bd_refcnt_inc ||
+      !_bd_refcnt_dec)
   {
     LogDebug("CLibBlurayWrapper - failed to load method from lib - a version mismatch?");
     m_bLibInitialized = false;
@@ -287,12 +320,12 @@ bool CLibBlurayWrapper::OpenBluray(const char* pRootPath)
     return false;
   }
 
-  if (!m_pDiscInfo->first_play_supported)
+  /*if (!m_pDiscInfo->first_play_supported)
   {
     LogDebug("CLibBlurayWrapper - First play is not supported - cannot play in navigation mode!");
     m_playbackMode = TitleBased;
   }
-  else
+  else*/
   {
     LogDebug("CLibBlurayWrapper - Using HDMV playback mode");
     m_playbackMode = Navigation;
@@ -305,12 +338,24 @@ bool CLibBlurayWrapper::OpenBluray(const char* pRootPath)
   _bd_set_player_setting_str(m_pBd, BLURAY_PLAYER_SETTING_MENU_LANG, m_playerSettings.menuLang);
   _bd_set_player_setting_str(m_pBd, BLURAY_PLAYER_SETTING_COUNTRY_CODE, m_playerSettings.countryCode);
 
+  _bd_set_player_setting(m_pBd, BLURAY_PLAYER_SETTING_DECODE_PG, 1);
+  _bd_set_player_setting(m_pBd, BLURAY_PLAYER_SETTING_TEXT_CAP, 1);
+
   // Init event queue
   _bd_get_event(m_pBd, NULL);
 
   m_numTitles = GetTitles(TITLES_ALL);
 
-  _bd_register_overlay_proc(m_pBd, this, StaticOverlayProc);
+  if (_bd_register_overlay_proc(m_pBd, this, StaticOverlayProc) != 0)
+    LogDebug("CLibBlurayWrapper - failed to register the overlay proc");
+
+  BD_ARGB_BUFFER* pBuffer = NULL;
+
+  if (m_pOverlayRenderer && !m_pOverlayRenderer->CreateARGBBuffers((BD_ARGB_BUFFER**)&pBuffer))
+    LogDebug("CLibBlurayWrapper - failed to create application side ARGB buffers");
+
+  if (_bd_register_argb_overlay_proc(m_pBd, this, StaticARGBOverlayProc, pBuffer) != 0)
+    LogDebug("CLibBlurayWrapper - failed to register ARGB overlay proc");
 
   return true;
 }
@@ -492,7 +537,7 @@ int CLibBlurayWrapper::Read(unsigned char* pData, int pSize, bool& pPause, bool 
     BD_EVENT ev = {0};
     ev.event = BD_EVENT_ERROR;
 
-    while (readBytes == 0 && ev.event != BD_EVENT_NONE && !m_bStopping && !m_bStopReading)
+    while (readBytes == 0 && ev.event != BD_EVENT_NONE && ev.event != BD_EVENT_END_OF_TITLE && !m_bStopping && !m_bStopReading)
     {
       // TODO add error handling
       readBytes = _bd_read_ext(m_pBd, pData, pSize, &ev); 
@@ -726,6 +771,20 @@ bool CLibBlurayWrapper::GetClipInfo(int pClip, UINT64* pClipStartTime, UINT64* p
   return _bd_get_clip_infos(m_pBd, pClip, pClipStartTime, pStreamStartTime, pBytePos, pDuration) == 1 ? true : false;
 }
 
+
+bool CLibBlurayWrapper::SetScr(INT64 pts, INT64 offset)
+{
+  CAutoLock cLibLock(&m_csLibLock);
+
+  if (m_pOverlayRenderer)
+    m_pOverlayRenderer->SetScr(pts, offset);
+
+  if (m_pBd)
+    return _bd_set_scr(m_pBd, pts) == 1 ? true : false;
+
+  return false;
+}
+
 bool CLibBlurayWrapper::ProvideUserInput(INT64 pPts, UINT32 pKey)
 {
   CAutoLock cLibLock(&m_csLibLock);
@@ -788,6 +847,16 @@ void CLibBlurayWrapper::SetD3DDevice(IDirect3DDevice9* device)
   m_pOverlayRenderer->SetD3DDevice(device);
 }
 
+void CLibBlurayWrapper::IncreaseRefCount(const void* obj)
+{
+  _bd_refcnt_inc(obj);
+}
+
+void CLibBlurayWrapper::DecreaseRefCount(const void* obj)
+{
+  _bd_refcnt_dec(obj);
+}
+
 void CLibBlurayWrapper::LogAction(int pKey)
 {
   switch (pKey)
@@ -845,13 +914,13 @@ void CLibBlurayWrapper::LogEvent(const BD_EVENT& pEvent, bool pIgnoreNoneEvent)
       LogDebug("    BD_EVENT_NONE - %d", pEvent.param);
     break;
   case BD_EVENT_ERROR:
-    LogDebug("    BD_EVENT_ERROR - %d", pEvent.param);
+    LogDebug("    BD_EVENT_ERROR - %s", BDErrorAsString(pEvent));
     break;
   case BD_EVENT_READ_ERROR:
     LogDebug("    BD_EVENT_READ_ERROR - %d", pEvent.param);
     break;
   case BD_EVENT_ENCRYPTED:
-    LogDebug("    BD_EVENT_ENCRYPTED - %d", pEvent.param);
+    LogDebug("    BD_EVENT_ENCRYPTED - %s", BDErrorAsString(pEvent));
     break;
   case BD_EVENT_ANGLE:
     LogDebug("    BD_EVENT_ANGLE - %d", pEvent.param);
@@ -869,7 +938,7 @@ void CLibBlurayWrapper::LogEvent(const BD_EVENT& pEvent, bool pIgnoreNoneEvent)
     LogDebug("    BD_EVENT_CHAPTER - %d", pEvent.param);
     break;
   case BD_EVENT_END_OF_TITLE:
-    LogDebug("    BD_EVENT_NONE - %d", pEvent.param);
+    LogDebug("    BD_EVENT_END_OF_TITLE - %d", pEvent.param);
     break;
   case BD_EVENT_AUDIO_STREAM:
     LogDebug("    BD_EVENT_AUDIO_STREAM - %d", pEvent.param);
@@ -925,8 +994,38 @@ void CLibBlurayWrapper::LogEvent(const BD_EVENT& pEvent, bool pIgnoreNoneEvent)
   case BD_EVENT_MENU:
     LogDebug("    BD_EVENT_MENU - %d", pEvent.param);
     break;
+  case BD_EVENT_STEREOSCOPIC_STATUS:
+    LogDebug("    BD_EVENT_STEREOSCOPIC_STATUS - %d", pEvent.param);
+    break;
+  case BD_EVENT_DISCONTINUITY:
+    LogDebug("    BD_EVENT_DISCONTINUITY - %d", pEvent.param);
+    break;
+  case BD_EVENT_IDLE:
+    //LogDebug("    BD_EVENT_IDLE - %d", pEvent.param);
+    break;
+  case BD_EVENT_PLAYMARK:
+    LogDebug("    BD_EVENT_PLAYMARK - %d", pEvent.param);
+    break;
+
   default:
-    LogDebug("    ERROR - no event!");
+    LogDebug("    ERROR - unknown event: %d param %d", pEvent.event, pEvent.param);
+  }
+}
+
+char* CLibBlurayWrapper::BDErrorAsString(const BD_EVENT& pEvent)
+{
+  switch(pEvent.param)
+  {
+  case BD_ERROR_HDMV:
+    return "HDMV";
+  case BD_ERROR_BDJ:
+    return "BD-J";
+  case BD_ERROR_AACS:
+    return "AACS";
+  case BD_ERROR_BDPLUS:
+    return "BDPLUS";
+  default:
+    return "UNKOWN";
   }
 }
 
@@ -942,12 +1041,26 @@ void CLibBlurayWrapper::LogDiskInfo(const BLURAY_DISC_INFO* pInfo)
     LogDebug("bdplus_handled:         %d", pInfo->bdplus_handled);
     LogDebug("bluray_detected:        %d", pInfo->bluray_detected);
     LogDebug("first_play_supported:   %d", pInfo->first_play_supported);
-    LogDebug("libaacs_detected:       %d", pInfo->libaacs_detected);
-    LogDebug("libbdplus_detected:     %d", pInfo->libbdplus_detected);
     LogDebug("num_bdj_titles:         %d", pInfo->num_bdj_titles);
     LogDebug("num_hdmv_titles:        %d", pInfo->num_hdmv_titles);
     LogDebug("num_unsupported_titles: %d", pInfo->num_unsupported_titles);
     LogDebug("top_menu_supported:     %d", pInfo->top_menu_supported);
+    LogDebug("libaacs_detected:       %d", pInfo->libaacs_detected);
+
+    if (pInfo->libbdplus_detected)
+    {
+      LogDebug("libbdplus_detected:     1");
+      LogDebug("bdplus_date:  d-%02d-%02d", pInfo->bdplus_date >> 16, (pInfo->bdplus_date >> 8) & 0xff, pInfo->bdplus_date & 0xff);
+      LogDebug("bdplus_handled:         %d", pInfo->bdplus_handled);
+    }
+
+    if (pInfo->bdj_supported)
+    {
+      LogDebug("bdj_supported:          1", pInfo->bdj_supported);
+      LogDebug("libjvm_detected:        %d", pInfo->libjvm_detected);
+      LogDebug("bdj_handled:            %d", pInfo->bdj_handled);
+    }
+
     LogDebug("--------------------------");
   }
   else
@@ -979,7 +1092,7 @@ void CLibBlurayWrapper::LogTitleInfo(int pIndex, bool ignoreShort)
 
 void CLibBlurayWrapper::HandleOSDUpdate(OSDTexture& texture)
 {
-  ivecObservers it = m_eventObservers.begin();
+   ivecObservers it = m_eventObservers.begin();
   while (it != m_eventObservers.end())
   {
     (*it)->HandleOSDUpdate(texture);

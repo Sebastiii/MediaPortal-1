@@ -149,6 +149,8 @@ HRESULT CSampleRateConverter::NegotiateFormat(const WAVEFORMATEXTENSIBLE* pwfx, 
   {
     LogWaveFormat(pwfx, "SRC  - applying ");
 
+    FlushStream();
+
     m_pNextSink->NegotiateBuffer(pOutWfx, &m_nOutBufferSize, &m_nOutBufferCount, true);
 
     m_bPassThrough = false;

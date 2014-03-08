@@ -370,7 +370,7 @@ namespace TvLibrary.Log
         }
         catch (Exception ex)
         {
-          CommonLogger.Instance.Error(CommonLogType.Error, "Error in writing log entry", ex);
+          CommonLogger.Instance.Error(CommonLogType.Error, "Error in writing log entry {0} with format {1}", ex, format);
         }
       }
     }

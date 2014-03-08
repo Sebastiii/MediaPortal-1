@@ -627,7 +627,7 @@ namespace MediaPortal.GUI.Pictures
       }
       InitViewSelections();
       UpdateButtonStates();
-      ResetShares();
+      //ResetShares();
 
       GUITextureManager.CleanupThumbs();
       // LoadSettings();

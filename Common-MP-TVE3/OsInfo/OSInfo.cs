@@ -610,7 +610,7 @@ namespace OSInfo
       }
       if (IsServer())
       { // any server OS
-        return OsSupport.NotSupported;
+        return OsSupport.FullySupported;
       }
 
       return OsSupport.Blocked;

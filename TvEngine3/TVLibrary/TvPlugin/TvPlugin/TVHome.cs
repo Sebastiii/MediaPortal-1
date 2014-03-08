@@ -116,10 +116,11 @@ namespace TvPlugin
     private static bool _preferAudioTypeOverLang = false;
     private static bool _autoFullScreen = false;
     private static bool _suspended = false;
+    private static bool _resumed = false;
     private static bool _showlastactivemodule = false;
     private static bool _showlastactivemoduleFullscreen = false;
     private static bool _playbackStopped = false;
-    public static bool _onPageLoadDone = false;
+    private static bool _onPageLoadDone = false;
     private static bool _userChannelChanged = false;
     private static bool _showChannelStateIcons = true;
     private static bool _doingHandleServerNotConnected = false;
@@ -129,7 +130,7 @@ namespace TvPlugin
     private static bool _connected = false;
     private static bool _isAnyCardRecording = false;
     protected static TvServer _server;
-    public static bool firstNotLoaded = true;
+    internal static bool firstNotLoaded = true;
 
     private static ManualResetEvent _waitForBlackScreen = null;
     private static ManualResetEvent _waitForVideoReceived = null;
@@ -184,6 +185,8 @@ namespace TvPlugin
     protected static int _notifyTVTimeout = 15;
     protected static bool _playNotifyBeep = true;
     protected static int _preNotifyConfig = 60;
+
+    private static ManualResetEvent syncEvent;
 
     #endregion
 
@@ -1646,7 +1649,13 @@ namespace TvPlugin
 
     private void OnSuspend()
     {
-      Log.Debug("TVHome.OnSuspend()");
+      Log.Info("TVHome.OnSuspend()");
+      // OnSuspend already in progress
+      if (_suspended && !_resumed)
+      {
+        Log.Info("TVHome: Suspend is already in progress");
+        return;
+      }
 
       RemoteControl.OnRemotingDisconnected -=
         new RemoteControl.RemotingDisconnectedDelegate(RemoteControl_OnRemotingDisconnected);
@@ -1669,12 +1678,18 @@ namespace TvPlugin
       {
         _ServerNotConnectedHandled = false;
         _suspended = true;
+        _resumed = false;
       }
     }
 
     private void OnResume()
     {
-      Log.Debug("TVHome.OnResume()");
+      Log.Info("TVHome.OnResume()");
+      if (_resumed || !_suspended)
+      {
+        Log.Info("TVHome: Resuming is already in progress");
+        return;
+      }
       try
       {
         Connected = false;
@@ -1695,6 +1710,7 @@ namespace TvPlugin
       finally
       {
         _suspended = false;
+        _resumed = true;
       }
     }
 
@@ -1712,28 +1728,58 @@ namespace TvPlugin
     {
       if (msg.Msg == WM_POWERBROADCAST)
       {
+        Log.Warn("TVHome.WndProc()");
         switch (msg.WParam.ToInt32())
         {
           case PBT_APMSTANDBY:
             Log.Info("TVHome.WndProc(): Windows is going to standby");
-            OnSuspend();
+            syncEvent = new ManualResetEvent(false);
+            Thread t1 = new Thread(
+              () =>
+              {
+                OnSuspend();
+                syncEvent.Set();
+              }
+              );
+            t1.Start();
             break;
           case PBT_APMSUSPEND:
             Log.Info("TVHome.WndProc(): Windows is suspending");
-            OnSuspend();
+            syncEvent = new ManualResetEvent(false);
+            Thread t2 = new Thread(
+              () =>
+              {
+                OnSuspend();
+                syncEvent.Set();
+              }
+              );
+            t2.Start();
             break;
           case PBT_APMQUERYSUSPEND:
           case PBT_APMQUERYSTANDBY:
             Log.Info("TVHome.WndProc(): Windows is going into powerstate (hibernation/standby)");
-
             break;
           case PBT_APMRESUMESUSPEND:
             Log.Info("TVHome.WndProc(): Windows has resumed from hibernate mode");
-            OnResume();
+            Thread t3 = new Thread(
+              () =>
+              {
+                syncEvent.WaitOne();
+                OnResume();
+              }
+              );
+            t3.Start();
             break;
           case PBT_APMRESUMESTANDBY:
             Log.Info("TVHome.WndProc(): Windows has resumed from standby mode");
-            OnResume();
+            Thread t4 = new Thread(
+              () =>
+              {
+                syncEvent.WaitOne();
+                OnResume();
+              }
+              );
+            t4.Start();
             break;
         }
       }
@@ -2639,14 +2685,14 @@ namespace TvPlugin
       Program next = null;
       if (ch == null)
       {
-        Log.Debug("UpdateNextEpgProperties: no channel, returning");
+        //Log.Debug("UpdateNextEpgProperties: no channel, returning");
       }
       else
       {
         next = ch.NextProgram;
         if (next == null)
         {
-          Log.Debug("UpdateNextEpgProperties: no EPG data, returning");
+          //Log.Debug("UpdateNextEpgProperties: no EPG data, returning");
         }
       }
 
@@ -3418,7 +3464,8 @@ namespace TvPlugin
           // ensure right channel name, even if not watchable:Navigator.Channel = channel; 
           ChannelTuneFailedNotifyUser(succeeded, _status.IsSet(LiveTvStatus.WasPlaying), channel);
 
-          _doingChannelChange = true; // keep fullscreen false;
+          // keep fullscreen false by setting _doingChannelChange to 'true' only when autoTurnOnTv is false
+          _doingChannelChange = !_autoTurnOnTv;
           return true; // "success"
         }
 

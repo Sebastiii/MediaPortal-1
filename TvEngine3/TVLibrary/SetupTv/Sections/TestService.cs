@@ -21,6 +21,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Threading;
 using System.Windows.Forms;
 using TvControl;
 using TvDatabase;
@@ -516,7 +517,11 @@ namespace SetupTv.Sections
         }
         else if (ServiceHelper.IsRunning)
         {
-          if (ServiceHelper.Stop()) {}
+          if (ServiceHelper.Stop())
+          {
+            // just make a small pause to avoid net socket exception :-)
+            Thread.Sleep(3000);
+          }
         }
         RemoteControl.Clear();
         timer1.Enabled = true;

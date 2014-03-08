@@ -26,6 +26,7 @@ using MediaPortal.GUI.Library;
 using MediaPortal.Mixer;
 using MediaPortal.Player;
 using MediaPortal.Profile;
+using MediaPortal.Services;
 
 #endregion
 
@@ -58,13 +59,13 @@ namespace MediaPortal.Plugins.Process
       if (useWaveVolume)
       {
         // Since MP's volume handler controls the wave volume, we have to access the Audio Endpoint Device directly
-        Log.Debug("PS: Control the master volume by accessing the Audio Endpoint Device directly");
+        Log.Debug(LogType.PS, "PS: Control the master volume by accessing the Audio Endpoint Device directly");
         _audioDefaultDevice = new AEDev();
       }
       else
       {
         // We use MP's volume handler, since it controls the master volume
-        Log.Debug("PS: Control the master volume by using MP's volume handler");
+        Log.Debug(LogType.PS, "PS: Control the master volume by using MP's volume handler");
       }
     }
 

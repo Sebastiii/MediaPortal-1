@@ -271,7 +271,10 @@ namespace SetupTv.Sections
           foreach (RadioGroupMap map in maps)
           {
             XmlNode nodeMap = xmlDoc.CreateElement("map");
-            AddAttribute(nodeMap, "ChannelName", map.ReferencedChannel().DisplayName);
+            if (map.ReferencedChannel() != null)
+            {
+              AddAttribute(nodeMap, "ChannelName", map.ReferencedChannel().DisplayName);
+            }
             AddAttribute(nodeMap, "SortOrder", map.SortOrder.ToString());
             nodeRadioGroupMap.AppendChild(nodeMap);
           }

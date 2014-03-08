@@ -34,7 +34,6 @@ public:
 	FileReader();
 	virtual ~FileReader();
 
-
 	// Open and write to the file
 	virtual HRESULT GetFileName(LPOLESTR *lpszFileName);
 	virtual HRESULT SetFileName(LPCOLESTR pszFileName);
@@ -58,6 +57,7 @@ public:
 	virtual void setBufferPointer();
 
 	void SetDebugOutput(BOOL bDebugOutput);
+  void SetDummyWrites(BOOL useDummyWrites);
 
 	virtual __int64 GetFileSize();
 	virtual bool IsBuffer(){return false;};
@@ -65,6 +65,8 @@ public:
 	virtual int HasData(){return 0; } ;
 
 protected:
+  
+  CString randomStrGen(int length); 
 	
 	HANDLE   m_hFile; 				// Handle to file for streaming
 	HANDLE   m_hInfoFile;           // Handle to Infofile for filesize from FileWriter
@@ -77,6 +79,7 @@ protected:
 	__int64 m_llBufferPointer;	
 
 	BOOL     m_bDebugOutput;
+	BOOL     m_bUseDummyWrites;
 };
 
 #endif

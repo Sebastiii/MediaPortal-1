@@ -252,7 +252,6 @@ namespace PowerScheduler.Setup
 
           checkBoxHomeOnly.Checked = Convert.ToBoolean(GetSetting("HomeOnly", "false"));
           textBoxCommand.Text = GetSetting("Command", string.Empty);
-          checkBoxUmuteMasterVolume.Checked = Convert.ToBoolean(GetSetting("UnmuteMasterVolume", "true"));
 
           return;
         }
@@ -318,8 +317,6 @@ namespace PowerScheduler.Setup
         checkBoxHomeOnly.Checked = Convert.ToBoolean(GetSetting("HomeOnly", "false"));
 
         textBoxCommand.Text = GetSetting("Command", string.Empty);
-
-        checkBoxUmuteMasterVolume.Checked = Convert.ToBoolean(GetSetting("UnmuteMasterVolume", "true"));
 
 #endif
 #if SERVER
@@ -593,7 +590,6 @@ namespace PowerScheduler.Setup
         {
           SetSetting("HomeOnly", checkBoxHomeOnly.Checked.ToString());
           SetSetting("Command", textBoxCommand.Text);
-          SetSetting("UnmuteMasterVolume", checkBoxUmuteMasterVolume.Checked.ToString());
           return;
         }
 #endif
@@ -609,8 +605,6 @@ namespace PowerScheduler.Setup
         SetSetting("HomeOnly", checkBoxHomeOnly.Checked.ToString());
 
         SetSetting("Command", textBoxCommand.Text);
-
-        SetSetting("UnmuteMasterVolume", checkBoxUmuteMasterVolume.Checked.ToString());
 
 #endif
 #if SERVER

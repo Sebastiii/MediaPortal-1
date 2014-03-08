@@ -108,11 +108,6 @@ namespace MediaPortal.Plugins.Process
     private Thread _standbyWakeupThread;
 
     /// <summary>
-    /// Thread to restore the master audio mute state
-    /// </summary>
-    private Thread _restoreMuteThread;
-
-    /// <summary>
     /// Timer with support for waking up the system
     /// </summary>
     private WaitableTimer _wakeupTimer;
@@ -152,10 +147,6 @@ namespace MediaPortal.Plugins.Process
     /// </summary>
     private bool _awayMode = false;
 
-    /// <summary>
-    /// Indicator if the audio master volume is mute
-    /// </summary>
-    private bool _mute = false;
 
     /// <summary>
     /// Indicator for single-seat configuration
@@ -695,26 +686,6 @@ namespace MediaPortal.Plugins.Process
         // Load settings
         LoadSettings();
 
-        // Unmute master volume
-        if (_settings.GetSetting("UnmuteMasterVolume").Get<bool>())
-        {
-          try
-          {
-            using (MasterVolume _masterVolume = new MasterVolume())
-            {
-              if (_masterVolume.IsMuted)
-              {
-                Log.Debug(LogType.PS, "PS: Master volume is muted - unmute it");
-                _masterVolume.IsMuted = false;
-              }
-            }
-          }
-          catch (Exception ex)
-          {
-            Log.Error(LogType.PS, "PS: Error in handling master volume - {0}", ex.Message);
-          }
-        }
-
         // Register as global service provider instance
         if (!GlobalServiceProvider.Instance.IsRegistered<IPowerScheduler>())
         {
@@ -778,14 +749,6 @@ namespace MediaPortal.Plugins.Process
           _standbyWakeupThread.Abort();
           _standbyWakeupThread.Join(100);
           _standbyWakeupThread = null;
-        }
-
-        // Stop and remove the RestoreMuteThread
-        if (_restoreMuteThread != null)
-        {
-          _restoreMuteThread.Abort();
-          _restoreMuteThread.Join(100);
-          _restoreMuteThread = null;
         }
 
         // Remove the EventWaitHandles
@@ -1089,12 +1052,6 @@ namespace MediaPortal.Plugins.Process
           powerSetting.Set<string>(stringSetting);
           Log.Debug(LogType.PS, "PS: Run command on power state change: {0}", stringSetting);
 
-          // Check if we should unmute the master volume
-          boolSetting = reader.GetValueAsBool("psclientplugin", "UnmuteMasterVolume", true);
-          powerSetting = _settings.GetSetting("UnmuteMasterVolume");
-          powerSetting.Set<bool>(boolSetting);
-          Log.Debug(LogType.PS, "PS: Unmute master volume: {0}", boolSetting);
-
           // Detect single-seat
           string tvPluginDll = Config.GetSubFolder(Config.Dir.Plugins, "windows") + @"\" + "TvPlugin.dll";
           if (File.Exists(tvPluginDll))
@@ -1361,10 +1318,6 @@ namespace MediaPortal.Plugins.Process
         GUIGraphicsContext.SendMessage(message);
       }
 
-      // Save audio mute state
-      if (_settings.GetSetting("UnmuteMasterVolume").Get<bool>())
-        SaveMasterVolumeMuteState();
-
       // Run external command
       Log.Debug(LogType.PS, "PS: Run external command");
       RunExternalCommand("Command", "suspend");
@@ -1410,10 +1363,6 @@ namespace MediaPortal.Plugins.Process
       // Reset time of last user activity
       Log.Debug(LogType.PS, "PS: System has resumed from standby due to user activity - reset time of last user activity");
       _lastUserTime = DateTime.Now;
-
-      // Restore master volume mute state
-      if (_settings.GetSetting("UnmuteMasterVolume").Get<bool>())
-        RestoreMasterVolumeMuteState();
     }
 
     /// <summary>
@@ -1598,10 +1547,8 @@ namespace MediaPortal.Plugins.Process
     {
       Log.Debug(LogType.PS, "PS: System is entering away mode");
 
-      // Stop player and save audio mute state
+      // Stop player
       StopPlayer();
-      if (_settings.GetSetting("UnmuteMasterVolume").Get<bool>())
-        SaveMasterVolumeMuteState();
 
       // Run external command
       Log.Info(LogType.PS, "PS: Run external command");
@@ -1618,110 +1565,6 @@ namespace MediaPortal.Plugins.Process
       // Run external command
       Log.Info(LogType.PS, "PS: Run external command");
       RunExternalCommand("Command", "runmode");
-
-      // Restore master volume mute state
-      if (_settings.GetSetting("UnmuteMasterVolume").Get<bool>())
-        RestoreMasterVolumeMuteState();
-    }
-
-    /// <summary>
-    /// Saves the master volume mute state
-    /// </summary>
-    private void SaveMasterVolumeMuteState()
-    {
-      try
-      {
-        using (MasterVolume _masterVolume = new MasterVolume())
-        {
-          _mute = _masterVolume.IsMuted;
-        }
-      }
-      catch (Exception ex)
-      {
-        Log.Error(LogType.PS, "PS: Error in getting master volume - {0}", ex.Message);
-        _mute = false;
-      }
-      finally
-      {
-        Log.Debug(LogType.PS, "PS: Saved master volume mute state: {0}", _mute);
-      }
-    }
-
-    /// <summary>
-    /// Restores the master volume mute state if necessary
-    /// </summary>
-    private void RestoreMasterVolumeMuteState()
-    {
-      // Return if volume was muted
-      if (_mute)
-        return;
-
-      // Start thread to unmute master volume (must be asynchronous since it might take some time)
-      Log.Debug(LogType.PS, "PS: Start thread to restore master volume mute state");
-      _restoreMuteThread = new Thread(RestoreMuteThread);
-      _restoreMuteThread.Name = "PS RestoreMute";
-      _restoreMuteThread.Start();
-    }
-
-    private void RestoreMuteThread()
-    {
-      // Try to unmute the master volume several times since some audio
-      // devices need time to get reactivated after away / sleep mode
-      string errorMessage = String.Empty;
-      for (int i = 0; i <= 4; i++)
-      {
-        // Wait some seconds until next try
-        if (i > 0)
-        {
-          Log.Debug(LogType.PS, "PS: Wait for {0} second(s)", i);
-          Thread.Sleep(1000 * i);
-        }
-        try
-        {
-          using (MasterVolume _masterVolume = new MasterVolume())
-          {
-            if (_masterVolume.IsMuted == false)
-            {
-              Log.Debug(LogType.PS, "PS: Master volume is unmuted - nothing to do");
-              return;
-            }
-            Log.Debug(LogType.PS, "PS: Master volume is muted - try to unmute it");
-            _masterVolume.IsMuted = false;
-            Log.Debug(LogType.PS, "PS: Successfully unmuted master volume");
-            return;
-          }
-        }
-        catch (ApplicationException appEx)
-        {
-          errorMessage = appEx.Message;
-          Log.Debug(LogType.PS, "PS: Cannot handle master volume - {0}", errorMessage);
-        }
-        catch (COMException comEx)
-        {
-          errorMessage = comEx.Message;
-          Log.Debug(LogType.PS, "PS: Cannot handle master volume - {0}", comEx.Message);
-        }
-        catch (ThreadAbortException)
-        {
-          Log.Debug(LogType.PS, "PS: RestoreMuteThread aborted");
-          return;
-        }
-        catch (Exception ex)
-        {
-          Log.Error(LogType.PS, "PS: Error in handling master volume - {0}", ex.Message);
-          return;
-        }
-
-        // Terminate if MP main thread has terminated
-        if (!_parentThread.IsAlive)
-        {
-          Log.Debug(LogType.PS, "PS: RestoreMuteThread terminated");
-          return;
-        }
-      }
-
-      // No success after several times trying...
-      Log.Error(LogType.PS, "PS: Error in handling master volume - " + errorMessage);
     }
 
     /// OnAction handler; if any action is received then last busy time is reset (i.e. idletimeout is reset)

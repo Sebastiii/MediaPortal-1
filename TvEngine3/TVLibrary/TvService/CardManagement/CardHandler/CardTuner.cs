@@ -143,7 +143,7 @@ namespace TvService
           {
             return tvResult;
           }
-          result = _cardHandler.Card.Scan(user.SubChannel, channel);
+          result = _cardHandler.Card.Scan(user.SubChannel, user.Name, channel);
           if (result != null)
           {
             return AfterTune(user, idChannel, result);
@@ -218,7 +218,7 @@ namespace TvService
       {
         return;
       }
-      Log.Info("card: CancelTune {0} to {1}", _cardHandler.DataBaseCard.IdCard);
+      Log.Info("card: CancelTune {0}", _cardHandler.DataBaseCard.IdCard);
       _cardHandler.Card.CancelTune(subchannel);
       RaiseOnAfterCancelTuneEvent(subchannel);
       WaitForCancelledTuneToFinish(subchannel);
@@ -337,7 +337,7 @@ namespace TvService
         }
         user.FailedCardId = -1;
         
-        result = _cardHandler.Card.Tune(user.SubChannel, channel);
+        result = _cardHandler.Card.Tune(user.SubChannel, user.Name, channel);
 
         if (result != null)
         {

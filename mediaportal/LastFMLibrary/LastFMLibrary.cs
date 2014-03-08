@@ -26,6 +26,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Xml.Linq;
+using MediaPortal.Util;
 
 namespace MediaPortal.LastFM
 {
@@ -514,60 +515,70 @@ namespace MediaPortal.LastFM
     /// <exception cref="LastFMException">Details of last.fm error or will wrap actual exception as inner exception</exception>
     private static XDocument GetXml(string querystring, string httpMethod, bool useHttps)
     {
-      HttpWebResponse response;
-      XDocument xDoc;
-      var url = useHttps ? BaseURLHttps : BaseURL;
-      if (httpMethod == "GET")
+      if (Win32API.IsConnectedToInternet())
       {
-        url = url + "?" + querystring;
-      }
-
-      bool webExceptionStatus = false;
-      var postArray = Encoding.UTF8.GetBytes(querystring);
-      var request = (HttpWebRequest) WebRequest.Create(url);
-      request.Method = httpMethod;
-      request.ServicePoint.Expect100Continue = false;
-      if (httpMethod == "POST")
-      {
-        request.ContentType = "application/x-www-form-urlencoded";
-        request.ContentLength = postArray.Length;
-        var s = request.GetRequestStream();
-        s.Write(postArray, 0, postArray.Length);
-        s.Close();
-      }
-      try
-      {
-        response = (HttpWebResponse) request.GetResponse();
-      }
-      catch (WebException ex)
-      {
-        if (ex.Status == WebExceptionStatus.ProtocolError)
+        HttpWebResponse response;
+        XDocument xDoc;
+        var url = useHttps ? BaseURLHttps : BaseURL;
+        if (httpMethod == "GET")
         {
-          // errors on last.fm side such as invalid API key, are returned as HTTP errors
-          // just process these as a standard return
-          response = (HttpWebResponse) ex.Response;
-          //webExceptionStatus = true;
-        }
-        else
-        {
-          throw;
-        }
-      }
-
-      if (!webExceptionStatus)
-      {
-        using (var stream = response.GetResponseStream())
-        using (var reader = new StreamReader(stream, Encoding.UTF8))
-        {
-          var resp = reader.ReadToEnd();
-          xDoc = XDocument.Parse(resp);
+          url = url + "?" + querystring;
         }
 
-        if ((string) xDoc.Root.Attribute("status") != "ok")
+        bool webExceptionStatus = false;
+        var postArray = Encoding.UTF8.GetBytes(querystring);
+        var request = (HttpWebRequest) WebRequest.Create(url);
+        request.Method = httpMethod;
+        request.ServicePoint.Expect100Continue = false;
+        if (httpMethod == "POST")
         {
-          throw GetLastFMException(xDoc);
+          try
+          {
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.ContentLength = postArray.Length;
+            var s = request.GetRequestStream();
+            s.Write(postArray, 0, postArray.Length);
+            s.Close();
+          }
+          catch (Exception)
+          {
+            return null;
+          }
         }
-        return xDoc;
+        try
+        {
+          response = (HttpWebResponse) request.GetResponse();
+        }
+        catch (WebException ex)
+        {
+          if (ex.Status == WebExceptionStatus.ProtocolError)
+          {
+            // errors on last.fm side such as invalid API key, are returned as HTTP errors
+            // just process these as a standard return
+            response = (HttpWebResponse) ex.Response;
+            //webExceptionStatus = true;
+          }
+          else
+          {
+            return null;
+          }
+        }
+
+        if (!webExceptionStatus)
+        {
+          using (var stream = response.GetResponseStream())
+          using (var reader = new StreamReader(stream, Encoding.UTF8))
+          {
+            var resp = reader.ReadToEnd();
+            xDoc = XDocument.Parse(resp);
+          }
+
+          if ((string) xDoc.Root.Attribute("status") != "ok")
+          {
+            throw GetLastFMException(xDoc);
+          }
+          return xDoc;
+        }
       }
       return null;
     }

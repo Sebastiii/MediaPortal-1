@@ -194,6 +194,8 @@ public class MediaPortalApp : D3D, IRender
 
   private ShellNotifications Notifications = new ShellNotifications();
 
+  private static ManualResetEvent syncEvent;
+
   #endregion
 
   #region enumns
@@ -1625,93 +1627,123 @@ public class MediaPortalApp : D3D, IRender
   /// <param name="msg"></param>
   private void OnPowerBroadcast(ref Message msg)
   {
-    Log.Debug("Main: WM_POWERBROADCAST ({0})", Enum.GetName(typeof(PBT_EVENT), msg.WParam.ToInt32()));
-    switch (msg.WParam.ToInt32())
+    try
     {
-      case PBT_APMSUSPEND:
-        Log.Info("Main: Suspending operation");
-        PrepareSuspend();
-        PluginManager.WndProc(ref msg);
-        OnSuspend();
-        break;
+      Log.Debug("Main: WM_POWERBROADCAST ({0})", Enum.GetName(typeof (PBT_EVENT), msg.WParam.ToInt32()));
+      switch (msg.WParam.ToInt32())
+      {
+        case PBT_APMSUSPEND:
+          Log.Info("Main: Suspending operation");
+          syncEvent = new ManualResetEvent(false);
+          Thread t1 = new Thread(
+            () =>
+            {
+              PrepareSuspend();
+              OnSuspend();
+              syncEvent.Set();
+            }
+            );
+          t1.Start();
+          PluginManager.WndProc(ref msg);
+          break;
 
-      // When resuming from hibernation, the OS always assume that a user is present. This is by design of Windows.
-      case PBT_APMRESUMEAUTOMATIC:
-        Log.Info("Main: Resuming operation");
-        OnResumeAutomatic();
-        PluginManager.WndProc(ref msg);
-        break;
+          // When resuming from hibernation, the OS always assume that a user is present. This is by design of Windows.
+        case PBT_APMRESUMEAUTOMATIC:
+          Log.Info("Main: Resuming operation");
+          OnResumeAutomatic();
+          PluginManager.WndProc(ref msg);
+          break;
 
-      // only for Windows XP
-      case PBT_APMRESUMECRITICAL:
-        Log.Info("Main: Resuming operation after a forced suspend");
-        OnResumeAutomatic();
-        OnResumeSuspend();
-        PluginManager.WndProc(ref msg);
-        break;
+          // only for Windows XP
+        case PBT_APMRESUMECRITICAL:
+          Log.Info("Main: Resuming operation after a forced suspend");
+          Thread t2 = new Thread(
+            () =>
+            {
+              syncEvent.WaitOne();
+              OnResumeAutomatic();
+              OnResumeSuspend();
+            }
+            );
+          t2.Start();
+          PluginManager.WndProc(ref msg);
+          break;
 
-      case PBT_APMRESUMESUSPEND:
-        OnResumeSuspend();
-        PluginManager.WndProc(ref msg);
-        break;
+        case PBT_APMRESUMESUSPEND:
+          Log.Info("Main: Resuming operation after a suspend");
+          Thread t3 = new Thread(
+            () =>
+            {
+              syncEvent.WaitOne();
+              OnResumeSuspend();
+            }
+            );
+          t3.Start();
+          PluginManager.WndProc(ref msg);
+          break;
 
-      case PBT_POWERSETTINGCHANGE:
-        var ps = (POWERBROADCAST_SETTING)Marshal.PtrToStructure(msg.LParam, typeof(POWERBROADCAST_SETTING));
+        case PBT_POWERSETTINGCHANGE:
+          var ps = (POWERBROADCAST_SETTING) Marshal.PtrToStructure(msg.LParam, typeof (POWERBROADCAST_SETTING));
 
-        if (ps.PowerSetting == GUID_SYSTEM_AWAYMODE && ps.DataLength == Marshal.SizeOf(typeof(Int32)))
-        {
-          switch (ps.Data)
+          if (ps.PowerSetting == GUID_SYSTEM_AWAYMODE && ps.DataLength == Marshal.SizeOf(typeof (Int32)))
           {
-            case 0:
-              Log.Info("Main: The computer is exiting away mode");
-              IsInAwayMode = false;
-              break;
-            case 1:
-              Log.Info("Main: The computer is entering away mode");
-              IsInAwayMode = true;
-              break;
+            switch (ps.Data)
+            {
+              case 0:
+                Log.Info("Main: The computer is exiting away mode");
+                IsInAwayMode = false;
+                break;
+              case 1:
+                Log.Info("Main: The computer is entering away mode");
+                IsInAwayMode = true;
+                break;
+            }
           }
-        }
-        // GUID_SESSION_DISPLAY_STATUS is only provided on Win8 and above
-        else if ((ps.PowerSetting == GUID_MONITOR_POWER_ON || ps.PowerSetting == GUID_SESSION_DISPLAY_STATUS) && ps.DataLength == Marshal.SizeOf(typeof(Int32)))
-        {
-          switch (ps.Data)
+            // GUID_SESSION_DISPLAY_STATUS is only provided on Win8 and above
+          else if ((ps.PowerSetting == GUID_MONITOR_POWER_ON || ps.PowerSetting == GUID_SESSION_DISPLAY_STATUS) &&
+                   ps.DataLength == Marshal.SizeOf(typeof (Int32)))
           {
-            case 0:
-              Log.Info("Main: The display is off");
-              IsDisplayTurnedOn = false;
-              break;
-            case 1:
-              Log.Info("Main: The display is on");
-              IsDisplayTurnedOn = true;
-              ShowMouseCursor(false);
-              break;
-            case 2:
-              Log.Info("Main: The display is dimmed");
-              IsDisplayTurnedOn = true;
-              break;
+            switch (ps.Data)
+            {
+              case 0:
+                Log.Info("Main: The display is off");
+                IsDisplayTurnedOn = false;
+                break;
+              case 1:
+                Log.Info("Main: The display is on");
+                IsDisplayTurnedOn = true;
+                ShowMouseCursor(false);
+                break;
+              case 2:
+                Log.Info("Main: The display is dimmed");
+                IsDisplayTurnedOn = true;
+                break;
+            }
           }
-        }
-        // GUIT_SESSION_USER_PRESENCE is only provide on Win8 and above
-        else if (ps.PowerSetting == GUID_SESSION_USER_PRESENCE && ps.DataLength == Marshal.SizeOf(typeof(Int32)))
-        {
-          switch (ps.Data)
+            // GUIT_SESSION_USER_PRESENCE is only provide on Win8 and above
+          else if (ps.PowerSetting == GUID_SESSION_USER_PRESENCE && ps.DataLength == Marshal.SizeOf(typeof (Int32)))
           {
-            case 0:
-              Log.Info("Main: User is providing input to the session");
-              IsUserPresent = true;
-              ShowMouseCursor(false);
-              break;
-            case 2:
-              Log.Info("Main: The user activity timeout has elapsed with no interaction from the user");
-              IsUserPresent = false;
-              break;
+            switch (ps.Data)
+            {
+              case 0:
+                Log.Info("Main: User is providing input to the session");
+                IsUserPresent = true;
+                ShowMouseCursor(false);
+                break;
+              case 2:
+                Log.Info("Main: The user activity timeout has elapsed with no interaction from the user");
+                IsUserPresent = false;
+                break;
+            }
           }
-        }
-        PluginManager.WndProc(ref msg);
-        break;
+          PluginManager.WndProc(ref msg);
+          break;
+      }
+      msg.Result = (IntPtr) 1;
     }
-    msg.Result = (IntPtr)1;
+    catch (System.Exception)
+    {
+    }
   }
 
 

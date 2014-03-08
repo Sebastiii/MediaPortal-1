@@ -303,7 +303,7 @@ namespace MediaPortal.Player
     {
       try
       {
-        if (!GUIGraphicsContext.IsPlayingVideo)
+        if (!GUIGraphicsContext.IsPlayingVideo && !_vmr9Util.InMenu)
         {
           return false;
         }
@@ -582,7 +582,7 @@ namespace MediaPortal.Player
         {
           return;
         }
-        if (GUIWindowManager.IsSwitchingToNewWindow)
+        if (GUIWindowManager.IsSwitchingToNewWindow && !_vmr9Util.InMenu)
         {
           return; //dont present video during window transitions
         }
@@ -602,19 +602,26 @@ namespace MediaPortal.Player
         int iMaxSteps = 12;
         if (_fadeFrameCounter < iMaxSteps)
         {
-          // fade in
-          int iStep = 0xff/iMaxSteps;
-          if (_fadingIn)
+          if (_vmr9Util.InMenu)
           {
-            _diffuseColor = iStep*_fadeFrameCounter;
-            _diffuseColor <<= 24;
-            _diffuseColor |= 0xffffff;
+            _diffuseColor = 0xFFffffff;
           }
           else
           {
-            _diffuseColor = (iMaxSteps - iStep)*_fadeFrameCounter;
-            _diffuseColor <<= 24;
-            _diffuseColor |= 0xffffff;
+            // fade in
+            int iStep = 0xff / iMaxSteps;
+            if (_fadingIn)
+            {
+              _diffuseColor = iStep * _fadeFrameCounter;
+              _diffuseColor <<= 24;
+              _diffuseColor |= 0xffffff;
+            }
+            else
+            {
+              _diffuseColor = (iMaxSteps - iStep) * _fadeFrameCounter;
+              _diffuseColor <<= 24;
+              _diffuseColor |= 0xffffff;
+            }
           }
           _fadeFrameCounter++;
         }
@@ -683,45 +690,42 @@ namespace MediaPortal.Player
           {
             // 3D output either SBS or TAB
 
-            Surface old = GUIGraphicsContext.DX9Device.GetRenderTarget(0);
             Surface backbuffer = GUIGraphicsContext.DX9Device.GetBackBuffer(0, 0, BackBufferType.Mono);
 
             // create texture/surface for preparation for 3D output if they don't exist
 
-            if (GUIGraphicsContext.Auto3DTexture == null)
-              GUIGraphicsContext.Auto3DTexture = new Texture(GUIGraphicsContext.DX9Device,
+            Texture auto3DTexture = new Texture(GUIGraphicsContext.DX9Device,
                                                              backbuffer.Description.Width,
                                                              backbuffer.Description.Height, 0, Usage.RenderTarget,
                                                              backbuffer.Description.Format, Pool.Default);
 
-            if (GUIGraphicsContext.Auto3DSurface == null)
-              GUIGraphicsContext.Auto3DSurface = GUIGraphicsContext.Auto3DTexture.GetSurfaceLevel(0);
+            Surface auto3DSurface = auto3DTexture.GetSurfaceLevel(0);
 
             if (GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.SideBySide)
             {
-              // left half
-              RenderFor3DMode(GUIGraphicsContext.eRender3DModeHalf.SBSLeft, timePassed, backbuffer,
-                              GUIGraphicsContext.Auto3DSurface,
+              // left half (or right if switched)
+
+              RenderFor3DMode(GUIGraphicsContext.Switch3DSides ? GUIGraphicsContext.eRender3DModeHalf.SBSRight : GUIGraphicsContext.eRender3DModeHalf.SBSLeft, 
+                              timePassed, backbuffer, auto3DSurface,
                               new Rectangle(0, 0, backbuffer.Description.Width/2, backbuffer.Description.Height));
 
-              // right half
-              RenderFor3DMode(GUIGraphicsContext.eRender3DModeHalf.SBSRight, timePassed, backbuffer,
-                              GUIGraphicsContext.Auto3DSurface,
-                              new Rectangle(backbuffer.Description.Width/2, 0, backbuffer.Description.Width/2,
-                                            backbuffer.Description.Height));
+              // right half (or right if switched)
+
+              RenderFor3DMode(GUIGraphicsContext.Switch3DSides ? GUIGraphicsContext.eRender3DModeHalf.SBSLeft : GUIGraphicsContext.eRender3DModeHalf.SBSRight, 
+                              timePassed, backbuffer, auto3DSurface,
+                              new Rectangle(backbuffer.Description.Width / 2, 0, backbuffer.Description.Width / 2, backbuffer.Description.Height));
             }
             else
             {
-              // upper half
-              RenderFor3DMode(GUIGraphicsContext.eRender3DModeHalf.TABTop, timePassed, backbuffer,
-                              GUIGraphicsContext.Auto3DSurface,
+              // upper half (or lower if switched)
+              RenderFor3DMode(GUIGraphicsContext.Switch3DSides ? GUIGraphicsContext.eRender3DModeHalf.TABBottom : GUIGraphicsContext.eRender3DModeHalf.TABTop, 
+                              timePassed, backbuffer, auto3DSurface,
                               new Rectangle(0, 0, backbuffer.Description.Width, backbuffer.Description.Height/2));
 
-              // lower half
-              RenderFor3DMode(GUIGraphicsContext.eRender3DModeHalf.TABBottom, timePassed, backbuffer,
-                              GUIGraphicsContext.Auto3DSurface,
-                              new Rectangle(0, backbuffer.Description.Height/2, backbuffer.Description.Width,
-                                            backbuffer.Description.Height/2));
+              // lower half (or upper if switched)
+              RenderFor3DMode(GUIGraphicsContext.Switch3DSides ? GUIGraphicsContext.eRender3DModeHalf.TABTop : GUIGraphicsContext.eRender3DModeHalf.TABBottom, 
+                              timePassed, backbuffer, auto3DSurface,
+                              new Rectangle(0, backbuffer.Description.Height/2, backbuffer.Description.Width, backbuffer.Description.Height/2));
             }
 
             // for a 3D movie with subtitles generated by a 3D subtitle tool, we render the subtitle here instead of in RenderLayer()
@@ -734,6 +738,9 @@ namespace MediaPortal.Player
 
             GUIGraphicsContext.DX9Device.Present();
             backbuffer.Dispose();
+
+            auto3DSurface.Dispose();
+            auto3DTexture.Dispose();
           }
         }
 
@@ -988,24 +995,26 @@ namespace MediaPortal.Player
               {
                 case GUIGraphicsContext.eRender3DModeHalf.SBSLeft:
 
-                  _destinationRect.Width = originalDestination.Width*2;
+                  _sourceRect.X = originalSource.X / 2;
+                  _sourceRect.Width = originalSource.Width/2;
                   break;
 
                 case GUIGraphicsContext.eRender3DModeHalf.SBSRight:
 
-                  _destinationRect.Width = originalDestination.Width*2;
-                  _destinationRect.X = -_destinationRect.Width/2;
+                  _sourceRect.X = originalDestination.Width/2 + originalSource.X / 2;
+                  _sourceRect.Width = originalSource.Width / 2;
                   break;
 
                 case GUIGraphicsContext.eRender3DModeHalf.TABTop:
 
-                  _destinationRect.Height = originalDestination.Height*2;
+                  _sourceRect.Y = originalSource.Y;
+                  _sourceRect.Height = originalSource.Height / 2;
                   break;
 
                 case GUIGraphicsContext.eRender3DModeHalf.TABBottom:
 
-                  _destinationRect.Height = originalDestination.Height*2;
-                  _destinationRect.Y = -(originalDestination.Height - _destinationRect.Y);
+                  _sourceRect.Y = originalSource.Height / 2 + originalSource.Y * 2;
+                  _sourceRect.Height = originalSource.Height / 2;
                   break;
               }
             }
@@ -1021,7 +1030,7 @@ namespace MediaPortal.Player
                 case GUIGraphicsContext.eRender3DModeHalf.SBSRight:
 
                   _sourceRect.Width = originalSource.Width/2;
-                  _sourceRect.X = originalSource.Width/2;
+                  _sourceRect.X = originalSource.Width/2 + _sourceRect.X*2;
                   break;
 
                 case GUIGraphicsContext.eRender3DModeHalf.TABTop:
@@ -1032,7 +1041,7 @@ namespace MediaPortal.Player
                 case GUIGraphicsContext.eRender3DModeHalf.TABBottom:
 
                   _sourceRect.Height = originalSource.Height/2;
-                  _sourceRect.Y = originalSource.Height/2;
+                  _sourceRect.Y = originalSource.Height/2 + _sourceRect.Y*2;
                   break;
               }
             }
@@ -1040,27 +1049,8 @@ namespace MediaPortal.Player
 
           DrawTexture(_textureAddress, _diffuseColor);
 
-          _destinationRect = originalDestination;
           _sourceRect = originalSource;
-
-          // in TAB-Mode the Video texture is repeated at the bottom. For widescreen material we have to clear this
-
-          if (GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.TopAndBottom ||
-              GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.TopAndBottomTo2D)
-          {
-            if (originalDestination.Width > 512) // full size mode
-            {
-              Rectangle[] rectTop = {new Rectangle(0, 0, originalDestination.Width, originalDestination.Top)};
-              GUIGraphicsContext.DX9Device.Clear(ClearFlags.Target, Color.Black, 1.0f, 0, rectTop);
-
-              Rectangle[] rectBottom =
-                {
-                  new Rectangle(0, originalDestination.Bottom, originalDestination.Width,
-                                GUIGraphicsContext.Height - originalDestination.Bottom + 1)
-                };
-              GUIGraphicsContext.DX9Device.Clear(ClearFlags.Target, Color.Black, 1.0f, 0, rectBottom);
-            }
-          }
+          _destinationRect = originalDestination;
         }
       }
       else
@@ -1078,8 +1068,10 @@ namespace MediaPortal.Player
 
         SubEngine.GetInstance().Render(_subsRect, _destinationRect);
       }
-      else if (GUIGraphicsContext.Render3DModeHalf == GUIGraphicsContext.eRender3DModeHalf.SBSLeft ||
-               GUIGraphicsContext.Render3DModeHalf == GUIGraphicsContext.eRender3DModeHalf.TABTop)
+      else if (((GUIGraphicsContext.Render3DModeHalf == GUIGraphicsContext.eRender3DModeHalf.SBSLeft ||
+                GUIGraphicsContext.Render3DModeHalf == GUIGraphicsContext.eRender3DModeHalf.TABTop) && !GUIGraphicsContext.Switch3DSides) ||
+               ((GUIGraphicsContext.Render3DModeHalf == GUIGraphicsContext.eRender3DModeHalf.SBSRight ||
+                GUIGraphicsContext.Render3DModeHalf == GUIGraphicsContext.eRender3DModeHalf.TABBottom) && GUIGraphicsContext.Switch3DSides))
       {
         // for a 3D movie we render the left/top frame subtitle here
         // if Render3DSubtitle is turned off, rendering takes place in InternalPresentImage()
@@ -1090,8 +1082,10 @@ namespace MediaPortal.Player
           SubEngine.GetInstance().Render(_subsRect, _destinationRect);
         }
       }
-      else if (GUIGraphicsContext.Render3DModeHalf == GUIGraphicsContext.eRender3DModeHalf.SBSRight ||
-               GUIGraphicsContext.Render3DModeHalf == GUIGraphicsContext.eRender3DModeHalf.TABBottom)
+      else if (((GUIGraphicsContext.Render3DModeHalf == GUIGraphicsContext.eRender3DModeHalf.SBSRight ||
+               GUIGraphicsContext.Render3DModeHalf == GUIGraphicsContext.eRender3DModeHalf.TABBottom) && !GUIGraphicsContext.Switch3DSides) ||
+              ((GUIGraphicsContext.Render3DModeHalf == GUIGraphicsContext.eRender3DModeHalf.SBSLeft ||
+               GUIGraphicsContext.Render3DModeHalf == GUIGraphicsContext.eRender3DModeHalf.TABTop) && GUIGraphicsContext.Switch3DSides))
       {
         // for a 3D movie we render the right/bottom frame subtitle here
         // if Render3DSubtitle is turned off, rendering takes place in InternalPresentImage()

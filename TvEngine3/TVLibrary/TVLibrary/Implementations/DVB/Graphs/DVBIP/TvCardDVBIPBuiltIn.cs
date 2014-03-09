@@ -86,82 +86,6 @@ namespace TvLibrary.Implementations.DVB
       }
     }
 
-    public static bool DisconnectAllPins(IGraphBuilder graphBuilder, IBaseFilter filter)
-    {
-      IEnumPins pinEnum;
-      int hr = filter.EnumPins(out pinEnum);
-      if (hr != 0 || pinEnum == null)
-      {
-        return false;
-      }
-      FilterInfo info;
-      filter.QueryFilterInfo(out info);
-      Log.Log.Info("Disconnecting all pins from filter {0}", info.achName);
-      Release.ComObject(info.pGraph);
-      bool allDisconnected = true;
-      for (; ; )
-      {
-        IPin[] pins = new IPin[1];
-        int fetched;
-        hr = pinEnum.Next(1, pins, out fetched);
-        if (hr != 0 || fetched == 0)
-        {
-          break;
-        }
-        PinInfo pinInfo;
-        pins[0].QueryPinInfo(out pinInfo);
-        DsUtils.FreePinInfo(pinInfo);
-        if (pinInfo.dir == PinDirection.Output)
-        {
-          if (!DisconnectPin(graphBuilder, pins[0]))
-          {
-            allDisconnected = false;
-          }
-        }
-        Release.ComObject(pins[0]);
-      }
-      Release.ComObject(pinEnum);
-      return allDisconnected;
-    }
-
-    public static bool DisconnectPin(IGraphBuilder graphBuilder, IPin pin)
-    {
-      IPin other;
-      int hr = pin.ConnectedTo(out other);
-      bool allDisconnected = true;
-      PinInfo info;
-      pin.QueryPinInfo(out info);
-      DsUtils.FreePinInfo(info);
-      Log.Log.Info("Disconnecting pin {0}", info.name);
-      if (hr == 0 && other != null)
-      {
-        other.QueryPinInfo(out info);
-        if (!DisconnectAllPins(graphBuilder, info.filter))
-        {
-          allDisconnected = false;
-        }
-        hr = pin.Disconnect();
-        if (hr != 0)
-        {
-          allDisconnected = false;
-          Log.Log.Error("Error disconnecting: {0:x}", hr);
-        }
-        hr = other.Disconnect();
-        if (hr != 0)
-        {
-          allDisconnected = false;
-          Log.Log.Error("Error disconnecting other: {0:x}", hr);
-        }
-        DsUtils.FreePinInfo(info);
-        Release.ComObject(other);
-      }
-      else
-      {
-        Log.Log.Info("  Not connected");
-      }
-      return allDisconnected;
-    }
-
     /// <summary>
     /// RemoveStreamSourceFilter
     /// </summary>
@@ -169,7 +93,6 @@ namespace TvLibrary.Implementations.DVB
     {
       if (_filterStreamSource != null)
       {
-        //DisconnectAllPins(_graphBuilder, _filterStreamSource);
         _graphBuilder.RemoveFilter(_filterStreamSource);
         Release.ComObject("MediaPortal IPTV Source Filter", _filterStreamSource);
         _filterStreamSource = null;

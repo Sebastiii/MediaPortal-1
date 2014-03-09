@@ -938,37 +938,45 @@ namespace DShowNET.Helper
                 {
                   try
                   {
+                    Log.Debug("DirectShowUtil: initialize new volume handler before instance part1");
                   #pragma warning disable 168
                     VolumeHandler vh = VolumeHandler.Instance;
+                    Log.Debug("DirectShowUtil: initialize new volume handler after instance part1");
                   #pragma warning restore 168
+                    Log.Debug("DirectShowUtil: volume handler value {0}", vh.Volume);
                     // vh.Volume = 19660500 that means Audio endpoint device are not available.
                     if (vh.Volume == 19660500) // Check if new audio device is connected
                     {
+                      Log.Debug("DirectShowUtil: initialize new volume handler before dispose");
                       VolumeHandler.Dispose();
+                      Log.Debug("DirectShowUtil: initialize new volume handler after dispose");
                     #pragma warning disable 168
+                      Log.Debug("DirectShowUtil: initialize new volume handler before instance");
                       vh = VolumeHandler.Instance;
+                      Log.Debug("DirectShowUtil: initialize new volume handler after instance");
                     #pragma warning restore 168
                     }
                     if (vh.Volume != 19660500)
                     {
+                      Log.Debug("DirectShowUtil: build the graph for PIN : {0}", pinName);
                       hr = graphBuilder.Render(pins[0]);
                     }
                   }
                   catch (Exception exception)
                   {
-                    Log.Warn("DirectShowUtil: Could not initialize volume handler (don't connect Audio Pin) : ",
-                             exception.Message);
+                    Log.Warn("DirectShowUtil: Could not initialize volume handler (don't connect Audio Pin) : {0}", exception.Message);
                   }
                 }
                 else
                 {
+                  Log.Debug("DirectShowUtil: build the graph for PIN : {0}", pinName);
                   hr = graphBuilder.Render(pins[0]);
                 }
               }
               catch (Exception ex)
               {
                 // Can't handle pin out
-                Log.Error("DirectShowUtil: Can't handle pin out {0]", ex);
+                Log.Error("DirectShowUtil: Can't handle pin out {0}", ex);
               }
               if (hr != 0)
               {

@@ -317,6 +317,12 @@ namespace TvLibrary.Implementations.DVB
                 Log.Log.Debug("WaitForPMT: Waiting for PMT {0:X}", _pmtPid);
               }
 
+              DVBIPChannel dvbipChannel = _currentChannel as DVBIPChannel;
+              if (dvbipChannel != null)
+              {
+                timeoutPMT = 1000;
+              }
+
               if (_eventPMT.WaitOne(timeoutPMT, true))
               {
                 ThrowExceptionIfTuneCancelled();

@@ -32,6 +32,7 @@ using TvDatabase;
 using MediaPortal.Profile;
 using System.IO;
 using TvControl;
+using System.Timers;
 
 namespace TvPlugin
 {
@@ -43,6 +44,8 @@ namespace TvPlugin
   {
     #region vars
 
+    private static Timer _reloadCommercialFileTimer;
+    private static Recording _currentlyPlayingRecording;
     private int _days;
     private static int _showEpisodeInfo = -1;
 
@@ -366,11 +369,19 @@ namespace TvPlugin
     
     public static bool PlayRecording(Recording rec, double startOffset, g_Player.MediaType mediaType)
     {
-      string fileName = GetFileNameForRecording(rec);
-
+      string fileName = GetFileNameForRecording(rec);      
       bool useRTSP = TVHome.UseRTSP();
+      Log.Debug("TVUtil.PlayRecording() - Starting to play {0}, use RTSP {1}, is Recording {2}", fileName, useRTSP,rec.IsRecording);
       string chapters = useRTSP ? TVHome.TvServer.GetChaptersForFileName(rec.IdRecording) : null;
-
+      if (useRTSP & rec.IsRecording)
+      {        
+        Log.Debug("TVUtil.PlayRecording() - Using RTSP and is currently recording, setting up timer to reload commercials");
+        _reloadCommercialFileTimer = new Timer();
+        _reloadCommercialFileTimer.Interval = 60000; //reload once per minute
+        _reloadCommercialFileTimer.Elapsed += new ElapsedEventHandler(OnCommercialTimerElapsed);
+        _currentlyPlayingRecording = rec;
+        _reloadCommercialFileTimer.Start();
+      }
       Log.Info("PlayRecording:{0} - using rtsp mode:{1}", fileName, useRTSP);
       if (g_Player.Play(fileName, mediaType, chapters, false)) // Force to use TsReader if true it will use Movie Codec and Splitter
       {
@@ -402,6 +413,31 @@ namespace TvPlugin
         return true;
       }
       return false;
+    }
+
+    private static void OnCommercialTimerElapsed(object source, ElapsedEventArgs e)
+    {
+      if (_currentlyPlayingRecording != null)
+      {
+        string chapters = TVHome.TvServer.GetChaptersForFileName(_currentlyPlayingRecording.IdRecording);
+        g_Player.LoadChaptersFromString(chapters);       
+      }
+      else
+      {
+        _reloadCommercialFileTimer.Stop();        
+        _reloadCommercialFileTimer.Elapsed -= new ElapsedEventHandler(OnCommercialTimerElapsed);
+        _currentlyPlayingRecording = null;
+      }
+    }
+
+    public static void StopWatchingCommercialFile()
+    {
+      if (_currentlyPlayingRecording != null & _reloadCommercialFileTimer!=null)
+      {
+        _reloadCommercialFileTimer.Stop();
+        _reloadCommercialFileTimer.Elapsed -= new ElapsedEventHandler(OnCommercialTimerElapsed);
+        _currentlyPlayingRecording = null;
+      }
     }
 
     public static string GetChannelLogo (Channel channel)

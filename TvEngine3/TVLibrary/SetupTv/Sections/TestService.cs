@@ -63,13 +63,17 @@ namespace SetupTv.Sections
       mpGroupBox1.Visible = false;
       RemoteControl.Instance.EpgGrabberEnabled = true;
 
-      comboBoxGroups.Items.Clear();
-      IList<ChannelGroup> groups = ChannelGroup.ListAll();
-      foreach (ChannelGroup group in groups)
-        comboBoxGroups.Items.Add(new ComboBoxExItem(group.GroupName, -1, group.IdGroup));
-      if (comboBoxGroups.Items.Count == 0)
-        comboBoxGroups.Items.Add(new ComboBoxExItem("(no groups defined)", -1, -1));
-      comboBoxGroups.SelectedIndex = 0;
+      if (comboBoxGroups != null)
+      {
+        comboBoxGroups.Items.Clear();
+        IList<ChannelGroup> groups = ChannelGroup.ListAll();
+        foreach (ChannelGroup group in groups)
+          comboBoxGroups.Items.Add(new ComboBoxExItem(@group.GroupName, -1, @group.IdGroup));
+        if (comboBoxGroups.Items.Count == 0)
+          comboBoxGroups.Items.Add(new ComboBoxExItem("(no groups defined)", -1, -1));
+        if (comboBoxGroups.Items.Count > 0)
+          comboBoxGroups.SelectedIndex = 0;
+      }
 
       timer1.Enabled = true;
 
@@ -658,42 +662,59 @@ namespace SetupTv.Sections
       }
       else
       {
-        ChannelGroup group = ChannelGroup.Retrieve(idItem.Id);
-        IList<GroupMap> maps = group.ReferringGroupMap();
-        foreach (GroupMap map in maps)
+        try
         {
-          Channel ch = map.ReferencedChannel();
-          if (ch.IsTv == false) continue;
-          bool hasFta = false;
-          bool hasScrambled = false;
-          IList<TuningDetail> tuningDetails = ch.ReferringTuningDetail();
-          foreach (TuningDetail detail in tuningDetails)
+          ChannelGroup group = ChannelGroup.Retrieve(idItem.Id);
+          IList<GroupMap> maps = group.ReferringGroupMap();
+          foreach (GroupMap map in maps)
           {
-            if (detail.FreeToAir)
+            Channel ch = map.ReferencedChannel();
+            if (ch == null)
             {
-              hasFta = true;
+              map.Delete();
+              map.IsChanged = true;
+              map.Persist();
+              continue;
             }
-            if (!detail.FreeToAir)
+            if (ch.IsTv == false)
             {
-              hasScrambled = true;
+              continue;
             }
-          }
+            bool hasFta = false;
+            bool hasScrambled = false;
+            IList<TuningDetail> tuningDetails = ch.ReferringTuningDetail();
+            foreach (TuningDetail detail in tuningDetails)
+            {
+              if (detail.FreeToAir)
+              {
+                hasFta = true;
+              }
+              if (!detail.FreeToAir)
+              {
+                hasScrambled = true;
+              }
+            }
 
-          int imageIndex;
-          if (hasFta && hasScrambled)
-          {
-            imageIndex = 5;
+            int imageIndex;
+            if (hasFta && hasScrambled)
+            {
+              imageIndex = 5;
+            }
+            else if (hasScrambled)
+            {
+              imageIndex = 4;
+            }
+            else
+            {
+              imageIndex = 3;
+            }
+            ComboBoxExItem item = new ComboBoxExItem(ch.DisplayName, imageIndex, ch.IdChannel);
+            mpComboBoxChannels.Items.Add(item);
           }
-          else if (hasScrambled)
-          {
-            imageIndex = 4;
-          }
-          else
-          {
-            imageIndex = 3;
-          }
-          ComboBoxExItem item = new ComboBoxExItem(ch.DisplayName, imageIndex, ch.IdChannel);
-          mpComboBoxChannels.Items.Add(item);
+        }
+        catch (Exception ex)
+        {
+          Log.Error("SetupTV catch comboBoxGroups exception {0}", ex);
         }
       }
       if (mpComboBoxChannels.Items.Count > 0)

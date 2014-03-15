@@ -1643,6 +1643,8 @@ public class MediaPortalApp : D3D, IRender
               syncEvent.Set();
             }
             );
+          t1.IsBackground = true;
+          t1.Name = "Main: PBT_APMSUSPEND thread";
           t1.Start();
           PluginManager.WndProc(ref msg);
           break;
@@ -1660,11 +1662,16 @@ public class MediaPortalApp : D3D, IRender
           Thread t2 = new Thread(
             () =>
             {
-              syncEvent.WaitOne();
+              if (syncEvent != null)
+              {
+                syncEvent.WaitOne();
+              }
               OnResumeAutomatic();
               OnResumeSuspend();
             }
             );
+          t2.IsBackground = true;
+          t2.Name = "Main: PBT_APMRESUMECRITICAL thread";
           t2.Start();
           PluginManager.WndProc(ref msg);
           break;
@@ -1674,10 +1681,15 @@ public class MediaPortalApp : D3D, IRender
           Thread t3 = new Thread(
             () =>
             {
-              syncEvent.WaitOne();
+              if (syncEvent != null)
+              {
+                syncEvent.WaitOne();
+              }
               OnResumeSuspend();
             }
             );
+          t3.IsBackground = true;
+          t3.Name = "Main: PBT_APMRESUMESUSPEND thread";
           t3.Start();
           PluginManager.WndProc(ref msg);
           break;

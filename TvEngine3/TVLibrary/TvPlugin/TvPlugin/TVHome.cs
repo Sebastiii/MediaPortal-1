@@ -1741,6 +1741,8 @@ namespace TvPlugin
                 syncEvent.Set();
               }
               );
+            t1.IsBackground = true;
+            t1.Name = "TVHome: PBT_APMSTANDBY thread";
             t1.Start();
             break;
           case PBT_APMSUSPEND:
@@ -1753,6 +1755,8 @@ namespace TvPlugin
                 syncEvent.Set();
               }
               );
+            t2.IsBackground = true;
+            t2.Name = "TVHome: PBT_APMSUSPEND thread";
             t2.Start();
             break;
           case PBT_APMQUERYSUSPEND:
@@ -1764,10 +1768,15 @@ namespace TvPlugin
             Thread t3 = new Thread(
               () =>
               {
-                syncEvent.WaitOne();
+                if (syncEvent != null)
+                {
+                  syncEvent.WaitOne();
+                }
                 OnResume();
               }
               );
+            t3.IsBackground = true;
+            t3.Name = "TVHome: PBT_APMRESUMESUSPEND thread";
             t3.Start();
             break;
           case PBT_APMRESUMESTANDBY:
@@ -1775,7 +1784,10 @@ namespace TvPlugin
             Thread t4 = new Thread(
               () =>
               {
-                syncEvent.WaitOne();
+                if (syncEvent != null)
+                {
+                  syncEvent.WaitOne();
+                }
                 OnResume();
               }
               );

@@ -56,6 +56,7 @@ using Microsoft.DirectX;
 using Microsoft.DirectX.Direct3D;
 using Microsoft.Win32;
 using Action = MediaPortal.GUI.Library.Action;
+using System.Collections.Generic;
 
 #endregion
 
@@ -194,7 +195,10 @@ public class MediaPortalApp : D3D, IRender
 
   private ShellNotifications Notifications = new ShellNotifications();
 
-  private static ManualResetEvent syncEvent;
+  private static List<Message> _listThreadMessages = new List<Message>();
+  private static readonly object _listThreadMessagesLock = new object();
+  private static event ThreadMessageHandler OnThreadMessageHandler;
+  private delegate void ThreadMessageHandler(object sender, Message message);
 
   #endregion
 
@@ -1373,7 +1377,44 @@ public class MediaPortalApp : D3D, IRender
     }
     return a;
   }
-  
+
+  private void DispatchThreadMessages()
+  {
+    if (_listThreadMessages.Count > 0)
+    {
+      List<Message> list;
+      lock (_listThreadMessagesLock) // need lock when switching queues
+      {
+        list = _listThreadMessages;
+        _listThreadMessages = new List<Message>();
+      }
+      for (int i = 0; i < list.Count; ++i)
+      {
+        Message message = list[i];
+        OnPowerBroadcast(ref message);
+      }
+    }
+  }
+
+  /// <summary>
+  /// send thread message. Same as sendmessage() however message is placed on a queue
+  /// which is processed later.
+  /// </summary>
+  /// <param name="message">new message to send</param>
+  private static void SendThreadMessage(ref Message message)
+  {
+    if (OnThreadMessageHandler != null)
+    {
+      OnThreadMessageHandler(null, message);
+    }
+    if (message != null)
+    {
+      lock (_listThreadMessagesLock)
+      {
+        _listThreadMessages.Add(message);
+      }
+    }
+  }
 
   /// <summary>
   /// Message Pump
@@ -1634,18 +1675,8 @@ public class MediaPortalApp : D3D, IRender
       {
         case PBT_APMSUSPEND:
           Log.Info("Main: Suspending operation");
-          syncEvent = new ManualResetEvent(false);
-          Thread t1 = new Thread(
-            () =>
-            {
-              PrepareSuspend();
-              OnSuspend();
-              syncEvent.Set();
-            }
-            );
-          t1.IsBackground = true;
-          t1.Name = "Main: PBT_APMSUSPEND thread";
-          t1.Start();
+          PrepareSuspend();
+          OnSuspend();
           PluginManager.WndProc(ref msg);
           break;
 
@@ -1659,38 +1690,28 @@ public class MediaPortalApp : D3D, IRender
           // only for Windows XP
         case PBT_APMRESUMECRITICAL:
           Log.Info("Main: Resuming operation after a forced suspend");
-          Thread t2 = new Thread(
-            () =>
-            {
-              if (syncEvent != null)
-              {
-                syncEvent.WaitOne();
-              }
-              OnResumeAutomatic();
-              OnResumeSuspend();
-            }
-            );
-          t2.IsBackground = true;
-          t2.Name = "Main: PBT_APMRESUMECRITICAL thread";
-          t2.Start();
+          if (!_suspended)
+          {
+            SendThreadMessage(ref msg);
+          }
+          else
+          {
+            OnResumeAutomatic();
+            OnResumeSuspend();
+          }
           PluginManager.WndProc(ref msg);
           break;
 
         case PBT_APMRESUMESUSPEND:
           Log.Info("Main: Resuming operation after a suspend");
-          Thread t3 = new Thread(
-            () =>
-            {
-              if (syncEvent != null)
-              {
-                syncEvent.WaitOne();
-              }
-              OnResumeSuspend();
-            }
-            );
-          t3.IsBackground = true;
-          t3.Name = "Main: PBT_APMRESUMESUSPEND thread";
-          t3.Start();
+          if (!_suspended)
+          {
+            SendThreadMessage(ref msg);
+          }
+          else
+          {
+            OnResumeSuspend();
+          }
           PluginManager.WndProc(ref msg);
           break;
 
@@ -2366,41 +2387,48 @@ public class MediaPortalApp : D3D, IRender
   /// </summary>
   private void OnSuspend()
   {
-    // stop playback
-    Log.Debug("Main: OnSuspend - stopping playback");
-    if (GUIGraphicsContext.IsPlaying)
+    try
     {
-      Currentmodulefullscreen();
-      g_Player.Stop();
-      while (GUIGraphicsContext.IsPlaying)
+      // stop playback
+      Log.Debug("Main: OnSuspend - stopping playback");
+      if (GUIGraphicsContext.IsPlaying)
       {
-        // This could lead into OS putting system into sleep before MP completes OnSuspend().
-        // OS gives only 2 seconds time to application to react power events (>= Vista)
-        Thread.Sleep(100);
+        Currentmodulefullscreen();
+        g_Player.Stop();
+        while (GUIGraphicsContext.IsPlaying)
+        {
+          // This could lead into OS putting system into sleep before MP completes OnSuspend().
+          // OS gives only 2 seconds time to application to react power events (>= Vista)
+          Thread.Sleep(100);
+        }
       }
+      SaveLastActiveModule();
+
+      Log.Debug("Main: OnSuspend - stopping input devices");
+      InputDevices.Stop();
+
+      Log.Debug("Main: OnSuspend - stopping AutoPlay");
+      AutoPlay.StopListening();
+
+      // un-mute volume in case we are suspending in away mode
+      if (IsInAwayMode && VolumeHandler.Instance.IsMuted)
+      {
+        Log.Debug("Main: OnSuspend - unmute volume");
+        VolumeHandler.Instance.UnMute();
+      }
+      VolumeHandler.Dispose();
+
+      // we only dispose the DB connection if the DB path is remote.      
+      Log.Debug("Main: OnSuspend - dispose DB connection");
+      DisposeDBs();
+
+      _suspended = true;
+      Log.Info("Main: OnSuspend - Done");
     }
-    SaveLastActiveModule();
-
-    Log.Debug("Main: OnSuspend - stopping input devices");
-    InputDevices.Stop();
-
-    Log.Debug("Main: OnSuspend - stopping AutoPlay");
-    AutoPlay.StopListening();
-      
-    // un-mute volume in case we are suspending in away mode
-    if (IsInAwayMode && VolumeHandler.Instance.IsMuted)
+    finally
     {
-      Log.Debug("Main: OnSuspend - unmute volume");
-      VolumeHandler.Instance.UnMute();
+      DispatchThreadMessages();
     }
-    VolumeHandler.Dispose();
-
-    // we only dispose the DB connection if the DB path is remote.      
-    Log.Debug("Main: OnSuspend - dispose DB connection");
-    DisposeDBs();
-
-    _suspended = true;
-    Log.Info("Main: OnSuspend - Done");
   }
 
   /// <summary>

@@ -157,6 +157,9 @@ namespace TvPlugin
     [SkinControl(14)]
     protected GUIButtonControl btnActiveRecordings = null;
 
+    private static List<Message> _listThreadMessages = new List<Message>();
+    private static readonly object _listThreadMessagesLock = new object();
+
     // error handling
     public class ChannelErrorInfo
     {
@@ -186,20 +189,20 @@ namespace TvPlugin
     protected static bool _playNotifyBeep = true;
     protected static int _preNotifyConfig = 60;
 
-    private static ManualResetEvent syncEvent;
-
     #endregion
 
     #region events & delegates
 
     private static event OnChannelChangedDelegate OnChannelChanged;
     private delegate void OnChannelChangedDelegate();
+    private static event ThreadMessageHandler OnThreadMessageHandler;
 
     #endregion
 
     #region delegates
 
     private delegate void StopPlayerMainThreadDelegate();
+    private delegate void ThreadMessageHandler(object sender, Message message);
 
     #endregion
 
@@ -1573,6 +1576,44 @@ namespace TvPlugin
       }
     }
 
+    private void DispatchThreadMessages()
+    {
+      if (_listThreadMessages.Count > 0)
+      {
+        List<Message> list;
+        lock (_listThreadMessagesLock) // need lock when switching queues
+        {
+          list = _listThreadMessages;
+          _listThreadMessages = new List<Message>();
+        }
+        for (int i = 0; i < list.Count; ++i)
+        {
+          Message message = list[i];
+          WndProc(ref message);
+        }
+      }
+    }
+
+    /// <summary>
+    /// send thread message. Same as sendmessage() however message is placed on a queue
+    /// which is processed later.
+    /// </summary>
+    /// <param name="message">new message to send</param>
+    private static void SendThreadMessage(ref Message message)
+    {
+      if (OnThreadMessageHandler != null)
+      {
+        OnThreadMessageHandler(null, message);
+      }
+      if (message != null)
+      {
+        lock (_listThreadMessagesLock)
+        {
+          _listThreadMessages.Add(message);
+        }
+      }
+    }
+
     #endregion
 
     public static void OnSelectGroup()
@@ -1679,6 +1720,7 @@ namespace TvPlugin
         _ServerNotConnectedHandled = false;
         _suspended = true;
         _resumed = false;
+        DispatchThreadMessages();
       }
     }
 
@@ -1733,31 +1775,11 @@ namespace TvPlugin
         {
           case PBT_APMSTANDBY:
             Log.Info("TVHome.WndProc(): Windows is going to standby");
-            syncEvent = new ManualResetEvent(false);
-            Thread t1 = new Thread(
-              () =>
-              {
-                OnSuspend();
-                syncEvent.Set();
-              }
-              );
-            t1.IsBackground = true;
-            t1.Name = "TVHome: PBT_APMSTANDBY thread";
-            t1.Start();
+            OnSuspend();
             break;
           case PBT_APMSUSPEND:
             Log.Info("TVHome.WndProc(): Windows is suspending");
-            syncEvent = new ManualResetEvent(false);
-            Thread t2 = new Thread(
-              () =>
-              {
-                OnSuspend();
-                syncEvent.Set();
-              }
-              );
-            t2.IsBackground = true;
-            t2.Name = "TVHome: PBT_APMSUSPEND thread";
-            t2.Start();
+            OnSuspend();
             break;
           case PBT_APMQUERYSUSPEND:
           case PBT_APMQUERYSTANDBY:
@@ -1765,33 +1787,25 @@ namespace TvPlugin
             break;
           case PBT_APMRESUMESUSPEND:
             Log.Info("TVHome.WndProc(): Windows has resumed from hibernate mode");
-            Thread t3 = new Thread(
-              () =>
-              {
-                if (syncEvent != null)
-                {
-                  syncEvent.WaitOne();
-                }
-                OnResume();
-              }
-              );
-            t3.IsBackground = true;
-            t3.Name = "TVHome: PBT_APMRESUMESUSPEND thread";
-            t3.Start();
+            if (!_suspended)
+            {
+              SendThreadMessage(ref msg);
+            }
+            else
+            {
+              OnResume();
+            }
             break;
           case PBT_APMRESUMESTANDBY:
             Log.Info("TVHome.WndProc(): Windows has resumed from standby mode");
-            Thread t4 = new Thread(
-              () =>
-              {
-                if (syncEvent != null)
-                {
-                  syncEvent.WaitOne();
-                }
-                OnResume();
-              }
-              );
-            t4.Start();
+            if (!_suspended)
+            {
+              SendThreadMessage(ref msg);
+            }
+            else
+            {
+              OnResume();
+            }
             break;
         }
       }

@@ -938,22 +938,16 @@ namespace DShowNET.Helper
                 {
                   try
                   {
-                    Log.Debug("DirectShowUtil: initialize new volume handler before instance part1");
                   #pragma warning disable 168
                     VolumeHandler vh = VolumeHandler.Instance;
-                    Log.Debug("DirectShowUtil: initialize new volume handler after instance part1");
                   #pragma warning restore 168
                     Log.Debug("DirectShowUtil: volume handler value {0}", vh.Volume);
                     // vh.Volume = 19660500 that means Audio endpoint device are not available.
                     if (vh.Volume == 19660500) // Check if new audio device is connected
                     {
-                      Log.Debug("DirectShowUtil: initialize new volume handler before dispose");
                       VolumeHandler.Dispose();
-                      Log.Debug("DirectShowUtil: initialize new volume handler after dispose");
                     #pragma warning disable 168
-                      Log.Debug("DirectShowUtil: initialize new volume handler before instance");
                       vh = VolumeHandler.Instance;
-                      Log.Debug("DirectShowUtil: initialize new volume handler after instance");
                     #pragma warning restore 168
                     }
                     if (vh.Volume != 19660500)

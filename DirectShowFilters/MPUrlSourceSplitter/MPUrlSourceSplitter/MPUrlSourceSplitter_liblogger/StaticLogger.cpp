@@ -57,6 +57,27 @@ CStaticLoggerContextCollection *CStaticLogger::GetLoggerContexts(void)
   return this->loggerContexts;
 }
 
+CStaticLoggerContext *CStaticLogger::GetLoggerContext(CLogger *logger)
+{
+  CStaticLoggerContext *context = NULL;
+
+  if (logger != NULL)
+  {
+    for (unsigned int i = 0; i < this->loggerContexts->Count(); i++)
+    {
+      CStaticLoggerContext *temp = this->loggerContexts->GetItem(i);
+
+      if (temp->GetMutex() == logger->GetMutex())
+      {
+        context = temp;
+        break;
+      }
+    }
+  }
+
+  return context;
+}
+
 /* set methods */
 
 /* other methods */
@@ -100,21 +121,13 @@ HANDLE CStaticLogger::Initialize(DWORD maxLogSize, unsigned int allowedLogVerbos
   return result;
 }
 
-void CStaticLogger::LogMessage(HANDLE mutex, unsigned int logLevel, const wchar_t *message)
+void CStaticLogger::LogMessage(CLogger *logger, unsigned int logLevel, const wchar_t *message)
 {
-  CStaticLoggerContext *context = NULL;
+  this->LogMessage(this->GetLoggerContext(logger), logLevel, message);
+}
 
-  for (unsigned int i = 0; i < this->loggerContexts->Count(); i++)
-  {
-    CStaticLoggerContext *temp = this->loggerContexts->GetItem(i);
-
-    if (temp->GetMutex() == mutex)
-    {
-      context = temp;
-      break;
-    }
-  }
-
+void CStaticLogger::LogMessage(CStaticLoggerContext *context, unsigned int logLevel, const wchar_t *message)
+{
   if (context != NULL)
   {
     if (logLevel <= context->GetAllowedLogVerbosity())
@@ -240,17 +253,26 @@ void CStaticLogger::Flush(void)
   assert(lock.IsLocked());
 
   unsigned int contextCount = this->loggerContexts->Count();
-  for (unsigned int i = 0; i < contextCount; i++)
+  CParameterCollection *temporaryMessages = new CParameterCollection();
+
+  for (unsigned int i = 0; ((temporaryMessages != NULL) && (i < contextCount)); i++)
   {
     CStaticLoggerContext *context = this->loggerContexts->GetItem(i);
 
-    unsigned int messagesCount = 0;
+    // in rare circumstances can be called Flush() method with LogMessage() method simultaneously
+    // in case that there is no space in internal memory for new message, then internal memory must be resized
+    // in rare case we can get another pointer to internal memory, which can lead to crash
+    // we need to copy all messages from context to temporary collection, process temporary collection and remove all processed messages from context
+
+    temporaryMessages->Clear();
 
     {
       CLockMutex lock(context->GetMutex(), INFINITE);
 
-      messagesCount = context->GetMessages()->Count();
+      temporaryMessages->Append(context->GetMessages());
     }
+
+    unsigned int messagesCount = temporaryMessages->Count();
 
     if (messagesCount > 0)
     {
@@ -280,7 +302,7 @@ void CStaticLogger::Flush(void)
           {
             for (unsigned int j = 0; j < messagesCount; j++)
             {
-              const wchar_t *message = context->GetMessages()->GetItem(j)->GetValue();
+              const wchar_t *message = temporaryMessages->GetItem(j)->GetValue();
               unsigned int messageSize = wcslen(message) * sizeof(wchar_t);
               
               if (((size.LowPart + bufferOccupied + messageSize) > bufferSize) && (context->GetLogBackupFile() != NULL))
@@ -329,11 +351,10 @@ void CStaticLogger::Flush(void)
       {
         CLockMutex lock(context->GetMutex(), INFINITE);
 
-        for (unsigned int j = 0; j < messagesCount; j++)
-        {
-          context->GetMessages()->Remove(0);
-        }
+        context->GetMessages()->Remove(0, messagesCount);
       }
     }
   }
+
+  FREE_MEM_CLASS(temporaryMessages);
 }

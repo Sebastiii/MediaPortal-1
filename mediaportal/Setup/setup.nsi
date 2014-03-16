@@ -520,8 +520,8 @@ Section "MediaPortal core files (required)" SecCore
   File "${git_DirectShowFilters}\bin_Win32\avutil-mpurlsourcesplitter-51.dll" 
   
   ; libbluray
-  SetOutPath "$MPdir.Base\lib"
-  File /nonfatal /r /x .git "${MEDIAPORTAL.BASE}\lib\*"
+  ;SetOutPath "$MPdir.Base\lib"
+  ;File /nonfatal /r /x .git "${MEDIAPORTAL.BASE}\lib\*"
 
   #---------------------------------------------------------------------------
   # FILTER REGISTRATION

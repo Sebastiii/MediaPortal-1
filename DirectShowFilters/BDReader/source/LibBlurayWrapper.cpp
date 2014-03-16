@@ -99,19 +99,20 @@ CLibBlurayWrapper::CLibBlurayWrapper() :
 
 CLibBlurayWrapper::~CLibBlurayWrapper()
 {
-  CAutoLock cRenderLock(&m_csRenderLock);
   CAutoLock cLibLock(&m_csLibLock);
 
   if (m_pBd)
   {
     _bd_register_overlay_proc(m_pBd, NULL, NULL);
+    _bd_register_argb_overlay_proc(m_pBd, NULL, NULL, NULL);
     _bd_close(m_pBd);
   }
 
-  if (m_pTitleInfo)
-    _bd_free_title_info(m_pTitleInfo);
+  CAutoLock cRenderLock(&m_csRenderLock);
 
-  m_pOverlayRenderer->SetD3DDevice(NULL);
+  if (m_pOverlayRenderer)
+    m_pOverlayRenderer->SetD3DDevice(NULL);
+
   delete m_pOverlayRenderer;
 
   FreeLibrary(m_hDLL);
@@ -119,29 +120,25 @@ CLibBlurayWrapper::~CLibBlurayWrapper()
 
 void CLibBlurayWrapper::StaticOverlayProc(void* this_gen, const BD_OVERLAY* const ov)
 {
-  //CAutoLock cRendertLock(&(((CLibBlurayWrapper *)this_gen)->m_csRenderLock));
-  ((CLibBlurayWrapper *)this_gen)->m_pOverlayRenderer->OverlayProc(ov);
+  CAutoLock cRendertLock(&(((CLibBlurayWrapper *)this_gen)->m_csRenderLock));
+  COverlayRenderer* pRenderer = ((CLibBlurayWrapper *)this_gen)->m_pOverlayRenderer;
+  if (pRenderer)
+    pRenderer->OverlayProc(ov);
 }
 
 void CLibBlurayWrapper::StaticARGBOverlayProc(void* this_gen, const BD_ARGB_OVERLAY* const ov)
 {
-  //CAutoLock cRendertLock(&(((CLibBlurayWrapper *)this_gen)->m_csRenderLock));
-  ((CLibBlurayWrapper *)this_gen)->m_pOverlayRenderer->ARGBOverlayProc(ov);
+  CAutoLock cRendertLock(&(((CLibBlurayWrapper *)this_gen)->m_csRenderLock));
+  COverlayRenderer* pRenderer = ((CLibBlurayWrapper *)this_gen)->m_pOverlayRenderer;
+  if (pRenderer)
+    pRenderer->ARGBOverlayProc(ov);
 }
 
 bool CLibBlurayWrapper::Initialize()
 {
   USES_CONVERSION;
 
-  if (_tputenv(_T("JAVA_HOME=")) != 0)
-  {
-    DWORD error = GetLastError();
-    LogDebug("Failed to remove the JAVA_HOME environment variable: %d", (int)error);
-
-    return false;
-  }
-
-  if (_tputenv(_T("LIBBLURAY_CP=libbluray-.jar")) != 0)
+  if (_tputenv(_T("LIBBLURAY_CP=libbluray.jar")) != 0)
   {
     DWORD error = GetLastError();
     LogDebug("Failed to set LIBBLURAY_CP environment variable: %d", (int)error);
@@ -371,6 +368,9 @@ bool CLibBlurayWrapper::CloseBluray()
     LogDebug("CLibBlurayWrapper - No disk has been opened!");
     return false;
   }
+
+  _bd_register_overlay_proc(m_pBd, NULL, NULL);
+  _bd_register_argb_overlay_proc(m_pBd, NULL, NULL, NULL);
 
   _bd_close(m_pBd);
   m_pBd = NULL;
@@ -1099,3 +1099,4 @@ void CLibBlurayWrapper::HandleOSDUpdate(OSDTexture& texture)
     ++it;
   }
 }
+

@@ -1,6 +1,7 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30110.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DvbCoreUtils", "DvbCoreUtils\DvbCoreUtils.vcxproj", "{4B134B4C-4EF6-4647-9CEA-A59FF0013357}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TsWriter", "TsWriter\MPTSWriter.vcxproj", "{FCF30D16-2C9E-4429-B605-4ACA43023E71}"
@@ -380,7 +381,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MPUrlSourceSplitter_Protoco
 		{88AA6FAE-FC98-4EF5-B491-87C8844F3DA3} = {88AA6FAE-FC98-4EF5-B491-87C8844F3DA3}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "freetype", "..\libbluray\3rd_party\freetype2\builds\win32\vc2010\freetype.vcxproj", "{78B079BD-9FC7-4B9E-B4A6-96DA0F00248B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "freetype", "..\libbluray\3rd_party\freetype2\builds\windows\vc2010\freetype.vcxproj", "{78B079BD-9FC7-4B9E-B4A6-96DA0F00248B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -135,7 +135,7 @@ CDeMultiplexer::CDeMultiplexer(CTsDuration& duration,CTsReaderFilter& filter)
 
   m_mpegPesParser = new CMpegPesParser();
 
-  m_pFileReadBuffer = new (std::nothrow) byte[READ_SIZE]; //~130ms of data @ 8Mbit/s
+  m_pFileReadBuffer = new byte[READ_SIZE]; //~130ms of data @ 8Mbit/s
   
   LogDebug(" ");
   LogDebug("=================== New filter instance ===========================");

@@ -64,9 +64,9 @@ MultiFileReader::MultiFileReader(BOOL useFileNext, BOOL useDummyWrites):
   m_TSFileNext.SetDummyWrites(false);
   m_TSFileGetLength.SetDummyWrites(false);
 
-  m_pFileReadNextBuffer = new (std::nothrow) byte[NEXT_READ_SIZE];
-  m_pInfoFileBuffer1 = new (std::nothrow) byte[INFO_BUFF_SIZE];
-  m_pInfoFileBuffer2 = new (std::nothrow) byte[INFO_BUFF_SIZE];
+  m_pFileReadNextBuffer = new byte[NEXT_READ_SIZE];
+  m_pInfoFileBuffer1 = new byte[INFO_BUFF_SIZE];
+  m_pInfoFileBuffer2 = new byte[INFO_BUFF_SIZE];
   
   LogDebug("MultiFileReader::ctor, useFileNext = %d, useDummyWrites %d", m_bUseFileNext, useDummyWrites);
 }

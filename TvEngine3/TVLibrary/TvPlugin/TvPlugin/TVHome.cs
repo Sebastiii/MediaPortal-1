@@ -116,6 +116,7 @@ namespace TvPlugin
     private static bool _preferAudioTypeOverLang = false;
     private static bool _autoFullScreen = false;
     private static bool _suspended = false;
+    private static bool _onSuspended = false;
     private static bool _resumed = false;
     private static bool _showlastactivemodule = false;
     private static bool _showlastactivemoduleFullscreen = false;
@@ -1692,9 +1693,10 @@ namespace TvPlugin
     {
       Log.Info("TVHome.OnSuspend()");
       // OnSuspend already in progress
-      if (_suspended && !_resumed)
+      if (_suspended)
       {
         Log.Info("TVHome: Suspend is already in progress");
+        _onSuspended = false;
         return;
       }
 
@@ -1719,6 +1721,7 @@ namespace TvPlugin
       {
         _ServerNotConnectedHandled = false;
         _suspended = true;
+        _onSuspended = false;
         _resumed = false;
         DispatchThreadMessages();
       }
@@ -1727,7 +1730,7 @@ namespace TvPlugin
     private void OnResume()
     {
       Log.Info("TVHome.OnResume()");
-      if (_resumed || !_suspended)
+      if (_resumed)
       {
         Log.Info("TVHome: Resuming is already in progress");
         return;
@@ -1775,10 +1778,12 @@ namespace TvPlugin
         {
           case PBT_APMSTANDBY:
             Log.Info("TVHome.WndProc(): Windows is going to standby");
+            _onSuspended = true;
             OnSuspend();
             break;
           case PBT_APMSUSPEND:
             Log.Info("TVHome.WndProc(): Windows is suspending");
+            _onSuspended = true;
             OnSuspend();
             break;
           case PBT_APMQUERYSUSPEND:
@@ -1787,7 +1792,7 @@ namespace TvPlugin
             break;
           case PBT_APMRESUMESUSPEND:
             Log.Info("TVHome.WndProc(): Windows has resumed from hibernate mode");
-            if (!_suspended)
+            if (_onSuspended)
             {
               SendThreadMessage(ref msg);
             }
@@ -1798,7 +1803,7 @@ namespace TvPlugin
             break;
           case PBT_APMRESUMESTANDBY:
             Log.Info("TVHome.WndProc(): Windows has resumed from standby mode");
-            if (!_suspended)
+            if (_onSuspended)
             {
               SendThreadMessage(ref msg);
             }

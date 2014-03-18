@@ -95,6 +95,8 @@ public class MediaPortalApp : D3D, IRender
   private bool                  _startWithBasicHome;
   private bool                  _useOnlyOneHome;
   private bool                  _suspended;
+  private bool                  _onSuspended;
+  private bool                  _resumed;
   private bool                  _ignoreContextMenuAction;
   private bool                  _supportsFiltering;
   private bool                  _supportsAlphaBlend;
@@ -1675,6 +1677,7 @@ public class MediaPortalApp : D3D, IRender
       {
         case PBT_APMSUSPEND:
           Log.Info("Main: Suspending operation");
+          _onSuspended = true;
           PrepareSuspend();
           OnSuspend();
           PluginManager.WndProc(ref msg);
@@ -1690,7 +1693,7 @@ public class MediaPortalApp : D3D, IRender
           // only for Windows XP
         case PBT_APMRESUMECRITICAL:
           Log.Info("Main: Resuming operation after a forced suspend");
-          if (!_suspended)
+          if (_onSuspended)
           {
             SendThreadMessage(ref msg);
           }
@@ -1704,7 +1707,7 @@ public class MediaPortalApp : D3D, IRender
 
         case PBT_APMRESUMESUSPEND:
           Log.Info("Main: Resuming operation after a suspend");
-          if (!_suspended)
+          if (_onSuspended)
           {
             SendThreadMessage(ref msg);
           }
@@ -2387,6 +2390,12 @@ public class MediaPortalApp : D3D, IRender
   /// </summary>
   private void OnSuspend()
   {
+    if (_suspended)
+    {
+      Log.Info("Main: OnSuspend is already in progress");
+      _onSuspended = false;
+      return;
+    }
     try
     {
       // stop playback
@@ -2427,6 +2436,8 @@ public class MediaPortalApp : D3D, IRender
     }
     finally
     {
+      _resumed = false;
+      _onSuspended = false;
       DispatchThreadMessages();
     }
   }
@@ -2458,6 +2469,11 @@ public class MediaPortalApp : D3D, IRender
   /// </summary>
   private void OnResumeSuspend()
   {
+    if (_resumed)
+    {
+      Log.Info("Main: OnResumeSuspend Resuming is already in progress");
+      return;
+    }
     // avoid screen saver after standby
     GUIGraphicsContext.ResetLastActivity();
     _ignoreContextMenuAction = false;
@@ -2495,6 +2511,7 @@ public class MediaPortalApp : D3D, IRender
     }
 
     _suspended = false;
+    _resumed = true;
     _lastOnresume = DateTime.Now;
     Log.Info("Main: OnResumeSuspend - Done");
   }

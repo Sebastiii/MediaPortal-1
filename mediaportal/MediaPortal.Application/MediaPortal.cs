@@ -1679,8 +1679,8 @@ public class MediaPortalApp : D3D, IRender
           Log.Info("Main: Suspending operation");
           _onSuspended = true;
           PrepareSuspend();
-          OnSuspend();
           PluginManager.WndProc(ref msg);
+          OnSuspend();
           break;
 
           // When resuming from hibernation, the OS always assume that a user is present. This is by design of Windows.
@@ -1783,8 +1783,9 @@ public class MediaPortalApp : D3D, IRender
       }
       msg.Result = (IntPtr) 1;
     }
-    catch (System.Exception)
+    catch (System.Exception ex)
     {
+      Log.Error("Main: Exception catch on OnPowerBroadcast : {0}", ex);
     }
   }
 

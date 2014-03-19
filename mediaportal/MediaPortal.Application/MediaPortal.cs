@@ -1686,7 +1686,14 @@ public class MediaPortalApp : D3D, IRender
           // When resuming from hibernation, the OS always assume that a user is present. This is by design of Windows.
         case PBT_APMRESUMEAUTOMATIC:
           Log.Info("Main: Resuming operation");
-          OnResumeAutomatic();
+          if (_onSuspended)
+          {
+            SendThreadMessage(ref msg);
+          }
+          else
+          {
+            OnResumeSuspend();
+          }
           PluginManager.WndProc(ref msg);
           break;
 
@@ -1699,7 +1706,6 @@ public class MediaPortalApp : D3D, IRender
           }
           else
           {
-            OnResumeAutomatic();
             OnResumeSuspend();
           }
           PluginManager.WndProc(ref msg);
@@ -2474,6 +2480,10 @@ public class MediaPortalApp : D3D, IRender
       Log.Info("Main: OnResumeSuspend Resuming is already in progress");
       return;
     }
+
+    // Reopen DB and activation Startup delay if user use it.
+    OnResumeAutomatic();
+
     // avoid screen saver after standby
     GUIGraphicsContext.ResetLastActivity();
     _ignoreContextMenuAction = false;

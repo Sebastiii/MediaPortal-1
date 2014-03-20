@@ -137,21 +137,22 @@ void CLibBlurayWrapper::StaticARGBOverlayProc(void* this_gen, const BD_ARGB_OVER
 bool CLibBlurayWrapper::Initialize()
 {
   USES_CONVERSION;
+  TCHAR szDirectory[MAX_PATH] = _T("");
+  TCHAR szJAR[MAX_PATH] = _T("");
+  TCHAR szPath[MAX_PATH] = _T("");
+  GetModuleFileName(NULL, szPath, sizeof(szPath)-1);
 
-  if (_tputenv(_T("LIBBLURAY_CP=libbluray.jar")) != 0)
+  _tcsncpy(szDirectory, szPath, _tcsrchr(szPath, '\\') - szPath);
+  szDirectory[_tcslen(szDirectory)] = '\0';
+
+  _stprintf_s(szJAR, _T("LIBBLURAY_CP=%s\\libbluray.jar"), szDirectory);
+  if (_tputenv(szJAR) != 0)
   {
     DWORD error = GetLastError();
     LogDebug("Failed to set LIBBLURAY_CP environment variable: %d", (int)error);
 
     return false;
   }
-
-  TCHAR szDirectory[MAX_PATH] = _T("");
-  TCHAR szPath[MAX_PATH] = _T("");
-  GetModuleFileName(NULL, szPath, sizeof(szPath) - 1);
-
-  _tcsncpy(szDirectory, szPath, _tcsrchr(szPath, '\\') - szPath);
-  szDirectory[_tcslen(szDirectory)] = '\0';
 
   _stprintf_s(szDirectory, _T("%s\\bluray.dll"), szDirectory);
   LogDebug("CLibBlurayWrapper - Load bluray: %s", szDirectory);

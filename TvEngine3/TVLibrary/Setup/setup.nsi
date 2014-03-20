@@ -280,6 +280,52 @@ ShowUninstDetails show
   ${EndIf}
 !macroend
 
+!macro SecMpeInstaller
+  ${LOG_TEXT} "INFO" "MediaPortal Extension Installer..."
+
+  ; install files
+  SetOutPath "$INSTDIR"
+  File "${git_MP}\MPE\MpeCore\bin\${BUILD_TYPE}\MpeCore.dll"
+  File "${git_MP}\MPE\MpeInstaller\bin\${BUILD_TYPE}\MpeInstaller.exe"
+  ;File "${git_MP}\MPE\MpeMaker\bin\${BUILD_TYPE}\MpeMaker.exe"
+  File "${git_MP}\Utils\bin\${BUILD_TYPE}\Utils.dll"
+  File "${git_MP}\core\bin\${BUILD_TYPE}\Core.dll"
+
+  ; create startmenu shortcuts
+  ${If} $noDesktopSC != 1
+    CreateShortCut "$DESKTOP\MediaPortal Extension Installer.lnk" "$INSTDIR\MpeInstaller.exe"  ""  "$INSTDIR\MpeInstaller.exe"  0 "" "" "MediaPortal Extension Installer"
+  ${EndIf}
+  CreateDirectory "${STARTMENU_GROUP}"
+  CreateShortCut "${STARTMENU_GROUP}\MediaPortal Extension Installer.lnk" "$INSTDIR\MpeInstaller.exe"  ""  "$INSTDIR\MpeInstaller.exe"  0 "" "" "MediaPortal Extension Installer"
+
+  ; associate file extensions
+  ${RegisterExtension} "$INSTDIR\MpeInstaller.exe" ".mpe1" "MediaPortal extension"
+
+  ${RefreshShellIcons}
+!macroend
+
+!macro Remove_SecMpeInstaller
+  ${LOG_TEXT} "INFO" "Uninstalling MediaPortal Extension Installer..."
+
+  ; remove files
+  Delete "$INSTDIR\MpeCore.dll"
+  Delete "$INSTDIR\MpeInstaller.exe"
+  Delete "$INSTDIR\MpeMaker.exe"
+  Delete "$INSTDIR\Utils.dll"
+  Delete "$INSTDIR\Core.dll"
+
+  ; remove startmenu shortcuts
+  Delete "$DESKTOP\MediaPortal Extension Installer.lnk"
+  Delete "${STARTMENU_GROUP}\MediaPortal Extension Installer.lnk"
+  ;Delete "${STARTMENU_GROUP}\MediaPortal Extension Maker.lnk"
+
+  ; unassociate file extensions
+  ${UnRegisterExtension} ".mpe1" "MediaPortal extension"
+  ${UnRegisterExtension} ".xmp2"  "MediaPortal extension project"
+
+  ${RefreshShellIcons}
+!macroend
+
 Function RunUninstaller
 
   ${VersionCompare} 1.0.2.22779 $PREVIOUS_VERSION $R0
@@ -366,6 +412,10 @@ ${MementoSection} "MediaPortal TV Server" SecServer
   ${KillProcess} "SetupTv.exe"
   ; ffmpeg
   ${KillProcess} "ffmpeg.exe"
+  
+  ${IfNot} ${MPIsInstalled}
+    !insertmacro SecMpeInstaller
+  ${EndIf}
 
   SetOverwrite on
 
@@ -657,6 +707,11 @@ ${MementoSectionEnd}
   Delete "${STARTMENU_GROUP}\web site.url"
   ; remove Desktop shortcuts
   Delete "$DESKTOP\TV-Server Configuration.lnk"
+  
+  ${IfNot} ${MPIsInstalled}
+    !insertmacro Remove_SecMpeInstaller
+  ${EndIf}
+  
 !macroend
 
 ${MementoSection} "MediaPortal TV Client plugin" SecClient

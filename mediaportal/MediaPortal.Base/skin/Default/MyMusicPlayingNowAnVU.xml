@@ -565,7 +565,7 @@
       <height>66</height>
       <imagepath>Animations\AnVu</imagepath>
       <texture>#VUMeterL</texture>
-	  <shouldCache>true</shouldCache>
+      <shouldCache>true</shouldCache>
       <visible>Player.playing+!Player.paused</visible>
     </control>
     <control>
@@ -587,7 +587,7 @@
       <height>66</height>
       <imagepath>Animations\AnVu</imagepath>
       <texture>#VUMeterR</texture>
-	  <shouldCache>true</shouldCache>
+      <shouldCache>true</shouldCache>
       <visible>Player.playing+!Player.paused</visible>
     </control>
   </controls>

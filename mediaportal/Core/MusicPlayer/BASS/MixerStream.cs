@@ -825,7 +825,7 @@ namespace MediaPortal.MusicPlayer.BASS
         Log.Error("BASS: Caught AccessViolationException in Playback End Proc");
       }
     }
-    
+
     #endregion
 
     #region IDisposable Members

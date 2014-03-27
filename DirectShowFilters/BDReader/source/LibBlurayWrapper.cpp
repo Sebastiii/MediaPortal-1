@@ -137,15 +137,23 @@ void CLibBlurayWrapper::StaticARGBOverlayProc(void* this_gen, const BD_ARGB_OVER
 bool CLibBlurayWrapper::Initialize()
 {
   USES_CONVERSION;
+
   TCHAR szDirectory[MAX_PATH] = _T("");
   TCHAR szJAR[MAX_PATH] = _T("");
   TCHAR szPath[MAX_PATH] = _T("");
-  GetModuleFileName(NULL, szPath, sizeof(szPath)-1);
+  GetModuleFileName(NULL, szPath, sizeof(szPath) - 1);
 
   _tcsncpy(szDirectory, szPath, _tcsrchr(szPath, '\\') - szPath);
   szDirectory[_tcslen(szDirectory)] = '\0';
 
-  _stprintf_s(szJAR, _T("LIBBLURAY_CP=%s\\libbluray.jar"), szDirectory);
+  if (_stprintf_s(szJAR, _T("LIBBLURAY_CP=%s\\libbluray.jar"), szDirectory) == -1)
+  {
+    DWORD error = GetLastError();
+    LogDebug("Failed to format szJAR: %d", (int)error);
+
+    return false;
+  }
+
   if (_tputenv(szJAR) != 0)
   {
     DWORD error = GetLastError();

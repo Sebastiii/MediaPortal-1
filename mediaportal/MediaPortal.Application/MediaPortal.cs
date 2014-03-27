@@ -1465,7 +1465,22 @@ public class MediaPortalApp : D3D, IRender
 
         // power management
         case WM_POWERBROADCAST:
-          OnPowerBroadcast(ref msg);
+          if (_onSuspended)
+          {
+            if (_listThreadMessages.Count == 1)
+            {
+              DispatchThreadMessages();
+            }
+            else if (_listThreadMessages.Count == 0)
+            {
+              SendThreadMessage(ref msg);
+            }
+          }
+          else
+          {
+            _onSuspended = true;
+            OnPowerBroadcast(ref msg);
+          }
           break;
 
         // set maximum and minimum form size in windowed mode
@@ -1677,7 +1692,6 @@ public class MediaPortalApp : D3D, IRender
       {
         case PBT_APMSUSPEND:
           Log.Info("Main: Suspending operation");
-          _onSuspended = true;
           PrepareSuspend();
           PluginManager.WndProc(ref msg);
           OnSuspend();
@@ -1686,11 +1700,6 @@ public class MediaPortalApp : D3D, IRender
           // When resuming from hibernation, the OS always assume that a user is present. This is by design of Windows.
         case PBT_APMRESUMEAUTOMATIC:
           Log.Info("Main: Resuming operation");
-          if (_onSuspended)
-          {
-            SendThreadMessage(ref msg);
-          }
-          else
           {
             OnResumeSuspend();
           }
@@ -1700,11 +1709,6 @@ public class MediaPortalApp : D3D, IRender
           // only for Windows XP
         case PBT_APMRESUMECRITICAL:
           Log.Info("Main: Resuming operation after a forced suspend");
-          if (_onSuspended)
-          {
-            SendThreadMessage(ref msg);
-          }
-          else
           {
             OnResumeSuspend();
           }
@@ -1713,11 +1717,6 @@ public class MediaPortalApp : D3D, IRender
 
         case PBT_APMRESUMESUSPEND:
           Log.Info("Main: Resuming operation after a suspend");
-          if (_onSuspended)
-          {
-            SendThreadMessage(ref msg);
-          }
-          else
           {
             OnResumeSuspend();
           }
@@ -1740,6 +1739,8 @@ public class MediaPortalApp : D3D, IRender
                 IsInAwayMode = true;
                 break;
             }
+            _onSuspended = false;
+            DispatchThreadMessages();
           }
             // GUID_SESSION_DISPLAY_STATUS is only provided on Win8 and above
           else if ((ps.PowerSetting == GUID_MONITOR_POWER_ON || ps.PowerSetting == GUID_SESSION_DISPLAY_STATUS) &&
@@ -1761,6 +1762,8 @@ public class MediaPortalApp : D3D, IRender
                 IsDisplayTurnedOn = true;
                 break;
             }
+            _onSuspended = false;
+            DispatchThreadMessages();
           }
             // GUIT_SESSION_USER_PRESENCE is only provide on Win8 and above
           else if (ps.PowerSetting == GUID_SESSION_USER_PRESENCE && ps.DataLength == Marshal.SizeOf(typeof (Int32)))
@@ -1777,6 +1780,8 @@ public class MediaPortalApp : D3D, IRender
                 IsUserPresent = false;
                 break;
             }
+            _onSuspended = false;
+            DispatchThreadMessages();
           }
           PluginManager.WndProc(ref msg);
           break;
@@ -2401,6 +2406,7 @@ public class MediaPortalApp : D3D, IRender
     {
       Log.Info("Main: OnSuspend is already in progress");
       _onSuspended = false;
+      DispatchThreadMessages();
       return;
     }
     try
@@ -2479,6 +2485,8 @@ public class MediaPortalApp : D3D, IRender
     if (_resumed)
     {
       Log.Info("Main: OnResumeSuspend Resuming is already in progress");
+      _onSuspended = false;
+      DispatchThreadMessages();
       return;
     }
 
@@ -2525,6 +2533,8 @@ public class MediaPortalApp : D3D, IRender
     _resumed = true;
     _lastOnresume = DateTime.Now;
     Log.Info("Main: OnResumeSuspend - Done");
+    _onSuspended = false;
+    DispatchThreadMessages();
   }
 
   #endregion

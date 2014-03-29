@@ -747,47 +747,47 @@ namespace MediaPortal.MusicPlayer.BASS
 
     private  void CommandThread()
     {
-      try
+      lock (this)
       {
-        bool exitThread = false;
-
-        while (!exitThread)
+        try
         {
-          _commandNotify.Wait();
-          _commandNotify.Reset();
+          bool exitThread = false;
 
-          lock (_commandQueueSync)
+          while (!exitThread)
           {
-            if (_commandQueue.Count == 0)
+            _commandNotify.Wait();
+            _commandNotify.Reset();
+
+            lock (_commandQueueSync)
             {
-              // No commands in queue, wait for queue to receive events
-              continue;
-            }
-            else // Process the 1st command in the queue
-            {
+              if (_commandQueue.Count == 0)
+              {
+                // No commands in queue, wait for queue to receive events
+                continue;
+              }
               QueueItem item = _commandQueue[0];
               _commandQueue.RemoveAt(0);
-              switch ((int)item.cmd)
+              switch ((int) item.cmd)
               {
-                case (int)PlaybackCommand.Stop:
+                case (int) PlaybackCommand.Stop:
                   StopCommand();
                   break;
 
-                case (int)PlaybackCommand.ExitThread:
+                case (int) PlaybackCommand.ExitThread:
                   exitThread = true;
                   break;
 
                 default:
-                  Log.Error("BASS: CommandThread unknown command {0}", (int)item.cmd);
+                  Log.Error("BASS: CommandThread unknown command {0}", (int) item.cmd);
                   continue;
               }
             }
           }
         }
-      }
-      catch(Exception ex)
-      {
-        Log.Error("BASS: CommandThread exception {0}", ex);
+        catch (Exception ex)
+        {
+          Log.Error("BASS: CommandThread exception {0}", ex);
+        }
       }
     }
 

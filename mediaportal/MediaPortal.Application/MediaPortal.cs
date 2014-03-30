@@ -1639,7 +1639,7 @@ public class MediaPortalApp : D3D, IRender
 
   private void PowerBroadcastThread()
   {
-    int lastMsgType = 0;
+    bool resuming = false;
     int msgType;
     Message msg;
 
@@ -1661,7 +1661,7 @@ public class MediaPortalApp : D3D, IRender
       {
         case PBT_APMSUSPEND:
           Log.Info("PowerBroadcastThread: Suspending operation");
-          lastMsgType = msgType;
+          resuming = false;
           PrepareSuspend();
           PluginManager.WndProc(ref msg);
           OnSuspend();
@@ -1669,12 +1669,12 @@ public class MediaPortalApp : D3D, IRender
 
         case PBT_APMRESUMEAUTOMATIC:
           Log.Info("PowerBroadcastThread: Resuming operation");
-          if (lastMsgType != PBT_APMRESUMESUSPEND)
+          if (!resuming)
           {
             if (DelayResume())
               break;  // delay was cancelled
           }
-          lastMsgType = msgType;
+          resuming = !resuming;
           OnResumeAutomatic();
           PluginManager.WndProc(ref msg);
           break;
@@ -1683,7 +1683,6 @@ public class MediaPortalApp : D3D, IRender
           Log.Info("PowerBroadcastThread: Resuming operation after a forced suspend");
           if (DelayResume())
             break;  // delay was cancelled
-          lastMsgType = msgType;
           OnResumeAutomatic();
           OnResumeSuspend();
           PluginManager.WndProc(ref msg);
@@ -1691,18 +1690,17 @@ public class MediaPortalApp : D3D, IRender
 
         case PBT_APMRESUMESUSPEND:
           Log.Info("PowerBroadcastThread: Resuming operation on user action");
-          if (lastMsgType != PBT_APMRESUMEAUTOMATIC)
+          if (!resuming)
           {
             if (DelayResume())
               break;  // delay was cancelled
           }
-          lastMsgType = msgType;
+          resuming = !resuming;
           OnResumeSuspend();
           PluginManager.WndProc(ref msg);
           break;
 
         case PBT_POWERSETTINGCHANGE:
-          lastMsgType = msgType;
           var ps = (POWERBROADCAST_SETTING)Marshal.PtrToStructure(msg.LParam, typeof(POWERBROADCAST_SETTING));
 
           if (ps.PowerSetting == GUID_SYSTEM_AWAYMODE && ps.DataLength == Marshal.SizeOf(typeof(Int32)))

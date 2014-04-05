@@ -1794,8 +1794,6 @@ namespace TvDatabase
       SqlStatement stmt = new SqlBuilder(StatementType.Select, typeof (Program)).GetStatement(true);
       SqlStatement ManualJoinSQL = new SqlStatement(StatementType.Select, stmt.Command, SqlSelectCommand.ToString(),
                                                     typeof (Program));
-      //Log.Debug("SearchPrograms: {0}", SqlSelectCommand.ToString());
-
       return ObjectFactory.GetCollection<Program>(ManualJoinSQL.Execute());
     }
 

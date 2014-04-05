@@ -1045,7 +1045,6 @@ namespace TvPlugin
         case SearchMode.Genre:
           if (currentLevel == 0)
           {
-            //filterLetter = "#";
             filterShow = String.Empty;
             filterEpisode = String.Empty;
             currentGenre = item.Label;

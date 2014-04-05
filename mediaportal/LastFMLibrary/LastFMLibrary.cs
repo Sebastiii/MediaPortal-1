@@ -566,18 +566,25 @@ namespace MediaPortal.LastFM
 
         if (!webExceptionStatus)
         {
-          using (var stream = response.GetResponseStream())
-          using (var reader = new StreamReader(stream, Encoding.UTF8))
+          try
           {
-            var resp = reader.ReadToEnd();
-            xDoc = XDocument.Parse(resp);
-          }
+            using (var stream = response.GetResponseStream())
+            using (var reader = new StreamReader(stream, Encoding.UTF8))
+            {
+              var resp = reader.ReadToEnd();
+              xDoc = XDocument.Parse(resp);
+            }
 
-          if ((string) xDoc.Root.Attribute("status") != "ok")
-          {
-            throw GetLastFMException(xDoc);
+            if ((string)xDoc.Root.Attribute("status") != "ok")
+            {
+              throw GetLastFMException(xDoc);
+            }
+            return xDoc;
           }
-          return xDoc;
+          catch (Exception ex)
+          {
+            return null;
+          }
         }
       }
       return null;

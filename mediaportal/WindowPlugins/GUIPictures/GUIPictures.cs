@@ -714,7 +714,7 @@ namespace MediaPortal.GUI.Pictures
         }
         else
         {
-          GUIControl.SelectItemControl(GetID, facadeLayout.GetID, 0);
+          GUIControl.SelectItemControl(GetID, facadeLayout.GetID, selectedItemIndex);
         }
       }
       btnSortBy.SortChanged += new SortEventHandler(SortChanged);

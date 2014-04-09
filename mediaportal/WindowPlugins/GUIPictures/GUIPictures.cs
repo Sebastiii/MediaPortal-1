@@ -2419,6 +2419,12 @@ namespace MediaPortal.GUI.Pictures
               Util.Utils.SetDefaultIcons(item);
               item.OnRetrieveArt += new GUIListItem.RetrieveCoverArtHandler(OnRetrieveCoverArt);
               item.OnItemSelected += new GUIListItem.ItemSelectedHandler(item_OnItemSelected);
+
+              if (!WakeUpSrv(pic))
+              {
+                return;
+              }
+
               item.FileInfo = new FileInformation(pic, false);
               facadeLayout.Add(item);
             }
@@ -2453,6 +2459,12 @@ namespace MediaPortal.GUI.Pictures
                 Util.Utils.SetDefaultIcons(item);
                 item.OnRetrieveArt += new GUIListItem.RetrieveCoverArtHandler(OnRetrieveCoverArt);
                 item.OnItemSelected += new GUIListItem.ItemSelectedHandler(item_OnItemSelected);
+
+                if (!WakeUpSrv(pic))
+                {
+                  return;
+                }
+
                 item.FileInfo = new FileInformation(pic, false);
                 facadeLayout.Add(item);
               }

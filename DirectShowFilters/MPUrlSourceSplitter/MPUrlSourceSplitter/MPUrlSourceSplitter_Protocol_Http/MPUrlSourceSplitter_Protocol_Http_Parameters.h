@@ -34,6 +34,6 @@
 #define HTTP_COOKIE_FORMAT_PARAMETER_NAME                         L"HttpCookie%08u"
 
 // we should get data in twenty seconds
-#define HTTP_RECEIVE_DATA_TIMEOUT_DEFAULT                         3000
+#define HTTP_RECEIVE_DATA_TIMEOUT_DEFAULT                         20000
 
 #endif

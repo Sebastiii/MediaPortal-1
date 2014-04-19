@@ -32,7 +32,7 @@
 #define PARAMETER_NAME_RTSP_IGNORE_RTP_PAYLOAD_TYPE                   L"RtspIgnoreRtpPayloadType"
 
 // we should get data in twenty seconds
-#define RTSP_RECEIVE_DATA_TIMEOUT_DEFAULT                             3000
+#define RTSP_RECEIVE_DATA_TIMEOUT_DEFAULT                             20000
 
 #define RTSP_MULTICAST_PREFERENCE_DEFAULT                             2
 #define RTSP_UDP_PREFERENCE_DEFAULT                                   1

@@ -529,7 +529,8 @@ namespace TvLibrary.Implementations.DVB
         _mapSubChannels[subChannelId].OnAfterTune();
       }
       catch (Exception ex)
-      {        
+      {
+        _cancelTune = false;
         if (newSubChannel)
         {
           Log.Log.WriteFile("dvb:SubmitTuneRequest  failed - removing subchannel: {0}, {1} - {2}", subChannelId, ex.Message, ex.StackTrace);
@@ -856,6 +857,7 @@ namespace TvLibrary.Implementations.DVB
           dvbChannel.CancelTune();
         }
       }
+      _cancelTune = false;
     }
 
     //protected Dictionary<int, TvDvbChannel> _mapSubChannels;

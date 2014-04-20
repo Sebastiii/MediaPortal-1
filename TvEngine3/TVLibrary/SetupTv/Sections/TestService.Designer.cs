@@ -66,6 +66,7 @@ namespace SetupTv.Sections
       this.mpComboBoxChannels = new SetupControls.ComboBoxEx();
       this.comboBoxGroups = new SetupControls.ComboBoxEx();
       this.mpLabel2 = new MediaPortal.UserInterface.Controls.MPLabel();
+      this.chkASynch = new MediaPortal.UserInterface.Controls.MPCheckBox();
       this.mpGroupBox1.SuspendLayout();
       this.SuspendLayout();
       // 
@@ -411,10 +412,25 @@ namespace SetupTv.Sections
       this.mpLabel2.TabIndex = 62;
       this.mpLabel2.Text = "Group:";
       // 
+      // chkASynch
+      // 
+      this.chkASynch.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+      this.chkASynch.AutoSize = true;
+      this.chkASynch.Checked = true;
+      this.chkASynch.CheckState = System.Windows.Forms.CheckState.Checked;
+      this.chkASynch.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+      this.chkASynch.Location = new System.Drawing.Point(377, 195);
+      this.chkASynch.Name = "chkASynch";
+      this.chkASynch.Size = new System.Drawing.Size(81, 17);
+      this.chkASynch.TabIndex = 75;
+      this.chkASynch.Text = "Tune Async";
+      this.chkASynch.UseVisualStyleBackColor = true;
+      // 
       // TestService
       // 
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+      this.Controls.Add(this.chkASynch);
       this.Controls.Add(this.mpLabel2);
       this.Controls.Add(this.comboBoxGroups);
       this.Controls.Add(this.mpButtonReGrabEpg);
@@ -472,5 +488,6 @@ namespace SetupTv.Sections
     private MediaPortal.UserInterface.Controls.MPNumericTextBox txtBytes;
     private System.Windows.Forms.Label label3;
     private System.Windows.Forms.ColumnHeader subchannels;
+    private MediaPortal.UserInterface.Controls.MPCheckBox chkASynch;
   }
 }

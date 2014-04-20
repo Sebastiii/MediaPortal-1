@@ -80,6 +80,10 @@ namespace TvPlugin
 
     #region variables
 
+    private static SynchronizationContext _mainThreadContext = SynchronizationContext.Current;
+    private static int _currentChannelIdForTune = 0;
+    private static int _currentChannelIdPendingTune = 0;
+
     private enum Controls
     {
       IMG_REC_CHANNEL = 21,
@@ -223,7 +227,7 @@ namespace TvPlugin
     }
 
     public bool GetHome(out string strButtonText, out string strButtonImage, out string strButtonImageFocus,
-                        out string strPictureImage)
+      out string strPictureImage)
     {
       // TODO:  Add TVHome.GetHome implementation
       strButtonText = GUILocalizeStrings.Get(605);
@@ -635,6 +639,8 @@ namespace TvPlugin
       base.OnPageDestroy(newWindowId);
     }
 
+    private static bool _tunePending = false;
+
     protected override void OnClicked(int controlId, GUIControl control, Action.ActionType actionType)
     {
       Stopwatch benchClock = null;
@@ -663,6 +669,25 @@ namespace TvPlugin
 
       if (control == btnTvOnOff)
       {
+        if (_tunePending)
+        {
+          IUser currentUser;
+          VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
+          if (card != null && card.IsTunerLocked)
+          {
+            RemoteControl.Instance.CancelTimeShifting(ref currentUser);
+          }
+        }
+        //if (_tunePending && control.Selected)
+        //{
+        //  IUser userCopy = Card.User.Clone() as IUser;
+        //  //Card.User.Name = new User().Name;
+        //  //Card.StopTimeShifting();
+        //  RemoteControl.Instance.StopTimeShifting(ref userCopy);
+        //  control.Selected = false;
+        //  return;
+        //}
+
         if (Card.IsTimeShifting && g_Player.IsTV && g_Player.Playing)
         {
           // tv off
@@ -3288,7 +3313,7 @@ namespace TvPlugin
         }
       }
       else if (g_Player.IsTVRecording && _userChannelChanged)
-      //we are watching a recording, we have now issued a ch. change..stop the player.
+        //we are watching a recording, we have now issued a ch. change..stop the player.
       {
         _userChannelChanged = false;
         g_Player.Stop(true);
@@ -3302,7 +3327,7 @@ namespace TvPlugin
       if (Card != null)
       {
         if (g_Player.Playing && g_Player.IsTV && !g_Player.IsTVRecording)
-        //modified by joboehl. Avoids other video being played instead of TV. 
+          //modified by joboehl. Avoids other video being played instead of TV. 
         {
           //if we're already watching this channel, then simply return
           if (Card.IsTimeShifting == true && Card.IdChannel == channel.IdChannel)
@@ -3324,26 +3349,22 @@ namespace TvPlugin
     /// <returns></returns>
     public static bool ViewChannelAndCheck(Channel channel)
     {
-      bool checkResult;
-      bool doContinue;
-
       if (!Connected)
       {
         return false;
       }
-
       _status.Clear();
-
       _doingChannelChange = false;
 
       try
       {
-        checkResult = PreTuneChecks(channel, out doContinue);
+        //_tunePending = true;
+        bool doContinue;
+        bool checkResult = PreTuneChecks(channel, out doContinue);
         if (doContinue == false)
           return checkResult;
 
         _doingChannelChange = true;
-        TvResult succeeded;
 
 
         IUser user = new User();
@@ -3359,7 +3380,6 @@ namespace TvPlugin
 
         //Start timeshifting the new tv channel
         TvServer server = new TvServer();
-        VirtualCard card;
         int newCardId = -1;
 
         // check which card will be used
@@ -3376,14 +3396,14 @@ namespace TvPlugin
         if (_status.AllSet(LiveTvStatus.WasPlaying | LiveTvStatus.CardChange))
         {
           Log.Debug("TVHome.ViewChannelAndCheck(): Stopping player. CardId:{0}/{1}, RTSP:{2}", Card.Id, newCardId,
-                    Card.RTSPUrl);
+            Card.RTSPUrl);
           Log.Debug("TVHome.ViewChannelAndCheck(): Stopping player. Timeshifting:{0}", Card.TimeShiftFileName);
           Log.Debug("TVHome.ViewChannelAndCheck(): rebuilding graph (card changed) - timeshifting continueing.");
         }
         if (_status.IsSet(LiveTvStatus.WasPlaying))
         {
           RenderBlackImage();
-          g_Player.PauseGraph();
+          //g_Player.PauseGraph();
         }
         else
         {
@@ -3398,31 +3418,264 @@ namespace TvPlugin
         {
           g_Player.OnZapping(0x80); // Setup Zapping for TsReader, requesting new PAT from stream
         }
-        bool cardChanged = false;
-        succeeded = server.StartTimeShifting(ref user, channel.IdChannel, out card, out cardChanged);
 
-        if (_status.IsSet(LiveTvStatus.WasPlaying))
+        ThreadStart work = () => DoAsynchTune(ref user, channel);
+        var tuneThread = new Thread(work) {Name = "Async Tune Thread for channel " + channel};
+        tuneThread.Start();
+
+        return true;
+      }
+      catch (Exception ex)
+      {
+        Log.Error("TvPlugin:ViewChannelandCheckV2 Exception {0}", ex);
+        _doingChannelChange = false;
+        Card.User.Name = new User().Name;
+        g_Player.Stop();
+        Card.StopTimeShifting();
+        return false;
+      }
+    }
+
+    private static bool _guiWaitCursorActive;
+    private static object _guiWaitCursorLock = new object();
+
+    private static void GUIWaitCursorHide()
+    {
+      _mainThreadContext.Send(delegate
+                              {
+                                if (!_guiWaitCursorActive)
+                                {
+                                  return;
+                                }
+                                lock (_guiWaitCursorLock)
+                                {
+                                  if (_guiWaitCursorActive)
+                                  {
+                                    GUIWaitCursor.Hide();
+                                    _guiWaitCursorActive = false;
+                                  }
+                                }
+                              }, null);
+    }
+
+
+    private static void GUIWaitCursorShow()
+    {
+      _mainThreadContext.Send(delegate
+                              {
+                                if (_guiWaitCursorActive)
+                                {
+                                  return;
+                                }
+                                lock (_guiWaitCursorLock)
+                                {
+                                  if (!_guiWaitCursorActive)
+                                  {
+                                    GUIWaitCursor.Show();
+                                    _guiWaitCursorActive = true;
+                                  }
+                                }
+                              }, null);
+    }
+
+    private static readonly object _asyncTuneLock = new object();
+
+    /// <summary>
+    /// returns the virtualcard which is timeshifting the channel specified
+    /// </summary>
+    /// <param name="channelId">Id of the channel</param>
+    /// <returns>virtual card</returns>
+    private static VirtualCard GetCardTimeShiftingChannel(int channelId, out IUser users)
+    {
+      IList<Card> cards = TvDatabase.Card.ListAll();
+      foreach (Card card in cards)
+      {
+        if (card.Enabled == false) continue;
+        if (!RemoteControl.Instance.CardPresent(card.IdCard)) continue;
+        IUser[] usersForCard = RemoteControl.Instance.GetUsersForCard(card.IdCard);
+        if (usersForCard == null) continue;
+        if (usersForCard.Length == 0) continue;
+        for (int i = 0; i < usersForCard.Length; ++i)
         {
-          if (card != null)
-            g_Player.OnZapping((int)card.Type);
-          else
-            g_Player.OnZapping(-1);
+          if (usersForCard[i].IdChannel == channelId)
+          {
+            VirtualCard vcard = new VirtualCard(usersForCard[i], RemoteControl.HostName);
+            if (vcard.IsTimeShifting)
+            {
+              vcard.RecordingFolder = card.RecordingFolder;
+              users = usersForCard[i];
+              return vcard;
+            }
+          }
         }
+      }
+      users = null;
+      return null;
+    }
 
+    private static void DoAsynchTune(ref IUser user, Channel channel)
+    {
+      TvServer server = new TvServer();
+      Exception startTimeShiftException = null;
 
+      IUser currentUser;
+      VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
+      if (_tunePending)
+      {
+        if (card != null && card.IsTunerLocked)
+        {
+          RemoteControl.Instance.CancelTimeShifting(ref currentUser);
+          _currentChannelIdPendingTune = channel.IdChannel;
+        }
+      }
+
+      if ((_currentChannelIdForTune == channel.IdChannel) && card != null)
+      {
+        return;
+      }
+
+      _tunePending = true;
+
+      _currentChannelIdPendingTune = channel.IdChannel;
+
+      GUIWaitCursorShow();
+
+      _currentChannelIdForTune = channel.IdChannel;
+
+      TvResult succeeded = TvResult.UnknownError;
+
+      bool cardChanged = false;
+
+      try
+      {
+        succeeded = server.StartTimeShifting(ref user, channel.IdChannel, out card, out cardChanged);
         if (succeeded != TvResult.Succeeded)
         {
-          //timeshifting new channel failed. 
-          g_Player.Stop();
-
-          // ensure right channel name, even if not watchable:Navigator.Channel = channel; 
-          ChannelTuneFailedNotifyUser(succeeded, _status.IsSet(LiveTvStatus.WasPlaying), channel);
-
-          // keep fullscreen false by setting _doingChannelChange to 'true' only when autoTurnOnTv is false
-          _doingChannelChange = !_autoTurnOnTv;
-          return true; // "success"
+          card = GetCardTimeShiftingChannel(channel.IdChannel, out currentUser);
+          if (_tunePending)
+          {
+            IUser userCopy = Card.User.Clone() as IUser;
+            RemoteControl.Instance.CancelTimeShifting(ref userCopy);
+            if (card != null && card.IsTunerLocked)
+            {
+              RemoteControl.Instance.CancelTimeShifting(ref currentUser);
+              _currentChannelIdPendingTune = channel.IdChannel;
+            }
+          }
         }
+      }
+      catch (Exception ex)
+      {
+        startTimeShiftException = ex;
+      }
 
+      lock (_asyncTuneLock)
+      {
+        try
+        {
+          if (startTimeShiftException != null)
+          {
+            throw startTimeShiftException;
+          }
+
+          if (_currentChannelIdForTune != channel.IdChannel)
+          {
+            return;
+          }
+
+          _mainThreadContext.Send(delegate
+                                  {
+                                    if (_currentChannelIdForTune != channel.IdChannel)
+                                    {
+                                      return;
+                                    }
+                                    CompleteTune(channel, succeeded, card, cardChanged);
+                                  }, null);
+
+          if (_currentChannelIdForTune != channel.IdChannel)
+          {
+            return;
+          }
+          _playbackStopped = false;
+          _doingChannelChange = false;
+          _ServerNotConnectedHandled = false;
+
+        }
+        catch (Exception ex)
+        {
+          if (_currentChannelIdForTune != channel.IdChannel)
+          {
+            return;
+          }
+          _mainThreadContext.Send(delegate
+                                  {
+                                    if (_currentChannelIdForTune != channel.IdChannel)
+                                    {
+                                      return;
+                                    }
+                                    Log.Error("TvPlugin:ViewChannelandCheckV2 Exception {0}", ex);
+                                    _doingChannelChange = false;
+                                    Card.User.Name = new User().Name;
+                                    g_Player.Stop();
+                                    Card.StopTimeShifting();
+                                  }, null);
+
+        }
+        finally
+        {
+          try
+          {
+            if (_currentChannelIdForTune == channel.IdChannel)
+            {
+
+              _mainThreadContext.Send(delegate
+                                      {
+                                        if (_currentChannelIdForTune == channel.IdChannel)
+                                        {
+                                          StopRenderBlackImage();
+                                          _userChannelChanged = false;
+                                          FireOnChannelChangedEvent();
+                                          Navigator.UpdateCurrentChannel();
+                                        }
+                                      }, null);
+            }
+          }
+          finally
+          {
+            if (_currentChannelIdForTune == channel.IdChannel)
+            {
+              //_currentChannelIdForTune = 0;
+              GUIWaitCursorHide();
+            }
+            _tunePending = false;
+          }
+        }
+      }
+    }
+
+    private static void CompleteTune(Channel channel, TvResult succeeded, VirtualCard card, bool cardChanged)
+    {
+      if (_status.IsSet(LiveTvStatus.WasPlaying))
+      {
+        if (card != null)
+            g_Player.OnZapping((int)card.Type);
+        else
+          g_Player.OnZapping(-1);
+      }
+
+      if (succeeded != TvResult.Succeeded)
+      {
+        //timeshifting new channel failed. 
+        g_Player.Stop();
+
+        // ensure right channel name, even if not watchable:Navigator.Channel = channel; 
+        ChannelTuneFailedNotifyUser(succeeded, _status.IsSet(LiveTvStatus.WasPlaying), channel);
+
+        // keep fullscreen false by setting _doingChannelChange to 'true' only when autoTurnOnTv is false
+        _doingChannelChange = !_autoTurnOnTv;
+      }
+      else
+      {
         if (card != null && card.NrOfOtherUsersTimeshiftingOnCard > 0)
         {
           _status.Set(LiveTvStatus.SeekToEndAfterPlayback);
@@ -3450,7 +3703,10 @@ namespace TvPlugin
           Navigator.LastViewedChannel = Navigator.Channel;
         }
         Log.Info("succeeded:{0} {1}", succeeded, card);
-        Card = card; //Moved by joboehl - Only touch the card if starttimeshifting succeeded. 
+        if (card != null)
+        {
+          Card = card; //Moved by joboehl - Only touch the card if starttimeshifting succeeded. 
+        }
 
         // if needed seek to end
         if (_status.IsSet(LiveTvStatus.SeekToEnd))
@@ -3458,8 +3714,11 @@ namespace TvPlugin
           SeekToEnd(true);
         }
 
+
+        // CardChange refactor it, so it reacts to changes in timeshifting path / URL.
+
         // continue graph
-        g_Player.ContinueGraph();
+        //g_Player.ContinueGraph();
         if (!g_Player.Playing || _status.IsSet(LiveTvStatus.CardChange) || (g_Player.Playing && !(g_Player.IsTV || g_Player.IsRadio)))
         {
           StartPlay();
@@ -3473,34 +3732,12 @@ namespace TvPlugin
         }
         try
         {
-
           TvTimeShiftPositionWatcher.SetNewChannel(channel.IdChannel);
         }
         catch
         {
           //ignore, error already logged
         }
-
-        _playbackStopped = false;
-        _doingChannelChange = false;
-        _ServerNotConnectedHandled = false;
-        return true;
-      }
-      catch (Exception ex)
-      {
-        Log.Debug("TvPlugin:ViewChannelandCheckV2 Exception {0}", ex.ToString());
-        _doingChannelChange = false;
-        Card.User.Name = new User().Name;
-        g_Player.Stop();
-        Card.StopTimeShifting();
-        return false;
-      }
-      finally
-      {
-        StopRenderBlackImage();        
-        _userChannelChanged = false;
-        FireOnChannelChangedEvent();
-        Navigator.UpdateCurrentChannel();
       }
     }
 

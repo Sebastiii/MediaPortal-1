@@ -1824,6 +1824,68 @@ namespace TvService
       return false;
     }
 
+    /// <summary>
+    /// Stops the time shifting.
+    /// </summary>
+    /// <param name="userName"> </param>
+    /// <param name="user">User</param>
+    /// <param name="channelId"> </param>
+    /// <returns></returns>
+    public bool CancelTimeShifting(ref IUser user)
+    {
+      bool timeshiftingStopped = false;
+      try
+      {
+        bool isAnyUserTS;
+        bool isRec;
+        bool isUserTS;
+        bool isRecOrTS = RemoteControl.Instance.IsAnyCardRecordingOrTimeshifting(new User(), out isUserTS, out isAnyUserTS, out isRec);
+        //first, lets figure out if we are trying to stop a pending tune session
+        foreach (ITvCardHandler cardHandler in _cards.Values)
+        {
+          ICardTuneReservationTicket cardTuneReservationTicket = cardHandler.Tuner.ReservationsForTune.FirstOrDefault();
+          if (cardTuneReservationTicket != null)
+          {
+            IUser userwWithPendingTicket = cardTuneReservationTicket.User;
+
+            if (userwWithPendingTicket.Name.Equals(user.Name))
+            {
+              ITvCardContext context = cardHandler.Card.Context as ITvCardContext;
+              if (context != null)
+              {
+                cardHandler.Users.RemoveUser(user);
+                //context.Remove(user);
+                if (context.ContainsUsersForSubchannel(user.SubChannel) == false)
+                {
+                  if (user.SubChannel > -1)
+                  {
+                    CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
+                  }
+                }
+              }
+              else
+              {
+                Log.Epg("TvController: Stop - context == null");
+              }
+              timeshiftingStopped = true;
+              break;
+            }
+          }
+        }
+
+        //if no pending tune session was found, then just stop the channel the old fashioned way.
+        if (!timeshiftingStopped)
+        {
+          timeshiftingStopped = StopTimeShifting(ref user);
+        }
+      }
+      catch (Exception e)
+      {
+        Log.Write(e);
+      }
+      return timeshiftingStopped;
+    }
+
     private bool DoStopTimeShifting(ref IUser user, int cardId)
     {
       if (IsGrabbingEpg(cardId))

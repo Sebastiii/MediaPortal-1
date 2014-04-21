@@ -3265,7 +3265,6 @@ namespace TvPlugin
         msg.Object = _lastError; // forward error info object
         msg.Param1 = 3; // sec timeout
         GUIGraphicsContext.SendMessage(msg);
-        return;
       }
       else
       {
@@ -3497,7 +3496,7 @@ namespace TvPlugin
         }
 
         ThreadStart work = () => DoAsynchTune(ref user, channel);
-        var tuneThread = new Thread(work) {Name = "Async Tune Thread for channel " + channel};
+        var tuneThread = new Thread(work) {Name = "Async Tune Thread for channel " + channel.IdChannel};
         tuneThread.Start();
 
         return true;
@@ -3599,7 +3598,7 @@ namespace TvPlugin
       VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
       if (_tunePending)
       {
-        if (card != null && card.IsTunerLocked)
+        if (card != null)
         {
           RemoteControl.Instance.CancelTimeShifting(ref currentUser);
           _currentChannelIdPendingTune = channel.IdChannel;
@@ -3639,14 +3638,20 @@ namespace TvPlugin
           }
           if (succeeded != TvResult.Succeeded)
           {
-            //timeshifting new channel failed. 
-            g_Player.Stop();
-
-            // ensure right channel name, even if not watchable:Navigator.Channel = channel; 
-            ChannelTuneFailedNotifyUser(succeeded, _status.IsSet(LiveTvStatus.WasPlaying), channel);
-
-            // keep fullscreen false by setting _doingChannelChange to 'true' only when autoTurnOnTv is false
-            _doingChannelChange = !_autoTurnOnTv;
+            _mainThreadContext.Send(delegate
+                                    {
+                                      lock (_guiWaitCursorLock)
+                                      {
+                                        //timeshifting new channel failed. 
+                                        g_Player.Stop();
+                                        if (_currentChannelIdForTune != channel.IdChannel)
+                                        {
+                                          return;
+                                        }
+                                        // ensure right channel name, even if not watchable:Navigator.Channel = channel; 
+                                        ChannelTuneFailedNotifyUser(succeeded, _status.IsSet(LiveTvStatus.WasPlaying), channel);
+                                      }
+                                    }, null);
           }
         }
         else if (succeeded == TvResult.Succeeded)
@@ -3690,7 +3695,6 @@ namespace TvPlugin
             return;
           }
           _playbackStopped = false;
-          _doingChannelChange = false;
           _ServerNotConnectedHandled = false;
 
         }
@@ -3819,6 +3823,7 @@ namespace TvPlugin
         {
           //ignore, error already logged
         }
+        _doingChannelChange = false;
       }
     }
 

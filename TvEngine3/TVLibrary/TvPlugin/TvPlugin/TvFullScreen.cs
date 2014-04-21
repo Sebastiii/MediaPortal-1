@@ -2371,11 +2371,13 @@ namespace TvPlugin
 
       if (!g_Player.Playing && !TVHome.DoingChannelChange())
       {
-          Log.Debug("Tvfullscreen:not viewing anymore");
-          GUIWindowManager.ShowPreviousWindow();
+        Log.Debug("Tvfullscreen:not viewing anymore");
+        GUIWindowManager.ShowPreviousWindow();
       }
       else
+      {
         GUIGraphicsContext.IsFullScreenVideo = true;
+      }
     }
 
     public bool ScreenStateChanged()

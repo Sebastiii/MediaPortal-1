@@ -164,6 +164,7 @@ namespace MediaPortal.GUI.Library
     private static readonly ArrayList _wakeables = new ArrayList();
     // ReSharper restore InconsistentNaming
     private static HashSet<String> _whiteList;
+    private static HashSet<String> _stockWhiteList;
     private static Incompatibilities _incompatibilities = new Incompatibilities();
     private static bool _started;
     private static bool _windowPluginsLoaded;
@@ -232,6 +233,37 @@ namespace MediaPortal.GUI.Library
       }
     }
 
+    public static void LoadWhiteListThreaded(string filename)
+    {
+      var stockWhiteList = new HashSet<string>();
+      var document = new XmlDocument();
+
+      try
+      {
+        Log.Info("Loading plugins whitelist:");
+        document.Load(filename);
+        XmlNodeList xmlNodeList = document.SelectNodes("/whitelist/plugin");
+        if (xmlNodeList != null)
+        {
+          foreach (XmlNode node in xmlNodeList)
+          {
+            string pluginName = node.InnerText.Trim();
+            if (!stockWhiteList.Contains(pluginName))
+            {
+              stockWhiteList.Add(pluginName);
+              Log.Info("    {0}", pluginName);
+            }
+          }
+        }
+        _stockWhiteList = stockWhiteList;
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Failed to load plugins whitelistthreaded:");
+        Log.Error(ex);
+      }
+    }
+
     /// <summary>
     /// 
     /// </summary>
@@ -282,6 +314,7 @@ namespace MediaPortal.GUI.Library
       {
         if (xmlreader.GetValueAsBool("general", "threadedstartup", false))
         {
+          LoadWindowWhiteListPluginsNonThreaded();
           LoadWindowPluginsThreaded();
         }
         else
@@ -334,6 +367,50 @@ namespace MediaPortal.GUI.Library
       }
     }
 
+    private static void LoadWindowWhiteListPluginsNonThreaded()
+    {
+      // Load _whiteList and fill _stockWhiteList to load stock plugins in non Threaded mode.
+      LoadWhiteListThreaded("BuiltInPlugins.xml");
+
+      if (_windowPluginsLoaded)
+      {
+        return;
+      }
+
+      Log.Debug("PlugInManager: LoadWindowPlugins()");
+
+      try
+      {
+        Directory.CreateDirectory(Config.GetFolder(Config.Dir.Plugins));
+        Directory.CreateDirectory(Config.GetSubFolder(Config.Dir.Plugins, "windows"));
+      }
+      // ReSharper disable EmptyGeneralCatchClause
+      catch (Exception) { }
+      // ReSharper restore EmptyGeneralCatchClause
+
+      string[] strFiles = MediaPortal.Util.Utils.GetFiles(Config.GetSubFolder(Config.Dir.Plugins, "windows"), "dll");
+
+      // load all window plugins in the main thread
+      foreach (string file in strFiles)
+      {
+        // get relative plugin file name
+        string removeString = Config.GetFolder(Config.Dir.Plugins);
+        int index = file.IndexOf(removeString, StringComparison.Ordinal);
+        string pluginFile = (index < 0) ? file : file.Remove(index, removeString.Length);
+
+        DateTime startTime = DateTime.Now;
+        Log.Debug("PluginManager: Begin loading '{0}' (non threaded)", pluginFile);
+
+        LoadWindowPlugin(file);
+
+        DateTime endTime = DateTime.Now;
+        TimeSpan runningTime = endTime - startTime;
+        Log.Debug("PluginManager: End loading '{0}' ({1} ms running time)", pluginFile, runningTime.TotalMilliseconds);
+      }
+      // Clear _whiteList plugins to be able to load other windows plugins in Threaded mode.
+      //_whiteList.Clear();
+      //_whiteList = null;
+    }
 
     /// <summary>
     /// 
@@ -380,12 +457,16 @@ namespace MediaPortal.GUI.Library
             string removeString = Config.GetFolder(Config.Dir.Plugins);
             int index = file.IndexOf(removeString, StringComparison.Ordinal);
             string pluginFile = (index < 0) ? file : file.Remove(index, removeString.Length);
+            string pluginFileLoaded = pluginFile.Substring(pluginFile.LastIndexOf(@"\", StringComparison.Ordinal) + 1);
 
             DateTime startTime = DateTime.Now;
             TimeSpan delay = startTime - queueTime;
             Log.Debug("PluginManager: Begin loading '{0}' ({1} ms thread delay)", pluginFile, delay.TotalMilliseconds);
 
-            LoadWindowPlugin(file);
+            if (_stockWhiteList != null && !_stockWhiteList.Contains(pluginFileLoaded))
+            {
+              LoadWindowPlugin(file);
+            }
 
             DateTime endTime = DateTime.Now;
             TimeSpan runningTime = endTime - startTime;

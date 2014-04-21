@@ -3538,7 +3538,6 @@ namespace TvPlugin
 
       _currentChannelIdPendingTune = channel.IdChannel;
 
-      GUIWaitCursorShow();
 
       _currentChannelIdForTune = channel.IdChannel;
 
@@ -3554,13 +3553,30 @@ namespace TvPlugin
           card = GetCardTimeShiftingChannel(channel.IdChannel, out currentUser);
           if (_tunePending)
           {
-            IUser userCopy = Card.User.Clone() as IUser;
-            RemoteControl.Instance.CancelTimeShifting(ref userCopy);
             if (card != null && card.IsTunerLocked)
             {
               RemoteControl.Instance.CancelTimeShifting(ref currentUser);
               _currentChannelIdPendingTune = channel.IdChannel;
             }
+            _tunePending = false;
+          }
+          if (succeeded != TvResult.Succeeded)
+          {
+            //timeshifting new channel failed. 
+            g_Player.Stop();
+
+            // ensure right channel name, even if not watchable:Navigator.Channel = channel; 
+            ChannelTuneFailedNotifyUser(succeeded, _status.IsSet(LiveTvStatus.WasPlaying), channel);
+
+            // keep fullscreen false by setting _doingChannelChange to 'true' only when autoTurnOnTv is false
+            _doingChannelChange = !_autoTurnOnTv;
+          }
+        }
+        else if (succeeded == TvResult.Succeeded)
+        {
+          if (card.IsTimeShifting)
+          {
+            _tunePending = false;
           }
         }
       }
@@ -3645,7 +3661,6 @@ namespace TvPlugin
             if (_currentChannelIdForTune == channel.IdChannel)
             {
               //_currentChannelIdForTune = 0;
-              GUIWaitCursorHide();
             }
             _tunePending = false;
           }
@@ -3663,18 +3678,7 @@ namespace TvPlugin
           g_Player.OnZapping(-1);
       }
 
-      if (succeeded != TvResult.Succeeded)
-      {
-        //timeshifting new channel failed. 
-        g_Player.Stop();
-
-        // ensure right channel name, even if not watchable:Navigator.Channel = channel; 
-        ChannelTuneFailedNotifyUser(succeeded, _status.IsSet(LiveTvStatus.WasPlaying), channel);
-
-        // keep fullscreen false by setting _doingChannelChange to 'true' only when autoTurnOnTv is false
-        _doingChannelChange = !_autoTurnOnTv;
-      }
-      else
+      if (succeeded == TvResult.Succeeded)
       {
         if (card != null && card.NrOfOtherUsersTimeshiftingOnCard > 0)
         {

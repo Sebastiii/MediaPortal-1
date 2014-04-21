@@ -3804,7 +3804,8 @@ namespace TvPlugin
 
         // continue graph
         //g_Player.ContinueGraph();
-        if (!g_Player.Playing || _status.IsSet(LiveTvStatus.CardChange) || (g_Player.Playing && !(g_Player.IsTV || g_Player.IsRadio)))
+        if (!g_Player.Playing || _status.IsSet(LiveTvStatus.CardChange) ||
+            (g_Player.Playing && !(g_Player.IsTV || g_Player.IsRadio)))
         {
           StartPlay();
 
@@ -3813,6 +3814,10 @@ namespace TvPlugin
           {
             double dTime = g_Player.Duration - 5;
             g_Player.SeekAbsolute(dTime);
+          }
+          if (_autoFullScreen)
+          {
+            g_Player.ShowFullScreenWindow();
           }
         }
         try

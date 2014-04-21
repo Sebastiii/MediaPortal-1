@@ -485,7 +485,7 @@ namespace MediaPortal.GUI.Library
         {
           string file = strFiles[i];
           DateTime queueTime = DateTime.Now;
-          ThreadPool.QueueUserWorkItem(x =>
+          ThreadPool.QueueUserWorkItem(delegate 
                                        {
                                          // get relative plugin file name
                                          string removeString = Config.GetFolder(Config.Dir.Plugins);
@@ -498,10 +498,10 @@ namespace MediaPortal.GUI.Library
                                            TimeSpan delay = startTime - queueTime;
                                            Log.Debug("PluginManager: Begin loading '{0}' ({1} ms thread delay)", pluginFile,
                                              delay.TotalMilliseconds);
-                                           //_mainThreadContext.Send(delegate
-                                           //                        {
+                                           _mainThreadContext.Post(delegate
+                                                                   {
                                                                      LoadWindowPlugin(file);
-                                                                   //}, null);
+                                                                   }, null);
 
                                            DateTime endTime = DateTime.Now;
                                            TimeSpan runningTime = endTime - startTime;

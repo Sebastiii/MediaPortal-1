@@ -169,6 +169,7 @@ namespace MediaPortal.GUI.Library
     private static bool _started;
     private static bool _windowPluginsLoaded;
     private static bool _nonWindowPluginsLoaded;
+    private static readonly SynchronizationContext _mainThreadContext = SynchronizationContext.Current;
 
     static PluginManager() { }
 
@@ -314,7 +315,6 @@ namespace MediaPortal.GUI.Library
       {
         if (xmlreader.GetValueAsBool("general", "threadedstartup", false))
         {
-          LoadWindowWhiteListPluginsNonThreaded();
           LoadWindowPluginsThreaded();
         }
         else
@@ -426,6 +426,8 @@ namespace MediaPortal.GUI.Library
     /// </summary>
     private static void LoadWindowPluginsThreaded()
     {
+      LoadWindowWhiteListPluginsNonThreaded();
+
       if (_windowPluginsLoaded)
       {
         return;
@@ -443,57 +445,78 @@ namespace MediaPortal.GUI.Library
       catch (Exception) { }
       // ReSharper restore EmptyGeneralCatchClause
 
-      string[] strFiles = MediaPortal.Util.Utils.GetFiles(Config.GetSubFolder(Config.Dir.Plugins, "windows"), "dll");
+      string[] strFilesTmp = MediaPortal.Util.Utils.GetFiles(Config.GetSubFolder(Config.Dir.Plugins, "windows"), "dll");
+      var strFiles = new List<string>();
 
-      int pluginsToLoad = strFiles.Length;
+      for (int i = 0; i < strFilesTmp.Length; i++)
+      {
+        string file = strFilesTmp[i];
+        string removeString = Config.GetFolder(Config.Dir.Plugins);
+        int index = file.IndexOf(removeString, StringComparison.Ordinal);
+        string pluginFile = (index < 0) ? file : file.Remove(index, removeString.Length);
+        string pluginFileCheck = pluginFile.Substring(pluginFile.LastIndexOf(@"\", StringComparison.Ordinal) + 1);
+        if (_stockWhiteList != null && !_stockWhiteList.Contains(pluginFileCheck))
+        {
+          strFiles.Add(file);
+          if (_whiteList == null)
+          {
+            Log.Info("    {0}", pluginFileCheck);
+          }
+        }
+        else if (_stockWhiteList == null)
+        {
+          strFiles.Add(file);
+        }
+      }
+
+      //int pluginsToLoad = strFiles.Length;
+      int pluginsToLoad = strFiles.Count;
       using (var resetEvent = new ManualResetEvent(false))
       {
         // initialize state list
         var states = new List<int>();
-        for (int i = 0; i < strFiles.Length; i++)
+        for (int i = 0; i < strFiles.Count; i++)
         {
           states.Add(i);
         }
 
         // load all window plugins using available worker threads
-        for (int i = 0; i < strFiles.Length; i++)
+        for (int i = 0; i < strFiles.Count; i++)
         {
           string file = strFiles[i];
           DateTime queueTime = DateTime.Now;
           ThreadPool.QueueUserWorkItem(x =>
-          {
-            // get relative plugin file name
-            string removeString = Config.GetFolder(Config.Dir.Plugins);
-            int index = file.IndexOf(removeString, StringComparison.Ordinal);
-            string pluginFile = (index < 0) ? file : file.Remove(index, removeString.Length);
-            string pluginFileLoaded = pluginFile.Substring(pluginFile.LastIndexOf(@"\", StringComparison.Ordinal) + 1);
+                                       {
+                                         // get relative plugin file name
+                                         string removeString = Config.GetFolder(Config.Dir.Plugins);
+                                         int index = file.IndexOf(removeString, StringComparison.Ordinal);
+                                         string pluginFile = (index < 0) ? file : file.Remove(index, removeString.Length);
 
-            if (_stockWhiteList != null && !_stockWhiteList.Contains(pluginFileLoaded))
-            {
-              if (IsPlugInEnabled(file))
-              {
-                DateTime startTime = DateTime.Now;
-                TimeSpan delay = startTime - queueTime;
-                Log.Debug("PluginManager: Begin loading '{0}' ({1} ms thread delay)", pluginFile,
-                  delay.TotalMilliseconds);
+                                         if (IsPlugInEnabled(file))
+                                         {
+                                           DateTime startTime = DateTime.Now;
+                                           TimeSpan delay = startTime - queueTime;
+                                           Log.Debug("PluginManager: Begin loading '{0}' ({1} ms thread delay)", pluginFile,
+                                             delay.TotalMilliseconds);
+                                           //_mainThreadContext.Send(delegate
+                                           //                        {
+                                                                     LoadWindowPlugin(file);
+                                                                   //}, null);
 
-                LoadWindowPlugin(file);
+                                           DateTime endTime = DateTime.Now;
+                                           TimeSpan runningTime = endTime - startTime;
+                                           Log.Debug("PluginManager: End loading '{0}' ({1} ms running time)", pluginFile,
+                                             runningTime.TotalMilliseconds);
+                                         }
 
-                DateTime endTime = DateTime.Now;
-                TimeSpan runningTime = endTime - startTime;
-                Log.Debug("PluginManager: End loading '{0}' ({1} ms running time)", pluginFile,
-                  runningTime.TotalMilliseconds);
-              }
-            }
-
-            // safely decrement the counter
-            if (Interlocked.Decrement(ref pluginsToLoad) == 0)
-            {
-              // ReSharper disable AccessToDisposedClosure
-              resetEvent.Set();
-              // ReSharper restore AccessToDisposedClosure
-            }
-          }, states[i]);
+                                         // safely decrement the counter
+                                         if (Interlocked.Decrement(ref pluginsToLoad) == 0)
+                                         {
+                                           // ReSharper disable AccessToDisposedClosure
+                                           resetEvent.Set();
+                                           // ReSharper restore AccessToDisposedClosure
+                                         }
+                                       }, states[i]);
         }
 
         // wait until all worker threads are finished

@@ -738,7 +738,7 @@ namespace TvPlugin
         }
 
         UpdateStateOfRecButton();
-        UpdateGUIonPlaybackStateChange();
+        //UpdateGUIonPlaybackStateChange();
         //UpdateProgressPercentageBar();
         benchClock.Stop();
         Log.Warn("TVHome.OnClicked(): Total Time - {0} ms", benchClock.ElapsedMilliseconds.ToString());
@@ -814,7 +814,7 @@ namespace TvPlugin
         // Let the navigator zap channel if needed
         if (Navigator.CheckChannelChange())
         {
-          UpdateGUIonPlaybackStateChange();
+          //UpdateGUIonPlaybackStateChange();
         }
 
         if (GUIGraphicsContext.InVmr9Render)

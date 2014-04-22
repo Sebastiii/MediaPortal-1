@@ -236,32 +236,63 @@ namespace MediaPortal.GUI.Library
 
     public static void LoadWhiteListThreaded(string filename)
     {
-      var stockWhiteList = new HashSet<string>();
-      var document = new XmlDocument();
-
-      try
+      if (_stockWhiteList == null)
       {
-        Log.Info("Loading plugins whitelist for threading startup:");
-        document.Load(filename);
-        XmlNodeList xmlNodeList = document.SelectNodes("/whitelist/plugin");
-        if (xmlNodeList != null)
+        var stockWhiteList = new HashSet<string>();
+        var document = new XmlDocument();
+
+        try
         {
-          foreach (XmlNode node in xmlNodeList)
+          Log.Info("Loading plugins whitelist for threading startup:");
+          document.Load(filename);
+          XmlNodeList xmlNodeList = document.SelectNodes("/whitelist/plugin");
+          if (xmlNodeList != null)
           {
-            string pluginName = node.InnerText.Trim();
-            if (!stockWhiteList.Contains(pluginName))
+            foreach (XmlNode node in xmlNodeList)
             {
-              stockWhiteList.Add(pluginName);
-              Log.Info("    {0}", pluginName);
+              string pluginName = node.InnerText.Trim();
+              if (!stockWhiteList.Contains(pluginName))
+              {
+                stockWhiteList.Add(pluginName);
+                Log.Info("    {0}", pluginName);
+              }
+            }
+          }
+          _stockWhiteList = stockWhiteList;
+        }
+        catch (Exception ex)
+        {
+          Log.Error("Failed to load plugins white list threaded:");
+          Log.Error(ex);
+        }
+      }
+      else
+      {
+        var stockWhiteList = new HashSet<string>();
+        var document = new XmlDocument();
+
+        try
+        {
+          document.Load(filename);
+          XmlNodeList xmlNodeList = document.SelectNodes("/whitelist/plugin");
+          if (xmlNodeList != null)
+          {
+            foreach (XmlNode node in xmlNodeList)
+            {
+              string pluginName = node.InnerText.Trim();
+              if (!stockWhiteList.Contains(pluginName))
+              {
+                _stockWhiteList.Add(pluginName);
+                Log.Info("    {0}", pluginName);
+              }
             }
           }
         }
-        _stockWhiteList = stockWhiteList;
-      }
-      catch (Exception ex)
-      {
-        Log.Error("Failed to load plugins white list threaded:");
-        Log.Error(ex);
+        catch (Exception ex)
+        {
+          Log.Error("Failed to load plugins white list threaded:");
+          Log.Error(ex);
+        }
       }
     }
 
@@ -373,7 +404,16 @@ namespace MediaPortal.GUI.Library
     private static void LoadWindowWhiteListPluginsNonThreaded()
     {
       // Load _whiteList and fill _stockWhiteList to load stock plugins in non Threaded mode.
-      LoadWhiteListThreaded("BuiltInPlugins.xml");
+      // Don't load LoadWhiteListThreaded if Watchdog is used
+      if (_whiteList == null)
+      {
+        LoadWhiteListThreaded("BuiltInPlugins.xml");
+        LoadWhiteListThreaded("BuiltInPluginsNT.xml");
+      }
+      else
+      {
+        _stockWhiteList = _whiteList;
+      }
 
       if (_windowPluginsLoaded)
       {
@@ -387,7 +427,7 @@ namespace MediaPortal.GUI.Library
         Directory.CreateDirectory(Config.GetFolder(Config.Dir.Plugins));
         Directory.CreateDirectory(Config.GetSubFolder(Config.Dir.Plugins, "windows"));
       }
-      // ReSharper disable EmptyGeneralCatchClause
+        // ReSharper disable EmptyGeneralCatchClause
       catch (Exception) { }
       // ReSharper restore EmptyGeneralCatchClause
 

@@ -199,15 +199,17 @@ namespace TvPlugin
     #region events & delegates
 
     private static event OnChannelChangedDelegate OnChannelChanged;
-    private delegate void OnChannelChangedDelegate();
     private static event ThreadMessageHandler OnThreadMessageHandler;
+    private static event OnChannelTvOnOffDelegate ChannelTvOnOff;
 
     #endregion
 
     #region delegates
 
+    private delegate void OnChannelChangedDelegate();
     private delegate void StopPlayerMainThreadDelegate();
     private delegate void ThreadMessageHandler(object sender, Message message);
+    private delegate void OnChannelTvOnOffDelegate(bool buttonTvOnOff);
 
     #endregion
 
@@ -342,6 +344,7 @@ namespace TvPlugin
       g_Player.PlayBackStarted += new g_Player.StartedHandler(OnPlayBackStarted);
       g_Player.PlayBackStopped += new g_Player.StoppedHandler(OnPlayBackStopped);
       g_Player.AudioTracksReady += new g_Player.AudioTracksReadyHandler(OnAudioTracksReady);
+      ChannelTvOnOff += new OnChannelTvOnOffDelegate(OnChannelTvOnOff);
 
       GUIWindowManager.Receivers += new SendMessageHandler(OnGlobalMessage);
 
@@ -685,15 +688,6 @@ namespace TvPlugin
             RemoteControl.Instance.CancelTimeShifting(ref currentUser);
           }
         }
-        //if (_tunePending && control.Selected)
-        //{
-        //  IUser userCopy = Card.User.Clone() as IUser;
-        //  //Card.User.Name = new User().Name;
-        //  //Card.StopTimeShifting();
-        //  RemoteControl.Instance.StopTimeShifting(ref userCopy);
-        //  control.Selected = false;
-        //  return;
-        //}
 
         if (Card.IsTimeShifting && g_Player.IsTV && g_Player.Playing)
         {
@@ -814,7 +808,7 @@ namespace TvPlugin
         // Let the navigator zap channel if needed
         if (Navigator.CheckChannelChange())
         {
-          //UpdateGUIonPlaybackStateChange();
+          UpdateGUIonPlaybackStateChange();
         }
 
         if (GUIGraphicsContext.InVmr9Render)
@@ -2174,6 +2168,14 @@ namespace TvPlugin
     {
       Schedule existingSchedule = Schedule.FindNoEPGSchedule(channel);
       return (existingSchedule != null);
+    }
+
+    private void OnChannelTvOnOff(bool buttonTvOnOff)
+    {
+      if (btnTvOnOff.Selected != buttonTvOnOff)
+      {
+        btnTvOnOff.Selected = buttonTvOnOff;
+      }
     }
 
     private void UpdateGUIonPlaybackStateChange(bool playbackStarted)
@@ -3623,6 +3625,7 @@ namespace TvPlugin
 
       try
       {
+        ChannelTvOnOff(true);
         succeeded = server.StartTimeShifting(ref user, channel.IdChannel, out card, out cardChanged);
         if (succeeded != TvResult.Succeeded)
         {
@@ -3650,6 +3653,7 @@ namespace TvPlugin
                                         }
                                         // ensure right channel name, even if not watchable:Navigator.Channel = channel; 
                                         ChannelTuneFailedNotifyUser(succeeded, _status.IsSet(LiveTvStatus.WasPlaying), channel);
+                                        ChannelTvOnOff(false);
                                       }
                                     }, null);
           }

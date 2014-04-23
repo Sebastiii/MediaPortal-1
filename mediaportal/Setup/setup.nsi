@@ -497,7 +497,7 @@ Section "MediaPortal core files (required)" SecCore
   ; ffmpeg
   SetOutPath "$MPdir.Base\MovieThumbnailer"
   File "${git_ROOT}\Packages\ffmpeg.2.1.1\ffmpeg.exe"
-  ; BaseAsio
+  ; NuGet binaries
   SetOutPath "$MPdir.Base\"
   File "${git_ROOT}\Packages\bass.asio.1.3.0.2\bassasio.dll"
   ; Doc

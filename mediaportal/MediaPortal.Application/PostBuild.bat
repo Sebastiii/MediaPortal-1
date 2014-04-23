@@ -142,3 +142,7 @@ xcopy %1\Databases\bin\%2\HtmlAgilityPack.* . /Y /D
 
 REM ffmpeg 
 xcopy %1\..\Packages\ffmpeg.2.1.1\ffmpeg.exe MovieThumbnailer\ /Y /D
+
+REM BassAsio
+xcopy %1\..\Packages\bass.asio.1.3.0.2\bassasio.dll . /Y /D
+

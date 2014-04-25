@@ -80,7 +80,7 @@ namespace TvPlugin
 
     #region variables
 
-    private static SynchronizationContext _mainThreadContext = SynchronizationContext.Current;
+    private static readonly SynchronizationContext _mainThreadContext = SynchronizationContext.Current;
     private static int _currentChannelIdForTune = 0;
     private static int _currentChannelIdPendingTune = 0;
 

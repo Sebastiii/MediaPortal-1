@@ -1679,8 +1679,7 @@
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\packages\bass.asio.1.3.0.2\build\bass.asio.targets" Condition="Exists('..\packages\bass.asio.1.3.0.2\build\bass.asio.targets')" />
-  <Import Project="..\packages\MediaInfo.0.7.68\build\MediaInfo.targets" Condition="Exists('..\packages\MediaInfo.0.7.68\build\MediaInfo.targets')" />
+  <Import Project="..\..\Packages\MediaInfo.0.7.69\build\MediaInfo.targets" Condition="Exists('..\..\Packages\MediaInfo.0.7.69\build\MediaInfo.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>

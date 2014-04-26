@@ -503,7 +503,7 @@ Section "MediaPortal core files (required)" SecCore
   ; NuGet binaries
   SetOutPath "$MPdir.Base\"
   File "${git_ROOT}\Packages\bass.asio.1.3.0.2\bassasio.dll"
-  File "${git_ROOT}\Packages\MediaInfo.0.7.68\MediaInfo.dll"
+  File "${git_ROOT}\Packages\MediaInfo.0.7.69\MediaInfo.dll"
   ; NuGet binaries
   ; Bass Core
   SetOutPath "$MPdir.Base\"

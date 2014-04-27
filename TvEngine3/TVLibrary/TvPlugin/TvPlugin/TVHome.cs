@@ -582,7 +582,7 @@ namespace TvPlugin
 
     private void AutoTurnOnTv(Channel channel)
     {
-      if (_autoTurnOnTv && !_playbackStopped && !wasPrevWinTVplugin())
+      if (_autoTurnOnTv && !_playbackStopped)
       {
         if (!wasPrevWinTVplugin())
         {
@@ -1723,6 +1723,20 @@ namespace TvPlugin
         new RemoteControl.RemotingDisconnectedDelegate(RemoteControl_OnRemotingDisconnected);
       RemoteControl.OnRemotingConnected -= new RemoteControl.RemotingConnectedDelegate(RemoteControl_OnRemotingConnected);
 
+      if (wasPrevWinTVplugin() && _autoTurnOnTv)
+      {
+        _playbackStopped = false;
+        GUIGraphicsContext.IsFullScreenVideo = false;
+        Channel channel = Navigator.Channel;
+        if (channel != null)
+        {
+          Log.Info("tv home store resume channel:{0}", channel.DisplayName);
+          _resumeChannel = channel;
+          GUIPropertyManager.SetProperty("#TV.Guide.Group", Navigator.CurrentGroup.GroupName);
+          Log.Info("tv home store resume channel:{0} done", channel.DisplayName);
+        }
+      }
+
       try
       {
         if (Card.IsTimeShifting)
@@ -1763,6 +1777,7 @@ namespace TvPlugin
         HandleWakeUpTvServer();
         startHeartBeatThread();
         _notifyManager.Start();
+        _suspended = false;
         if (_resumeChannel != null)
         {
           Log.Debug("TVHome.OnResume() - automatically turning on TV: {0}", _resumeChannel.DisplayName);
@@ -1773,7 +1788,6 @@ namespace TvPlugin
       }
       finally
       {
-        _suspended = false;
         _resumed = true;
       }
     }

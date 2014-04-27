@@ -3819,7 +3819,7 @@ namespace TvPlugin
             double dTime = g_Player.Duration - 5;
             g_Player.SeekAbsolute(dTime);
           }
-          if (_autoFullScreen || (GUIWindowManager.ActiveWindow == (int)(int)GUIWindow.Window.WINDOW_TVGUIDE))
+          if (_autoFullScreen || (GUIWindowManager.ActiveWindow == (int)GUIWindow.Window.WINDOW_TVGUIDE))
           {
             g_Player.ShowFullScreenWindow();
           }

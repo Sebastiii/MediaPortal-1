@@ -49,6 +49,9 @@ COverlayRenderer::COverlayRenderer(CLibBlurayWrapper* pLib) :
   m_pARGBTextures[BD_OVERLAY_PG] = NULL;
   m_pARGBTextures[BD_OVERLAY_IG] = NULL;
 
+  m_overlayType[BD_OVERLAY_PG] = NONE;
+  m_overlayType[BD_OVERLAY_IG] = NONE;
+
   ZeroMemory((void*)&m_ARGBBuffer, sizeof(BD_ARGB_BUFFER_EX));
 
   m_hStopThreadEvent = CreateEvent(0, TRUE, FALSE, 0);
@@ -353,6 +356,9 @@ void ARBGLock(BD_ARGB_BUFFER* buffer)
 
 void COverlayRenderer::LockARGBSurface(BD_ARGB_BUFFER_EX* buffer)
 {
+  if (!m_pPlanes[BD_OVERLAY_IG])
+    return;
+
   RECT area = {};
   area.left = buffer->dirty[BD_OVERLAY_IG].x0;
   area.top = buffer->dirty[BD_OVERLAY_IG].y0;
@@ -406,7 +412,8 @@ void COverlayRenderer::UnlockARGBSurface(BD_ARGB_BUFFER_EX* buffer)
   CopyToFrontBuffer(BD_OVERLAY_IG, true);
 
   OSDTexture* plane = m_pPlanes[BD_OVERLAY_IG];
-  m_pLib->HandleOSDUpdate(*plane);
+  if (plane)
+    m_pLib->HandleOSDUpdate(*plane);
 }
 
 void COverlayRenderer::OverlayProc(const BD_OVERLAY* ov)
@@ -464,11 +471,16 @@ void COverlayRenderer::ProcessOverlay(const BD_OVERLAY* pOv)
   switch (pOv->cmd)
   {
     case BD_OVERLAY_INIT:
+      ASSERT(m_overlayType[pOv->plane] == NONE);
       OpenOverlay(pOv);
+      m_overlayType[pOv->plane] = NORMAL_OVERLAY;
       return;
+
     case BD_OVERLAY_CLOSE:
+      ASSERT(m_overlayType[pOv->plane] == NORMAL_OVERLAY);
       CloseOverlay(pOv->plane);
       FreeOverlayQueue(pOv->plane);
+      m_overlayType[pOv->plane] = NONE;
       return;
   }
 
@@ -530,10 +542,15 @@ void COverlayRenderer::ARGBOverlayProc(const BD_ARGB_OVERLAY* ov)
   switch (ov->cmd)
   {
     case BD_ARGB_OVERLAY_INIT:
+      ASSERT(m_overlayType[ov->plane] == NONE);
       OpenOverlay(ov);
+      m_overlayType[ov->plane] = ARGB_OVERLAY;
       return;
+
     case BD_ARGB_OVERLAY_CLOSE:
+      ASSERT(m_overlayType[ov->plane] == ARGB_OVERLAY);
       CloseOverlay(ov->plane);
+      m_overlayType[ov->plane] = NONE;
       return;
   }
 
@@ -1001,14 +1018,14 @@ char* COverlayRenderer::ARGBCommandAsString(int cmd)
   switch (cmd)
   {
     case BD_ARGB_OVERLAY_INIT:
-      return "BD_OVERLAY_INIT ";
+      return "BD_ARGB_OVERLAY_INIT ";
     case BD_ARGB_OVERLAY_CLOSE:
-      return "BD_OVERLAY_CLOSE";
+      return "BD_ARGB_OVERLAY_CLOSE";
     case BD_ARGB_OVERLAY_DRAW:
-      return "BD_OVERLAY_DRAW ";
+      return "BD_ARGB_OVERLAY_DRAW ";
     case BD_ARGB_OVERLAY_FLUSH:
-      return "BD_OVERLAY_FLUSH";
+      return "BD_ARGB_OVERLAY_FLUSH";
     default:
-      return "UNKNOWN         ";
+      return "UNKNOWN              ";
   }
 }

@@ -939,6 +939,7 @@ namespace MediaPortal.GUI.Library
                         catch (Exception ex)
                         {
                           Log.Error("Error initializing window:{0} {1} {2} {3}", win.ToString(), ex.Message, ex.Source, ex.StackTrace);
+                          continue;
                         }
                         GUIWindowManager.Add(ref win);
                       }
@@ -948,6 +949,7 @@ namespace MediaPortal.GUI.Library
                       Log.Error("Exception while loading GUIWindows instances: {0}", t.FullName);
                       Log.Error(guiWindowsException.Message);
                       Log.Error(guiWindowsException.StackTrace);
+                      continue;
                     }
                   }
 
@@ -979,6 +981,7 @@ namespace MediaPortal.GUI.Library
                     Log.Error("Exception while loading ISetupForm instances: {0}", t.FullName);
                     Log.Error(iSetupFormException.Message);
                     Log.Error(iSetupFormException.StackTrace);
+                    continue;
                   }
 
                   try
@@ -1002,6 +1005,7 @@ namespace MediaPortal.GUI.Library
                     Log.Error("Exception while loading IWakeable instances: {0}", t.FullName);
                     Log.Error(iWakeableException.Message);
                     Log.Error(iWakeableException.StackTrace);
+                    continue;
                   }
                 }
               }

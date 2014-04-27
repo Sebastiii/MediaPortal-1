@@ -1887,16 +1887,16 @@ public class MediaPortalApp : D3D, IRender
           {
             case DBT_DEVICEREMOVECOMPLETE:
               Log.Info("Main: Audio Renderer {0} removed", deviceName);
-              if (_stopOnLostAudioRenderer)
-              {
-                g_Player.Stop();
-                while (GUIGraphicsContext.IsPlaying)
-                {
-                  Thread.Sleep(100);
-                }
-              }
               try
               {
+                if (_stopOnLostAudioRenderer)
+                {
+                  g_Player.Stop();
+                  while (GUIGraphicsContext.IsPlaying)
+                  {
+                    Thread.Sleep(100);
+                  }
+                }
                 VolumeHandler.Dispose();
                 #pragma warning disable 168
                 VolumeHandler vh = VolumeHandler.Instance;
@@ -1904,22 +1904,22 @@ public class MediaPortalApp : D3D, IRender
               }
               catch (Exception exception)
               {
-                Log.Warn("Main: Could not initialize volume handler: ", exception.Message);
+                Log.Warn("Main: Exception on removal Audio Renderer {0} exception: {1} ",deviceName, exception.Message);
               }
               break;
 
             case DBT_DEVICEARRIVAL:
               Log.Info("Main: Audio Renderer {0} connected", deviceName);
-              if (_stopOnLostAudioRenderer)
-              {
-                g_Player.Stop();
-                while (GUIGraphicsContext.IsPlaying)
-                {
-                  Thread.Sleep(100);
-                }
-              }
               try
               {
+                if (_stopOnLostAudioRenderer)
+                {
+                  g_Player.Stop();
+                  while (GUIGraphicsContext.IsPlaying)
+                  {
+                    Thread.Sleep(100);
+                  }
+                }
                 VolumeHandler.Dispose();
                 #pragma warning disable 168
                 VolumeHandler vh = VolumeHandler.Instance;
@@ -1927,7 +1927,7 @@ public class MediaPortalApp : D3D, IRender
               }
               catch (Exception exception)
               {
-                Log.Warn("Main: Could not initialize volume handler: ", exception.Message);
+                Log.Warn("Main: Exception on arrival Audio Renderer {0} exception: {1} ", deviceName, exception.Message);
               }
               break;
           }

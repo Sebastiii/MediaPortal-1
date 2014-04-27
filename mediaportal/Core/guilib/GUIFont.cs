@@ -19,6 +19,7 @@
 #endregion
 
 using System;
+using System.Collections;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -27,6 +28,7 @@ using System.Drawing.Text;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
 using DShowNET.Helper;
 using MediaPortal.ExtensionMethods;
 using Microsoft.DirectX.Direct3D;
@@ -231,14 +233,52 @@ namespace MediaPortal.GUI.Library
       }
     }
 
+    public static string RemapHighOrderChars(string input)
+    {
+      if (string.IsNullOrEmpty(input)) return string.Empty;
+
+      // hack to remap high order unicode characters with a low order equivalents
+      // for now, this allows better usage of clipping. This can be removed, once the skin engine can properly render unicode without falling back to sprites
+      // as unicode is more widely used, this will hit us more with existing font rendering only allowing cached font textures with clipping
+
+      input = input.Replace((char)8211, '-');  //	–
+      input = input.Replace((char)8212, '-');  //	—
+      input = input.Replace((char)8216, '\''); //	‘
+      input = input.Replace((char)8217, '\''); //	’
+      input = input.Replace((char)8220, '"');  //	“
+      input = input.Replace((char)8221, '"');  //	”
+      input = input.Replace((char)8223, '"');  // ‟
+      input = input.Replace((char)8226, '*');  //	•
+      input = input.Replace(((char)8230).ToString(), ". ");  //	…
+      return input;
+    }
+
     public bool containsOutOfBoundsChar(string text)
     {
+      // Add some OutOfBoundsChar as valid to avoid overlap
+      ArrayList OutOfBoundsChar = new ArrayList
+                                       {
+                                         (char) 8211,
+                                         (char) 8212,
+                                         (char) 8216,
+                                         (char) 8217,
+                                         (char) 8220,
+                                         (char) 8221,
+                                         (char) 8223,
+                                         (char) 8226,
+                                         (char) 8230,
+                                         (char) 339
+                                       };
+      text = RemapHighOrderChars(text);
       for (int i = 0; i < text.Length; ++i)
       {
         char c = text[i];
         if ((c < _StartCharacter || c >= _EndCharacter) && c != '\n')
         {
-          return true;
+          if (!OutOfBoundsChar.Contains(c))
+          {
+            return true;
+          }
         }
       }
       return false;

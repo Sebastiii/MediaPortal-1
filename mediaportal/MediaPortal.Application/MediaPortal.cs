@@ -96,7 +96,6 @@ public class MediaPortalApp : D3D, IRender
   private bool                  _startWithBasicHome;
   private bool                  _useOnlyOneHome;
   private bool                  _suspended;
-  private bool                  _onSuspended;
   private bool                  _resumed;
   private bool                  _ignoreContextMenuAction;
   private bool                  _supportsFiltering;
@@ -129,6 +128,7 @@ public class MediaPortalApp : D3D, IRender
   private IntPtr                _displayStatusHandle;
   private IntPtr                _userPresenceHandle;
   private IntPtr                _awayModeHandle;
+  private bool                  _WndProcMessage;
 
   // ReSharper disable InconsistentNaming
   private const int WM_SYSCOMMAND            = 0x0112; // http://msdn.microsoft.com/en-us/library/windows/desktop/ms646360(v=vs.85).aspx
@@ -1395,9 +1395,10 @@ public class MediaPortalApp : D3D, IRender
       for (int i = 0; i < list.Count; ++i)
       {
         Message message = list[i];
-        OnPowerBroadcast(ref message);
+        WndProcProcess(ref message);
       }
     }
+    _WndProcMessage = false;
   }
 
   /// <summary>
@@ -1428,11 +1429,37 @@ public class MediaPortalApp : D3D, IRender
   {
     try
     {
+      if (_listThreadMessages.Count == 1)
+      {
+        DispatchThreadMessages();
+      }
+      if (!_WndProcMessage)
+      {
+        _WndProcMessage = true;
+        {
+          WndProcProcess(ref msg);
+        }
+      }
+      else if (_WndProcMessage)
+      {
+        SendThreadMessage(ref msg);
+      }
+    }
+    catch (Exception ex)
+    {
+      Log.Error(ex);
+    }
+  }
+
+  protected void WndProcProcess(ref Message msg)
+  {
+    try
+    {
       switch (msg.Msg)
       {
-        case (int)ShellNotifications.WmShnotify:
-          NotifyInfos info = new NotifyInfos((ShellNotifications.SHCNE)(int)msg.LParam);
-          
+        case (int) ShellNotifications.WmShnotify:
+          NotifyInfos info = new NotifyInfos((ShellNotifications.SHCNE) (int) msg.LParam);
+
           if (Notifications.NotificationReceipt(msg.WParam, msg.LParam, ref info))
           {
             if (info.Notification == ShellNotifications.SHCNE.SHCNE_MEDIAINSERTED)
@@ -1465,27 +1492,12 @@ public class MediaPortalApp : D3D, IRender
           }
           return;
 
-        // power management
+          // power management
         case WM_POWERBROADCAST:
-          if (_onSuspended)
-          {
-            if (_listThreadMessages.Count == 1)
-            {
-              DispatchThreadMessages();
-            }
-            else if (_listThreadMessages.Count == 0)
-            {
-              SendThreadMessage(ref msg);
-            }
-          }
-          else
-          {
-            _onSuspended = true;
-            OnPowerBroadcast(ref msg);
-          }
+          OnPowerBroadcast(ref msg);
           break;
 
-        // set maximum and minimum form size in windowed mode
+          // set maximum and minimum form size in windowed mode
         case WM_GETMINMAXINFO:
           OnGetMinMaxInfo(ref msg);
           PluginManager.WndProc(ref msg);
@@ -1501,31 +1513,31 @@ public class MediaPortalApp : D3D, IRender
           PluginManager.WndProc(ref msg);
           break;
 
-        // only allow window to be moved inside a valid working area
+          // only allow window to be moved inside a valid working area
         case WM_MOVING:
           OnMoving(ref msg);
           PluginManager.WndProc(ref msg);
           break;
-        
-        // verify window size in case it was not resized by the user
+
+          // verify window size in case it was not resized by the user
         case WM_SIZE:
           OnSize(ref msg);
           PluginManager.WndProc(ref msg);
           break;
 
-        // aspect ratio save window resizing
+          // aspect ratio save window resizing
         case WM_SIZING:
           OnSizing(ref msg);
           PluginManager.WndProc(ref msg);
           break;
-        
-        // handle display changes
+
+          // handle display changes
         case WM_DISPLAYCHANGE:
           OnDisplayChange(ref msg);
           PluginManager.WndProc(ref msg);
           break;
-        
-        // handle device changes
+
+          // handle device changes
         case WM_DEVICECHANGE:
           OnDeviceChange(ref msg);
           PluginManager.WndProc(ref msg);
@@ -1536,7 +1548,7 @@ public class MediaPortalApp : D3D, IRender
           PluginManager.WndProc(ref msg);
           base.WndProc(ref msg);
           ShuttingDown = true;
-          msg.Result = (IntPtr)1;
+          msg.Result = (IntPtr) 1;
           break;
 
         case WM_ENDSESSION:
@@ -1545,16 +1557,16 @@ public class MediaPortalApp : D3D, IRender
           base.WndProc(ref msg);
           Application.ExitThread();
           Application.Exit();
-          msg.Result = (IntPtr)0;
+          msg.Result = (IntPtr) 0;
           break;
-        
-        // handle activation and deactivation requests
+
+          // handle activation and deactivation requests
         case WM_ACTIVATE:
           OnActivate(ref msg);
           PluginManager.WndProc(ref msg);
           break;
 
-        // handle system commands
+          // handle system commands
         case WM_SYSCOMMAND:
           // do not continue with rest of method in case we aborted screen saver or display powering off
           if (!OnSysCommand(ref msg))
@@ -1564,7 +1576,7 @@ public class MediaPortalApp : D3D, IRender
           PluginManager.WndProc(ref msg);
           break;
 
-        // handle default commands needed for plugins
+          // handle default commands needed for plugins
         default:
           PluginManager.WndProc(ref msg);
           break;
@@ -1585,7 +1597,8 @@ public class MediaPortalApp : D3D, IRender
         if (action != null && action.wID != Action.ActionType.ACTION_INVALID)
         {
           Log.Info("Main: Incoming action: {0}", action.wID);
-          if (ActionTranslator.GetActionDetail(GUIWindowManager.ActiveWindowEx, action) && (action.SoundFileName.Length > 0 && !g_Player.Playing))
+          if (ActionTranslator.GetActionDetail(GUIWindowManager.ActiveWindowEx, action) &&
+              (action.SoundFileName.Length > 0 && !g_Player.Playing))
           {
             Utils.PlaySound(action.SoundFileName, false, true);
           }
@@ -1622,6 +1635,14 @@ public class MediaPortalApp : D3D, IRender
     catch (Exception ex)
     {
       Log.Error(ex);
+    }
+    finally
+    {
+      _WndProcMessage = false;
+      if (_listThreadMessages.Count == 1)
+      {
+        DispatchThreadMessages();
+      }
     }
   }
 
@@ -1741,8 +1762,6 @@ public class MediaPortalApp : D3D, IRender
                 IsInAwayMode = true;
                 break;
             }
-            _onSuspended = false;
-            DispatchThreadMessages();
           }
             // GUID_SESSION_DISPLAY_STATUS is only provided on Win8 and above
           else if ((ps.PowerSetting == GUID_MONITOR_POWER_ON || ps.PowerSetting == GUID_SESSION_DISPLAY_STATUS) &&
@@ -1764,8 +1783,6 @@ public class MediaPortalApp : D3D, IRender
                 IsDisplayTurnedOn = true;
                 break;
             }
-            _onSuspended = false;
-            DispatchThreadMessages();
           }
             // GUIT_SESSION_USER_PRESENCE is only provide on Win8 and above
           else if (ps.PowerSetting == GUID_SESSION_USER_PRESENCE && ps.DataLength == Marshal.SizeOf(typeof (Int32)))
@@ -1782,8 +1799,6 @@ public class MediaPortalApp : D3D, IRender
                 IsUserPresent = false;
                 break;
             }
-            _onSuspended = false;
-            DispatchThreadMessages();
           }
           PluginManager.WndProc(ref msg);
           break;
@@ -2412,8 +2427,6 @@ public class MediaPortalApp : D3D, IRender
     if (_suspended)
     {
       Log.Info("Main: OnSuspend is already in progress");
-      _onSuspended = false;
-      DispatchThreadMessages();
       return;
     }
     try
@@ -2457,8 +2470,6 @@ public class MediaPortalApp : D3D, IRender
     finally
     {
       _resumed = false;
-      _onSuspended = false;
-      DispatchThreadMessages();
     }
   }
 
@@ -2492,8 +2503,6 @@ public class MediaPortalApp : D3D, IRender
     if (_resumed)
     {
       Log.Info("Main: OnResumeSuspend Resuming is already in progress");
-      _onSuspended = false;
-      DispatchThreadMessages();
       return;
     }
 
@@ -2540,8 +2549,6 @@ public class MediaPortalApp : D3D, IRender
     _resumed = true;
     _lastOnresume = DateTime.Now;
     Log.Info("Main: OnResumeSuspend - Done");
-    _onSuspended = false;
-    DispatchThreadMessages();
   }
 
   #endregion

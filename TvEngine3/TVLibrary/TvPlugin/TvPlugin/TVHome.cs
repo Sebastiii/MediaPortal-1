@@ -120,7 +120,6 @@ namespace TvPlugin
     private static bool _preferAudioTypeOverLang = false;
     private static bool _autoFullScreen = false;
     private static bool _suspended = false;
-    private static bool _onSuspended = false;
     private static bool _resumed = false;
     private static bool _showlastactivemodule = false;
     private static bool _showlastactivemoduleFullscreen = false;
@@ -1596,44 +1595,6 @@ namespace TvPlugin
       }
     }
 
-    private void DispatchThreadMessages()
-    {
-      if (_listThreadMessages.Count > 0)
-      {
-        List<Message> list;
-        lock (_listThreadMessagesLock) // need lock when switching queues
-        {
-          list = _listThreadMessages;
-          _listThreadMessages = new List<Message>();
-        }
-        for (int i = 0; i < list.Count; ++i)
-        {
-          Message message = list[i];
-          WndProc(ref message);
-        }
-      }
-    }
-
-    /// <summary>
-    /// send thread message. Same as sendmessage() however message is placed on a queue
-    /// which is processed later.
-    /// </summary>
-    /// <param name="message">new message to send</param>
-    private static void SendThreadMessage(ref Message message)
-    {
-      if (OnThreadMessageHandler != null)
-      {
-        OnThreadMessageHandler(null, message);
-      }
-      if (message != null)
-      {
-        lock (_listThreadMessagesLock)
-        {
-          _listThreadMessages.Add(message);
-        }
-      }
-    }
-
     #endregion
 
     public static void OnSelectGroup()
@@ -1718,7 +1679,6 @@ namespace TvPlugin
       if (_suspended)
       {
         Log.Info("TVHome: Suspend is already in progress");
-        _onSuspended = false;
         return;
       }
 
@@ -1757,9 +1717,7 @@ namespace TvPlugin
       {
         _ServerNotConnectedHandled = false;
         _suspended = true;
-        _onSuspended = false;
         _resumed = false;
-        DispatchThreadMessages();
       }
     }
 
@@ -1814,12 +1772,10 @@ namespace TvPlugin
         {
           case PBT_APMSTANDBY:
             Log.Info("TVHome.WndProc(): Windows is going to standby");
-            _onSuspended = true;
             OnSuspend();
             break;
           case PBT_APMSUSPEND:
             Log.Info("TVHome.WndProc(): Windows is suspending");
-            _onSuspended = true;
             OnSuspend();
             break;
           case PBT_APMQUERYSUSPEND:
@@ -1828,25 +1784,11 @@ namespace TvPlugin
             break;
           case PBT_APMRESUMESUSPEND:
             Log.Info("TVHome.WndProc(): Windows has resumed from hibernate mode");
-            if (_onSuspended)
-            {
-              SendThreadMessage(ref msg);
-            }
-            else
-            {
-              OnResume();
-            }
+            OnResume();
             break;
           case PBT_APMRESUMESTANDBY:
             Log.Info("TVHome.WndProc(): Windows has resumed from standby mode");
-            if (_onSuspended)
-            {
-              SendThreadMessage(ref msg);
-            }
-            else
-            {
-              OnResume();
-            }
+            OnResume();
             break;
         }
       }

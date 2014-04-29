@@ -1690,7 +1690,7 @@ namespace TvPlugin
 
     private void TvDelayThread()
     {
-      //we have to use a small delay before calling tvfullscreen.                                    
+      //we have to use a small delay before calling tvfullscreen.
       Thread.Sleep(200);
 
       // wait for timeshifting to complete
@@ -1704,7 +1704,10 @@ namespace TvPlugin
 
       if (!_playbackStopped)
       {
-        g_Player.ShowFullScreenWindow();
+        _mainThreadContext.Send(delegate
+        {
+          g_Player.ShowFullScreenWindow();
+        }, null);
       }
     }
 

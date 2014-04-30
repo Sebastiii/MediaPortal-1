@@ -344,11 +344,11 @@ namespace MediaPortal.GUI.Library
     {
       using (Settings xmlreader = new MPSettings())
       {
-        if (xmlreader.GetValueAsBool("general", "threadedstartup", false))
-        {
-          LoadWindowPluginsThreaded();
-        }
-        else
+        //if (xmlreader.GetValueAsBool("general", "threadedstartup", false))
+        //{
+        //  LoadWindowPluginsThreaded();
+        //}
+        //else
         {
           LoadWindowPluginsNonThreaded();
         }

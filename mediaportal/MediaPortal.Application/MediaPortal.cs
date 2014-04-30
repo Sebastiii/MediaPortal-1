@@ -194,6 +194,9 @@ public class MediaPortalApp : D3D, IRender
 
   private ShellNotifications Notifications = new ShellNotifications();
 
+  // Framegrabber instance
+  private FrameGrabber grabber = FrameGrabber.GetInstance();
+
   #endregion
 
   #region enumns
@@ -3150,6 +3153,17 @@ public class MediaPortalApp : D3D, IRender
               GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.SideBySideTo2D ||
               GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.TopAndBottomTo2D)
           {
+            // Call FrameGrabber with UI Surface
+            if (grabber.HasSubscribers())
+            {
+              Surface frameGrabberSurface = GUIGraphicsContext.DX9Device.GetBackBuffer(0, 0, BackBufferType.Mono);
+              unsafe
+              {
+                grabber.OnFrame((Int16)frameGrabberSurface.Description.Width, (Int16)frameGrabberSurface.Description.Height, 0, 0, (uint)frameGrabberSurface.UnmanagedComPointer);
+              }
+              frameGrabberSurface.Dispose();
+            }
+
             // clear the surface
             GUIGraphicsContext.DX9Device.Clear(ClearFlags.Target, Color.Black, 1.0f, 0);
             GUIGraphicsContext.DX9Device.BeginScene();
@@ -3182,6 +3196,15 @@ public class MediaPortalApp : D3D, IRender
             // 3D output either SBS or TAB
 
             Surface backbuffer = GUIGraphicsContext.DX9Device.GetBackBuffer(0, 0, BackBufferType.Mono);
+
+            // Call FrameGrabber with UI Surface
+            if (grabber.HasSubscribers())
+            {
+              unsafe
+              {
+                grabber.OnFrame((Int16)backbuffer.Description.Width, (Int16)backbuffer.Description.Height, 0, 0, (uint)backbuffer.UnmanagedComPointer);
+              }
+            }
 
             // create texture/surface for preparation for 3D output if they don't exist
 

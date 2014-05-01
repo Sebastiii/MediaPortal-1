@@ -840,6 +840,12 @@ namespace MediaPortal.GUI.Music
           tag = song.ToMusicTag();
           playListItem.MusicTag = tag;
         }
+        else
+        {
+          MusicTag tag = new MusicTag();
+          tag = TagReader.TagReader.ReadTag(playListItem.FileName);
+          playListItem.MusicTag = tag;
+        }
         if (Util.Utils.FileExistsInCache(playListItem.FileName) ||
             playListItem.Type == PlayListItem.PlayListItemType.AudioStream)
         {
@@ -2217,8 +2223,27 @@ namespace MediaPortal.GUI.Music
 
       foreach (PlayListItem pItem in pItems)
       {
-        // actually add items to the playlist
-        pl.Add(pItem);
+        if (PlayListFactory.IsPlayList(pItem.FileName))
+        {
+          if (Util.Utils.GetFileExtension(pItem.FileName) == ".m3u")
+          {
+            pl.Remove(pItem.FileName, false);
+          }
+          if (pl.Count > 0)
+          {
+            // Playlist already filled, just add song
+            LoadPlayList(pItem.FileName, false, false, false, false);
+          }
+          else
+          {
+            LoadPlayList(pItem.FileName, false, false, false, true);
+          }
+        }
+        else
+        {
+          // actually add items to the playlist
+          pl.Add(pItem);
+        }
       }
 
       // If Resume has been enabled we need to check te first item for resume information

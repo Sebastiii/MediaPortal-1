@@ -771,15 +771,15 @@ namespace MediaPortal.GUI.Music
 
     protected void LoadPlayList(string strPlayList, bool startPlayback)
     {
-      LoadPlayList(strPlayList, startPlayback, false, false, false);
+      LoadPlayList(strPlayList, startPlayback, false, false, true);
     }
 
     protected void LoadPlayList(string strPlayList, bool startPlayback, bool isAsynch)
     {
-      LoadPlayList(strPlayList, startPlayback, isAsynch, false, false);
+      LoadPlayList(strPlayList, startPlayback, isAsynch, false, true);
     }
 
-    protected void LoadPlayList(string strPlayList, bool startPlayback, bool isAsynch, bool defaultLoad, bool refreshList)
+    protected void LoadPlayList(string strPlayList, bool startPlayback, bool isAsynch, bool defaultLoad, bool replacePlaylist)
     {
       IPlayListIO loader = PlayListFactory.CreateIO(strPlayList);
       if (loader == null)
@@ -874,7 +874,7 @@ namespace MediaPortal.GUI.Music
         }
       }
 
-      if (!refreshList)
+      if (replacePlaylist)
       {
         ReplacePlaylist(newPlaylist);
       }

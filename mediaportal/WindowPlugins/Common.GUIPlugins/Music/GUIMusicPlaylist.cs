@@ -446,7 +446,7 @@ namespace MediaPortal.GUI.Music
           {
             pl.Remove(pi.FileName, false);
           }
-          LoadPlayList(pi.FileName, false, false, false, true);
+          LoadPlayList(pi.FileName, false, false, false, false);
         }
         // refresh pi if .m3u are cleaned up
         pi = pl[i];
@@ -887,7 +887,7 @@ namespace MediaPortal.GUI.Music
 
     private void bw_DoWork(object sender, DoWorkEventArgs e)
     {
-      LoadPlayList(Path.Combine(_playlistFolder, _defaultPlaylist), false, true, true, false);
+      LoadPlayList(Path.Combine(_playlistFolder, _defaultPlaylist), false, true, true, true);
       if (null != bw && bw.CancellationPending)
         e.Cancel = true;
     }

@@ -501,6 +501,9 @@ namespace MediaPortal.GUI.Music
     {
       if (message.Message == GUIMessage.MessageType.GUI_MSG_ITEM_FOCUS)
       {
+        // Send SelectedListItemIndex if we are on view with root folder '..'
+        int iSelectedItem = facadeLayout.SelectedListItemIndex;
+        message.Param4 = iSelectedItem;
         _currentPlaying = message.Label;
         facadeLayout.OnMessage(message);
       }
@@ -768,15 +771,15 @@ namespace MediaPortal.GUI.Music
 
     protected void LoadPlayList(string strPlayList, bool startPlayback)
     {
-      LoadPlayList(strPlayList, startPlayback, false, false);
+      LoadPlayList(strPlayList, startPlayback, false, false, false);
     }
 
     protected void LoadPlayList(string strPlayList, bool startPlayback, bool isAsynch)
     {
-      LoadPlayList(strPlayList, startPlayback, isAsynch, false);
+      LoadPlayList(strPlayList, startPlayback, isAsynch, false, false);
     }
 
-    protected void LoadPlayList(string strPlayList, bool startPlayback, bool isAsynch, bool defaultLoad)
+    protected void LoadPlayList(string strPlayList, bool startPlayback, bool isAsynch, bool defaultLoad, bool refreshList)
     {
       IPlayListIO loader = PlayListFactory.CreateIO(strPlayList);
       if (loader == null)
@@ -851,7 +854,30 @@ namespace MediaPortal.GUI.Music
       if (null != bw && isAsynch && bw.CancellationPending)
         return;
 
-      ReplacePlaylist(newPlaylist);
+      PlayList pl = playlistPlayer.GetPlaylist(PlayListType.PLAYLIST_MUSIC);
+
+      if (pl.Count > 0)
+      {
+        // add each item of the playlist to the playlistplayer
+        for (int i = 0; i < newPlaylist.Count; ++i)
+        {
+          PlayListItem playListItem = pl[i];
+          if (Util.Utils.FileExistsInCache(playListItem.FileName) ||
+              playListItem.Type == PlayListItem.PlayListItemType.AudioStream)
+          {
+            pl.Add(playListItem, false);
+          }
+          else
+          {
+            Log.Info("Playlist: File {0} no longer exists. Skipping item.", playListItem.FileName);
+          }
+        }
+      }
+
+      if (!refreshList)
+      {
+        ReplacePlaylist(newPlaylist);
+      }
 
       if (startPlayback)
         StartPlayingPlaylist();

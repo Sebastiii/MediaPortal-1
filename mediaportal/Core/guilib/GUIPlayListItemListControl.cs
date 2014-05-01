@@ -529,8 +529,12 @@ namespace MediaPortal.GUI.Library
         }
         foreach (GUIListItem item in _listItems.Where(item => item.Path.Equals(message.Label, StringComparison.OrdinalIgnoreCase)))
         {
-          item.Selected = true;
-          break;
+          // Needed for select the correct item from music playlist if the list has same song in the list
+          if (_listItems.IndexOf(item) == message.Param1 || _listItems.IndexOf(item) == message.Param4)
+          {
+            item.Selected = true;
+            break;
+          }
         }
       }
 

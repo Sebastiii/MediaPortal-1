@@ -580,11 +580,6 @@ namespace MediaPortal.Playlists
         PlayListItem item = playlist[_currentItem];
 
         // Skip .m3u files from being playing in Playlist View.
-        while (Util.Utils.GetFileExtension(item.FileName.ToLowerInvariant()) == ".m3u")
-        {
-          _currentItem++;
-          item = playlist[_currentItem];
-        }
 
         if (playlist.AllPlayed())
         {

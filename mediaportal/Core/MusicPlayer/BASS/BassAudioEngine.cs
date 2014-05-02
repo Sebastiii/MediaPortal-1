@@ -747,49 +747,46 @@ namespace MediaPortal.MusicPlayer.BASS
       _commandThread.Start();
     }
 
-    private  void CommandThread()
+    private void CommandThread()
     {
-      lock (this)
+      try
       {
-        try
+        bool exitThread = false;
+
+        while (!exitThread)
         {
-          bool exitThread = false;
+          _commandNotify.Wait();
+          _commandNotify.Reset();
 
-          while (!exitThread)
+          lock (_commandQueueSync)
           {
-            _commandNotify.Wait();
-            _commandNotify.Reset();
-
-            lock (_commandQueueSync)
+            if (_commandQueue.Count == 0)
             {
-              if (_commandQueue.Count == 0)
-              {
-                // No commands in queue, wait for queue to receive events
+              // No commands in queue, wait for queue to receive events
+              continue;
+            }
+            QueueItem item = _commandQueue[0];
+            _commandQueue.RemoveAt(0);
+            switch ((int) item.cmd)
+            {
+              case (int) PlaybackCommand.Stop:
+                StopCommand();
+                break;
+
+              case (int) PlaybackCommand.ExitThread:
+                exitThread = true;
+                break;
+
+              default:
+                Log.Error("BASS: CommandThread unknown command {0}", (int) item.cmd);
                 continue;
-              }
-              QueueItem item = _commandQueue[0];
-              _commandQueue.RemoveAt(0);
-              switch ((int) item.cmd)
-              {
-                case (int) PlaybackCommand.Stop:
-                  StopCommand();
-                  break;
-
-                case (int) PlaybackCommand.ExitThread:
-                  exitThread = true;
-                  break;
-
-                default:
-                  Log.Error("BASS: CommandThread unknown command {0}", (int) item.cmd);
-                  continue;
-              }
             }
           }
         }
-        catch (Exception ex)
-        {
-          Log.Error("BASS: CommandThread exception {0}", ex);
-        }
+      }
+      catch (Exception ex)
+      {
+        Log.Error("BASS: CommandThread exception {0}", ex);
       }
     }
 
@@ -2140,7 +2137,6 @@ namespace MediaPortal.MusicPlayer.BASS
     {
       MusicStream stream = GetCurrentStream();
 
-      Log.Debug("BASS: Pause of stream {0}", stream.FilePath);
       try
       {
         PlayState oldPlayState = _state;
@@ -2152,6 +2148,7 @@ namespace MediaPortal.MusicPlayer.BASS
 
         if (oldPlayState == PlayState.Paused)
         {
+          Log.Debug("BASS: Resuming stream {0}", stream.FilePath);
           _state = PlayState.Playing;
 
           if (Config.SoftStop)
@@ -2179,6 +2176,7 @@ namespace MediaPortal.MusicPlayer.BASS
 
         else
         {
+          Log.Debug("BASS: Pausing stream {0}", stream.FilePath);
           _state = PlayState.Paused;
 
           if (Config.SoftStop)

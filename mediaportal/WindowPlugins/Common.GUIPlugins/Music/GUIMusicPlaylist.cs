@@ -442,10 +442,7 @@ namespace MediaPortal.GUI.Music
         PlayListItem pi = pl[i];
         if (PlayListFactory.IsPlayList(pi.FileName))
         {
-          if (Util.Utils.GetFileExtension(pi.FileName) == ".m3u")
-          {
-            pl.Remove(pi.FileName, false);
-          }
+          pl.Remove(pi.FileName, false);
           LoadPlayList(pi.FileName, false, false, false, false);
         }
         // refresh pi if .m3u are cleaned up

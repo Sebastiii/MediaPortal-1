@@ -2225,10 +2225,7 @@ namespace MediaPortal.GUI.Music
       {
         if (PlayListFactory.IsPlayList(pItem.FileName))
         {
-          if (Util.Utils.GetFileExtension(pItem.FileName) == ".m3u")
-          {
-            pl.Remove(pItem.FileName, false);
-          }
+          pl.Remove(pItem.FileName, false);
           if (pl.Count > 0)
           {
             // Playlist already filled, just add song

@@ -1986,7 +1986,7 @@ public class MediaPortalApp : D3D, IRender
         Log.Debug("Main: Screen MP OnDisplayChange set current detected screen bounds : {0} to previous bounds values : {1}", GUIGraphicsContext.currentScreen.Bounds, Bounds);
         Bounds = screen.Bounds;
         Log.Debug("Main: Screen MP OnDisplayChange recreate swap chain");
-        AppActive = true;
+        NeedRecreateSwapChain = true;
         RecreateSwapChain();
         _changeScreenDisplayChange = true;
       }
@@ -2075,7 +2075,7 @@ public class MediaPortalApp : D3D, IRender
       Log.Debug("Main: Screen MP OnGetMinMaxInfo set current screen bounds {0} to Bounds {1}", GUIGraphicsContext.currentScreen.Bounds, Bounds);
       Bounds = screen.Bounds;
       Log.Debug("Main: Screen MP OnGetMinMaxInfo recreate swap chain");
-      AppActive = true;
+      NeedRecreateSwapChain = true;
       RecreateSwapChain();
       _changeScreen = true;
 

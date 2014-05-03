@@ -1663,72 +1663,6 @@ namespace MediaPortal.MusicPlayer.BASS
       return _streamcopy.ChannelHandle;
     }
 
-    public int GetDataFFT(float[] buffer, int lenght)
-    {
-      lock (_syncRoot)
-      {
-        // Return the clone of the stream, because for a decoding channel, we can't get data from the original stream
-        return BassWasapi.BASS_WASAPI_GetData(buffer, lenght);
-      }
-    }
-
-    internal int StreamCreate(int freq, int chans, BASSFlag Flags, STREAMPROC proc, IntPtr user)
-    {
-      lock (_syncRoot)
-      {
-        return Bass.BASS_StreamCreate(freq, chans, Flags, proc, user);
-      }
-    }
-
-    internal bool ChannelSetLink(int handle, int chan)
-    {
-      lock (_syncRoot)
-      {
-        return Bass.BASS_ChannelSetLink(handle, chan);
-      }
-    }
-
-    internal bool ChannelPlay(int handle, bool restart)
-    {
-      lock (_syncRoot)
-      {
-        return Bass.BASS_ChannelPlay(handle, restart);
-      }
-    }
-
-    internal bool ChannelRemoveLink(int handle, int chan)
-    {
-      lock (_syncRoot)
-      {
-        return Bass.BASS_ChannelRemoveLink(handle, chan);
-      }
-    }
-
-    internal BASSActive ChannelIsActive(int handle)
-    {
-      lock (_syncRoot)
-      {
-        return Bass.BASS_ChannelIsActive(handle);
-      }
-    }
-
-    internal bool StreamFree(int handle)
-    {
-      lock (_syncRoot)
-      {
-        return Bass.BASS_StreamFree(handle);
-      }
-    }
-
-    public int GetChannelData(int handle, float[] buffer, int lenght)
-    {
-      lock (_syncRoot)
-      {
-        // Return the clone of the stream, because for a decoding channel, we can't get data from the original stream
-        return Bass.BASS_ChannelGetData(handle, buffer, lenght);
-      }
-    }
-
     /// <summary>
     /// Show the Visualisation Window
     /// </summary>
@@ -2789,6 +2723,76 @@ namespace MediaPortal.MusicPlayer.BASS
 
       dbLevelL = dbLeft;
       dbLevelR = dbRight;
+    }
+
+    public int GetDataFFT(float[] buffer, int lenght)
+    {
+      lock (_syncRoot)
+      {
+        // Return the clone of the stream, because for a decoding channel, we can't get data from the original stream
+        return BassWasapi.BASS_WASAPI_GetData(buffer, lenght);
+      }
+    }
+
+    public int GetChannelData(int handle, float[] buffer, int lenght)
+    {
+      lock (_syncRoot)
+      {
+        // Return the clone of the stream, because for a decoding channel, we can't get data from the original stream
+        return Bass.BASS_ChannelGetData(handle, buffer, lenght);
+      }
+    }
+
+    #endregion
+
+    #region  Internals Methods
+
+    internal int StreamCreate(int freq, int chans, BASSFlag Flags, STREAMPROC proc, IntPtr user)
+    {
+      lock (_syncRoot)
+      {
+        return Bass.BASS_StreamCreate(freq, chans, Flags, proc, user);
+      }
+    }
+
+    internal bool ChannelSetLink(int handle, int chan)
+    {
+      lock (_syncRoot)
+      {
+        return Bass.BASS_ChannelSetLink(handle, chan);
+      }
+    }
+
+    internal bool ChannelPlay(int handle, bool restart)
+    {
+      lock (_syncRoot)
+      {
+        return Bass.BASS_ChannelPlay(handle, restart);
+      }
+    }
+
+    internal bool ChannelRemoveLink(int handle, int chan)
+    {
+      lock (_syncRoot)
+      {
+        return Bass.BASS_ChannelRemoveLink(handle, chan);
+      }
+    }
+
+    internal BASSActive ChannelIsActive(int handle)
+    {
+      lock (_syncRoot)
+      {
+        return Bass.BASS_ChannelIsActive(handle);
+      }
+    }
+
+    internal bool StreamFree(int handle)
+    {
+      lock (_syncRoot)
+      {
+        return Bass.BASS_StreamFree(handle);
+      }
     }
 
     #endregion

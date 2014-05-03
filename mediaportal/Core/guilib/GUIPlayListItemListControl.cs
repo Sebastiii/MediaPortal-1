@@ -523,6 +523,7 @@ namespace MediaPortal.GUI.Library
 
       if (message.Message == GUIMessage.MessageType.GUI_MSG_ITEM_FOCUS)
       {
+        bool foundMatchedItem = false;
         foreach (GUIListItem item in _listItems)
         {
           item.Selected = false;
@@ -533,11 +534,20 @@ namespace MediaPortal.GUI.Library
           if (_listItems.IndexOf(item) == message.Param1 || _listItems.IndexOf(item) == message.Param4)
           {
             item.Selected = true;
+            foundMatchedItem = true;
+            break;
+          }
+        }
+        if (!foundMatchedItem)
+        {
+          // fall back to item matched by name if previous check based on current index failed
+          foreach (GUIListItem item in _listItems.Where(item => item.Path.Equals(message.Label, StringComparison.OrdinalIgnoreCase)))
+          {
+            item.Selected = true;
             break;
           }
         }
       }
-
       return result;
     }
 

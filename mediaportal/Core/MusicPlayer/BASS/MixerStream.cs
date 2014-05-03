@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using MediaPortal.GUI.Library;
+using MediaPortal.Player;
 using Un4seen.Bass;
 using Un4seen.Bass.AddOn.Mix;
 using Un4seen.BassAsio;
@@ -788,6 +789,7 @@ namespace MediaPortal.MusicPlayer.BASS
         catch (KeyNotFoundException)
         {
           Log.Error("BASS: GCHandle of Musicstream not found in Dictionary");
+          g_Player.Stop();
           return;
         }
 

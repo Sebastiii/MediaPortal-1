@@ -2348,7 +2348,7 @@ namespace MediaPortal.GUI.Pictures
       GUIControl.SelectItemControl(GetID, facadeLayout.GetID, 0);
       for (int i = 0; i < totalItemCount; i++)
       {
-        if (facadeLayout[i].Label == strSelectedItem)
+        if (facadeLayout[i].Label == strSelectedItem || facadeLayout[i].Path == strSelectedItem)
         {
           GUIControl.SelectItemControl(GetID, facadeLayout.GetID, i);
           break;
@@ -2555,6 +2555,7 @@ namespace MediaPortal.GUI.Pictures
       try
       {
         returnFromSlideshow = true;
+        string strSelectedItem = Util.Utils.GetFilename(selectedItem, true);
         if (strNewDirectory.Length == 4 && !_useDayGrouping)
         {
           // Months
@@ -2571,15 +2572,16 @@ namespace MediaPortal.GUI.Pictures
               {
                 if (pic == selectedItem)
                 {
-                  string monthFriendly = Util.Utils.GetNamedMonth(month);
                   string strFreshNewDirectory = strNewDirectory + "\\" + month;
                   // Set root directory
                   folderHistory.Set(year, "");
-                  folderHistory.Set(monthFriendly, year);
+                  folderHistory.Set(strFreshNewDirectory, year);
+                  folderHistory.Set(strSelectedItem, strFreshNewDirectory);
                   // Reset facadeLayout
                   facadeLayout.Clear();
                   // Reload fresh view
                   LoadDateView(strFreshNewDirectory);
+                  returnFromSlideshow = false;
                   return selectedItem;
                 }
               }
@@ -2616,26 +2618,23 @@ namespace MediaPortal.GUI.Pictures
                     {
                       // Set root directory
                       string strFreshNewDirectory = strNewDirectory + "\\" + month + "\\" + day;
-                      string monthFriendly = Util.Utils.GetNamedMonth(month);
-                      //currentFolderDateView = strFreshNewDirectory;
-                      //folderHistory.Set(day, strFreshNewDirectory);
                       // Set root directory
                       folderHistory.Set(year, "");
-                      folderHistory.Set(monthFriendly, year);
-                      folderHistory.Set(day, monthFriendly);
-                      //folderHistory.Set(day, strFreshNewDirectory.Substring(0, 7));
-                      //folderHistory.Set(year, strFreshNewDirectory.Substring(0, 7));
-                      //folderHistory.Set(year, "");
+                      folderHistory.Set(strFreshNewDirectory.Substring(0, 7), year);
+                      folderHistory.Set(strFreshNewDirectory, strFreshNewDirectory.Substring(0, 7));
+                      folderHistory.Set(strSelectedItem, strFreshNewDirectory);
                       // Reset facadeLayout
                       facadeLayout.Clear();
                       // Reload fresh view
                       LoadDateView(strFreshNewDirectory);
+                      returnFromSlideshow = false;
                       return selectedItem;
                     }
                   }
                   catch (Exception)
                   {
                     Log.Warn("GUIPictures: can't match item in date view");
+                    returnFromSlideshow = false;
                   }
                 }
               }
@@ -2659,18 +2658,17 @@ namespace MediaPortal.GUI.Pictures
                 {
                   if (pic == selectedItem)
                   {
-                    string monthFriendly = Util.Utils.GetNamedMonth(month);
                     string strFreshNewDirectory = strNewDirectory + "\\" + day;
                     // Set root directory
                     folderHistory.Set(year, "");
-                    folderHistory.Set(monthFriendly, year);
-                    folderHistory.Set(day, monthFriendly);
-                    //folderHistory.Set(day, strNewDirectory.Substring(0, 7));
-                    //currentFolderDateView = strFreshNewDirectory;
+                    folderHistory.Set(strFreshNewDirectory.Substring(0, 7), year);
+                    folderHistory.Set(strFreshNewDirectory, strFreshNewDirectory.Substring(0, 7));
+                    folderHistory.Set(strSelectedItem, strFreshNewDirectory);
                     // Reset facadeLayout
                     facadeLayout.Clear();
                     // Reload fresh view
                     LoadDateView(strFreshNewDirectory);
+                    returnFromSlideshow = false;
                     return selectedItem;
                   }
                 }
@@ -2695,19 +2693,21 @@ namespace MediaPortal.GUI.Pictures
             {
               if (pic == selectedItem)
               {
-                string monthFriendly = Util.Utils.GetNamedMonth(month);
                 // Set root directory
                 folderHistory.Set(year, "");
-                folderHistory.Set(monthFriendly, year);
-                folderHistory.Set(day, monthFriendly);
-                //// Set root directory
-                //folderHistory.Set(day, strNewDirectory.Substring(0, 7));
-                //folderHistory.Set(year, strNewDirectory.Substring(0, 7));
-                //currentFolderDateView = strNewDirectory;
+                folderHistory.Set(strNewDirectory, year);
+                folderHistory.Set(day, strNewDirectory);
+                folderHistory.Set(strSelectedItem, strNewDirectory);
+
+                //folderHistory.Set(strFreshNewDirectory.Substring(0, 7), year);
+                //folderHistory.Set(strFreshNewDirectory, strFreshNewDirectory.Substring(0, 7));
+                //folderHistory.Set(strSelectedItem, strFreshNewDirectory);
+
                 // Reset facadeLayout
                 facadeLayout.Clear();
                 // Reload fresh view
                 LoadDateView(strNewDirectory);
+                returnFromSlideshow = false;
                 return selectedItem;
               }
             }
@@ -2729,10 +2729,15 @@ namespace MediaPortal.GUI.Pictures
               {
                 if (pic == selectedItem)
                 {
+                  // Set root directory
+                  folderHistory.Set(year, "");
+                  folderHistory.Set(strNewDirectory, year);
+                  folderHistory.Set(strSelectedItem, strNewDirectory);
                   // Reset facadeLayout
                   facadeLayout.Clear();
                   // Reload fresh view
                   LoadDateView(strNewDirectory);
+                  returnFromSlideshow = false;
                   return selectedItem;
                 }
               }

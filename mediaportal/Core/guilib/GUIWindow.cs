@@ -484,7 +484,7 @@ namespace MediaPortal.GUI.Library
     /// Loads the xml file for the window.
     /// </summary>
     /// <returns></returns>
-    private bool LoadSkin()
+    public bool LoadSkin()
     {
       // add thread check to log calls not running in main thread/GUI
       String threadName = Thread.CurrentThread.Name;

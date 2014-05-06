@@ -69,9 +69,8 @@ namespace MediaPortal.GUI.Pictures
 
       if (_autoShuffleFolder)
       {
-        // Need a new shuffle after new files added and select first entry (so use _currentSlideIndex "0") and check if new selected entry is a folder
+        // Need a new shuffle after new files added and check if new selected entry is a folder
         Shuffle(true, false);
-        _currentSlideIndex = 0;
         // It's a folder then need to load the content
         while (IsPathDirectory(_slideList[_currentSlideIndex]))
         {

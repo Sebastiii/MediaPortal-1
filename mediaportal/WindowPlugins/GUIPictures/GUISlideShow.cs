@@ -148,10 +148,6 @@ namespace MediaPortal.GUI.Pictures
         _loadVideoPlayback = false;
         _returnedFromVideoPlayback = true;
       }
-      //else
-      //{
-      //  GUIPictureSlideShow._slideDirection = 0;
-      //}
 
       #endregion Video in slideshow
 

@@ -682,7 +682,7 @@ namespace TvPlugin
         {
           IUser currentUser;
           VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
-          if (card != null && card.IsTunerLocked)
+          if (card != null)// && card.IsTunerLocked)
           {
             RemoteControl.Instance.CancelTimeShifting(ref currentUser);
           }
@@ -696,38 +696,39 @@ namespace TvPlugin
           benchClock.Stop();
           return;
         }
-        else
-        {
-          // tv on
-          Log.Info("TVHome:turn tv on {0}", Navigator.CurrentChannel);
 
-          // stop playing anything
-          if (g_Player.Playing)
+        // tv on
+        Log.Info("TVHome:turn tv on {0}", Navigator.CurrentChannel);
+
+        // stop playing anything
+        if (g_Player.Playing)
+        {
+          if (g_Player.IsTV && !g_Player.IsTVRecording)
           {
-            if (g_Player.IsTV && !g_Player.IsTVRecording)
-            {
-              //already playing tv...
-            }
-            else
-            {
-              Log.Warn("TVHome.OnClicked: Stop Called - {0} ms", benchClock.ElapsedMilliseconds.ToString());
-              g_Player.Stop(true);
-            }
+            //already playing tv...
+          }
+          else
+          {
+            Log.Warn("TVHome.OnClicked: Stop Called - {0} ms", benchClock.ElapsedMilliseconds.ToString());
+            g_Player.Stop(true);
           }
         }
 
-        // turn tv on/off        
-        if (Navigator.Channel != null && Navigator.Channel.IsTv)
+        // turn tv on/off
+        if (!_tunePending)
         {
-          ViewChannelAndCheck(Navigator.Channel);
-        }
-        else
-        // current channel seems to be non-tv (radio ?), get latest known tv channel from xml config and use this instead
-        {
-          Settings xmlreader = new MPSettings();
-          string currentchannelName = xmlreader.GetValueAsString("mytv", "channel", String.Empty);
-          Channel currentChannel = Navigator.GetChannel(currentchannelName);
-          ViewChannelAndCheck(currentChannel);
+          if (Navigator.Channel != null && Navigator.Channel.IsTv)
+          {
+            ViewChannelAndCheck(Navigator.Channel);
+          }
+          else
+            // current channel seems to be non-tv (radio ?), get latest known tv channel from xml config and use this instead
+          {
+            Settings xmlreader = new MPSettings();
+            string currentchannelName = xmlreader.GetValueAsString("mytv", "channel", String.Empty);
+            Channel currentChannel = Navigator.GetChannel(currentchannelName);
+            ViewChannelAndCheck(currentChannel);
+          }
         }
 
         UpdateStateOfRecButton();

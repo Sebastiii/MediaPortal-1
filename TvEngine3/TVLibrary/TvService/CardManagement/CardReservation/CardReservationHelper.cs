@@ -79,6 +79,14 @@ namespace TvService
       }
     }
 
+    private static void SetAsyncTuneCardState(ITvCardHandler tvcard)
+    {
+      lock (tvcard.Tuner.CardReservationsLock)
+      {
+        tvcard.Tuner.CardTuneState = CardTuneState.TuneAsync;
+      }
+    }
+
     private static void SetCurrentCardState(ITvCardHandler tvcard)
     {
       lock (tvcard.Tuner.CardReservationsLock)
@@ -105,6 +113,10 @@ namespace TvService
       if (tvResult == TvResult.Succeeded)
       {
         SetTunedCardState(tvcard);
+      }
+      if (tvResult == TvResult.TuneAsync)
+      {
+        SetAsyncTuneCardState(tvcard);
       }
       else if (tvResult == TvResult.NoVideoAudioDetected ||
                tvResult == TvResult.NoPmtFound ||

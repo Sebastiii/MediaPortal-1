@@ -125,7 +125,7 @@ namespace SetupTv.Sections
         {
           RemoteControl.Instance.CancelTimeShifting(ref currentUser);
           card.StopTimeShifting();
-          _tunePending = false;
+          //_tunePending = false; // TODO
         }
         mpButtonRec.Enabled = false;
       }

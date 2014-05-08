@@ -1807,7 +1807,9 @@ namespace TvService
         }
         
         if (false == tvcard.TimeShifter.IsTimeShifting(ref user))
-          return true;
+        {
+          return true; // TODO
+        }
         Fire(this, new TvServerEventArgs(TvServerEventType.EndTimeShifting, GetVirtualCard(user), (User)user));
 
         if (tvcard.Recorder.IsRecording(ref user))
@@ -1843,32 +1845,47 @@ namespace TvService
         //first, lets figure out if we are trying to stop a pending tune session
         foreach (ITvCardHandler cardHandler in _cards.Values)
         {
-          ICardTuneReservationTicket cardTuneReservationTicket = cardHandler.Tuner.ReservationsForTune.FirstOrDefault();
-          if (cardTuneReservationTicket != null)
+          lock (cardHandler.Tuner.CardReservationsLock)
           {
-            IUser userwWithPendingTicket = cardTuneReservationTicket.User;
-
-            if (userwWithPendingTicket.Name.Equals(user.Name))
+            bool userToRemove = false;
+            foreach (ICardTuneReservationTicket cardTuneReservationTicket in cardHandler.Tuner.ReservationsForTune)
             {
-              ITvCardContext context = cardHandler.Card.Context as ITvCardContext;
-              if (context != null)
+              if (cardTuneReservationTicket != null)
               {
-                cardHandler.Users.RemoveUser(user);
-                //context.Remove(user);
-                if (context.ContainsUsersForSubchannel(user.SubChannel) == false)
+                IUser userwWithPendingTicket = cardTuneReservationTicket.User;
+
+                if (userwWithPendingTicket.Name.Equals(user.Name))
                 {
-                  if (user.SubChannel > -1)
+                  ITvCardContext context = cardHandler.Card.Context as ITvCardContext;
+                  if (context != null)
                   {
-                    CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
+                    //if (context.ContainsUsersForSubchannel(user.SubChannel))
+                    {
+                      if (user.SubChannel > -1)
+                      {
+                        CardReservationHelper.CancelCardReservation(cardHandler, cardTuneReservationTicket);
+                        CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
+                        userToRemove = true; cardHandler.TimeShifter._timeshiftCancelled = false;
+                      }
+                    }
                   }
+                  else
+                  {
+                    Log.Epg("TvController: Stop - context == null");
+                  }
+                  timeshiftingStopped = true;
+                  break;
                 }
               }
-              else
-              {
-                Log.Epg("TvController: Stop - context == null");
-              }
-              timeshiftingStopped = true;
-              break;
+            }
+            if (userToRemove)
+            {
+              cardHandler.Users.RemoveUser(user);
+              cardHandler.TimeShifter._timeshiftCancelled = true;
+              cardHandler.TimeShifter._eventAudio.Reset();
+              cardHandler.TimeShifter._eventVideo.Reset();
+              cardHandler.TimeShifter._eventAudio.Set();
+              cardHandler.TimeShifter._eventVideo.Set();
             }
           }
         }
@@ -3954,10 +3971,13 @@ namespace TvService
 
               foreach (Channel ch in tvChannelList)
               {
-                bool exists = _tvChannelListGroups.Exists(delegate(Channel c) { return c.IdChannel == ch.IdChannel; });
-                if (!exists)
+                if (_tvChannelListGroups != null && ch != null)
                 {
-                  _tvChannelListGroups.Add(ch);
+                  bool exists = _tvChannelListGroups.Exists(delegate(Channel c) { return c.IdChannel == ch.IdChannel; });
+                  if (!exists)
+                  {
+                    _tvChannelListGroups.Add(ch);
+                  }
                 }
               }
             }
@@ -4145,6 +4165,7 @@ namespace TvService
 
     private void Tuner_OnBeforeTuneEvent(ITvCardHandler cardHandler)
     {
+      cardHandler.TimeShifter._timeshiftCancelled = false;
       cardHandler.TimeShifter.OnBeforeTune();
     }
 

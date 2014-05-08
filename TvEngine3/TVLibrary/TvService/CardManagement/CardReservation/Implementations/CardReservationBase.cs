@@ -41,7 +41,8 @@ namespace TvService
     Tuning,
     Tuned,
     TuneCancelled,
-    TuneFailed    
+    TuneFailed,
+    TuneAsync
   }
 
   public enum CardStopState
@@ -403,8 +404,10 @@ namespace TvService
 
       bool isCardTuneStateIdle = (tvcard.Tuner.CardTuneState == CardTuneState.Idle);
       bool isCardTuneStateTuned = (tvcard.Tuner.CardTuneState == CardTuneState.Tuned);
+      bool isCardAsynctune = (tvcard.Tuner.CardTuneState == CardTuneState.TuneAsync);
+      bool isCardTuning = (tvcard.Tuner.CardTuneState == CardTuneState.Tuning);
 
-      bool isCardAvail = (isCardStopStateIdle || isCardStopStateStopped) && (isCardTuneStateIdle || isCardTuneStateTuned);
+      bool isCardAvail = (isCardStopStateIdle || isCardStopStateStopped) && (isCardTuneStateIdle || isCardTuneStateTuned || isCardAsynctune || isCardTuning);
       return isCardAvail;
     }
 

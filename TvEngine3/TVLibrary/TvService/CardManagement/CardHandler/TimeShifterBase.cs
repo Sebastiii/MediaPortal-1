@@ -17,10 +17,11 @@ namespace TvService
     protected ITvCardHandler _cardHandler;
     protected bool _timeshiftingEpgGrabberEnabled;
     private readonly int _waitForTimeshifting = 15;
-    protected readonly ManualResetEvent _eventAudio = new ManualResetEvent(false); // gets signaled when audio PID is seen
-    protected readonly ManualResetEvent _eventVideo = new ManualResetEvent(false); // gets signaled when video PID is seen
-    protected bool _cancelled;
-    protected readonly ManualResetEvent _eventTimeshift = new ManualResetEvent(true);
+    internal readonly ManualResetEvent _eventAudio = new ManualResetEvent(false); // gets signaled when audio PID is seen
+    internal readonly ManualResetEvent _eventVideo = new ManualResetEvent(false); // gets signaled when video PID is seen
+    internal bool _cancelled;
+    internal bool _timeshiftCancelled;
+    internal readonly ManualResetEvent _eventTimeshift = new ManualResetEvent(true);
     protected ITvSubChannel _subchannel; // the active sub channel to record        
 
     protected TimeShifterBase(ITvCardHandler cardHandler)
@@ -59,7 +60,7 @@ namespace TvService
         ITvSubChannel subchannel = GetSubChannel(subchannelId);
         if (subchannel is BaseSubChannel)
         {
-          Log.Write("card {2}: Cancel Timeshifting sub:{1}", subchannel, _cardHandler.Card.Name);
+          Log.Write("card {0}: Cancel Timeshifting sub:{1}", _cardHandler.Card.Name, subchannel);
           ((BaseSubChannel)subchannel).AudioVideoEvent -= AudioVideoEventHandler;
           _eventAudio.Set();
           _eventVideo.Set();
@@ -151,7 +152,7 @@ namespace TvService
       {
         Log.Write("card: WaitForFile - waiting _eventAudio");
         // wait for audio PID to be seen
-        if (_eventAudio.WaitOne(waitForEvent, true))
+        if (_eventAudio.WaitOne(waitForEvent, true) && !_timeshiftCancelled)
         {
           if (IsTuneCancelled())
           {
@@ -178,13 +179,13 @@ namespace TvService
       {
         Log.Write("card: WaitForFile - waiting _eventAudio & _eventVideo");
         // block until video & audio PIDs are seen or the timeout is reached
-        if (_eventAudio.WaitOne(waitForEvent, true))
+        if (_eventAudio.WaitOne(waitForEvent, true) && !_timeshiftCancelled)
         {
           if (IsTuneCancelled())
           {
             return false;
           }
-          if (_eventVideo.WaitOne(waitForEvent, true))
+          if (_eventVideo.WaitOne(waitForEvent, true) && !_timeshiftCancelled)
           {
             if (IsTuneCancelled())
             {
@@ -207,6 +208,10 @@ namespace TvService
               scrambled = true;
             }
           }
+        }
+        else if (_timeshiftCancelled)
+        {
+          return true;
         }
         else
         {

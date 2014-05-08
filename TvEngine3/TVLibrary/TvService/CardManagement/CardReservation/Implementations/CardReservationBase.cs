@@ -216,7 +216,7 @@ namespace TvService
       {
         if (hasUserHigherPriorityThanBlockingUser)
         {
-          tvcard.Tuner.CancelTune(tvcard.Tuner.ActiveCardTuneReservationTicket.PendingSubchannel);          
+          tvcard.Tuner.CancelTune(tvcard.Tuner.ActiveCardTuneReservationTicket.PendingSubchannel);
           lock (tvcard.Tuner.CardReservationsLock)
           {
             isCardAvail = IsCardAvail(tvcard);

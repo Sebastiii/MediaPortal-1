@@ -786,7 +786,7 @@ namespace SetupTv.Sections
         result = server.StartTimeShifting(ref user, channelId, out outCard, cardId != -1);
         if (result == TvResult.Succeeded)
         {
-          if (outCard.IsTimeShifting)
+          if (outCard != null && outCard.IsTimeShifting)
           {
             _currentChannelIdForTune = channelId;
             _tunePending = false;

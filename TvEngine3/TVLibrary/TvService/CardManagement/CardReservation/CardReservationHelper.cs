@@ -158,7 +158,7 @@ namespace TvService
         {
           Log.Debug("CardReservation.RemoveTuneTicket: removed reservation with id={0}, tuningdetails={1}", ticket.Id, ticket.TuningDetail);
           tvcard.Tuner.ReservationsForTune.Remove(ticket);
-          ResetCardTuneStateToIdle(tvcard);          
+          ResetCardTuneStateToIdle(tvcard);
         }
       }
     }

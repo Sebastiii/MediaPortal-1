@@ -1517,6 +1517,7 @@ namespace TvPlugin
                     break;
                 }
                 NotifyUser(errMsg);
+                ChannelTvOnOff(false);
               }
             }
           }
@@ -1564,6 +1565,7 @@ namespace TvPlugin
       Action keyAction = new Action(Action.ActionType.ACTION_STOP, 0, 0);
       GUIGraphicsContext.OnAction(keyAction);
       _playbackStopped = true;
+      ChannelTvOnOff(false);
     }
 
     private void startHeartBeatThread()
@@ -2027,6 +2029,7 @@ namespace TvPlugin
 
       _recoverTV = false;
       _playbackStopped = true;
+      ChannelTvOnOff(false);
     }
 
     public static bool ManualRecord(Channel channel, int dialogId)

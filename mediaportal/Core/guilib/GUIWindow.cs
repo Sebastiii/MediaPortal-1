@@ -492,11 +492,11 @@ namespace MediaPortal.GUI.Library
       {
         if (threadName != null)
         {
-          Log.Debug("LoadSkin: Running on wrong thread name [{0}] - StackTrace: '{1}'", threadName, Environment.StackTrace);
+          Log.Error("LoadSkin: Running on wrong thread name [{0}] - StackTrace: '{1}'", threadName, Environment.StackTrace);
         }
         else
         {
-          Log.Debug("LoadSkin: Running on wrong thread - StackTrace: '{0}'", Environment.StackTrace);
+          Log.Error("LoadSkin: Running on wrong thread - StackTrace: '{0}'", Environment.StackTrace);
         }
       }
 

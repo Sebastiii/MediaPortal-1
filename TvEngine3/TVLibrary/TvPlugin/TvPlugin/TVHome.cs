@@ -3496,7 +3496,7 @@ namespace TvPlugin
       }
       finally
       {
-        if (_useasynctuning)
+        if (!_useasynctuning)
         {
           StopRenderBlackImage();
           _userChannelChanged = false;
@@ -3619,7 +3619,7 @@ namespace TvPlugin
       {
         ChannelTvOnOff(true);
         succeeded = server.StartTimeShifting(ref user, channel.IdChannel, out card, out cardChanged);
-        if (succeeded != TvResult.Succeeded)
+        if (succeeded != TvResult.Succeeded && succeeded != TvResult.TuneAsync)
         {
           card = GetCardTimeShiftingChannel(channel.IdChannel, out currentUser);
           if (_tunePending)
@@ -3718,17 +3718,18 @@ namespace TvPlugin
         {
           try
           {
-            if (_currentChannelIdForTune == channel.IdChannel)
             {
-
               _mainThreadContext.Send(delegate
                                       {
                                         if (_currentChannelIdForTune == channel.IdChannel)
                                         {
-                                          StopRenderBlackImage();
-                                          _userChannelChanged = false;
-                                          FireOnChannelChangedEvent();
-                                          Navigator.UpdateCurrentChannel();
+                                          if (succeeded == TvResult.Succeeded)
+                                          {
+                                            StopRenderBlackImage();
+                                            _userChannelChanged = false;
+                                            FireOnChannelChangedEvent();
+                                            Navigator.UpdateCurrentChannel();
+                                          }
                                         }
                                       }, null);
             }

@@ -1675,7 +1675,7 @@ namespace TvService
           Log.Error("Exception in checking  " + ex.Message);
         }
         TvResult result = _cards[cardId].TimeShifter.Start(ref user, ref fileName);
-        if (result == TvResult.Succeeded)
+        if (result == TvResult.Succeeded || result == TvResult.TuneAsync)
         {
           if (!isTimeShifting)
           {
@@ -1882,8 +1882,8 @@ namespace TvService
             {
               cardHandler.Users.RemoveUser(user);
               cardHandler.TimeShifter._timeshiftCancelled = true;
-              cardHandler.TimeShifter._eventAudio.Reset();
-              cardHandler.TimeShifter._eventVideo.Reset();
+              //cardHandler.TimeShifter._eventAudio.Reset();
+              //cardHandler.TimeShifter._eventVideo.Reset();
               cardHandler.TimeShifter._eventAudio.Set();
               cardHandler.TimeShifter._eventVideo.Set();
             }
@@ -2787,7 +2787,7 @@ namespace TvService
 
     private static bool HasTvSucceeded(TvResult result)
     {
-      return result == TvResult.Succeeded;
+      return (result == TvResult.Succeeded || result == TvResult.TuneAsync);
     }
 
     private static TvResult AllCardsBusy(TvResult result)

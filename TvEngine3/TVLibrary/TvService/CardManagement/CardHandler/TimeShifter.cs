@@ -276,7 +276,7 @@ namespace TvService
         }
 #endif
         if (IsTuneCancelled())
-        {          
+        {
           result = TvResult.TuneCancelled;
           return result;
         }
@@ -285,8 +285,8 @@ namespace TvService
         {
           // Let's verify if hard disk drive has enough free space before we start time shifting. The function automatically handles both local and UNC paths
           if (!IsTimeShifting(ref user) && !HasFreeDiskSpace(fileName))
-          {            
-            result = TvResult.NoFreeDiskSpace;            
+          {
+            result = TvResult.NoFreeDiskSpace;
           }
           else
           {
@@ -305,7 +305,7 @@ namespace TvService
                 AttachAudioVideoEventHandler(subchannel);
                 if (subchannel.IsTimeShifting)
                 {
-                  result = GetTvResultFromTimeshiftingSubchannel(ref user, context);                    
+                  result = GetTvResultFromTimeshiftingSubchannel(ref user, context);
                 }
                 else
                 {
@@ -317,7 +317,7 @@ namespace TvService
                   }
                   else
                   {
-                    result = TvResult.UnableToStartGraph; 
+                    result = TvResult.UnableToStartGraph;
                   }
                 }
               }
@@ -338,7 +338,7 @@ namespace TvService
       {
         _eventTimeshift.Set();
         _cancelled = false;
-        if (result != TvResult.Succeeded)
+        if (result != TvResult.Succeeded && result != TvResult.TuneAsync)
         {
           Stop(ref user);
         }
@@ -350,12 +350,13 @@ namespace TvService
     {
       TvResult result;
       bool isScrambled;
-      if (WaitForFile(ref user, out isScrambled))
+      bool isAsyncTuning;
+      if (WaitForFile(ref user, out isScrambled, out isAsyncTuning))
       {
         context.OnZap(user);
         StartLinkageScanner();
         StartTimeShiftingEPGgrabber(user);
-        result = TvResult.Succeeded;
+        result = isAsyncTuning ? TvResult.TuneAsync : TvResult.Succeeded;
       }
       else
       {

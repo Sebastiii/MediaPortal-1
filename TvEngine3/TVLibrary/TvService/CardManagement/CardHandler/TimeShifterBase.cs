@@ -22,7 +22,8 @@ namespace TvService
     internal bool _cancelled;
     internal bool _timeshiftCancelled;
     internal readonly ManualResetEvent _eventTimeshift = new ManualResetEvent(true);
-    protected ITvSubChannel _subchannel; // the active sub channel to record        
+    protected ITvSubChannel _subchannel; // the active sub channel to record
+    internal object _asyncLock = new Object();
 
     protected TimeShifterBase(ITvCardHandler cardHandler)
     {
@@ -123,9 +124,10 @@ namespace TvService
     /// <param name="user">User</param>
     /// <param name="scrambled">Indicates if the channel is scambled</param>
     /// <returns>true when timeshift files is at least of 300kb, else timeshift file is less then 300kb</returns>
-    protected bool WaitForFile(ref IUser user, out bool scrambled)
+    protected bool WaitForFile(ref IUser user, out bool scrambled, out bool isAsyncTuning)
     {
       scrambled = false;
+      isAsyncTuning = false;
 
       if (_cardHandler.DataBaseCard.Enabled == false)
       {
@@ -166,6 +168,14 @@ namespace TvService
         }
         else
         {
+          if (_timeshiftCancelled)
+          {
+            //lock (_cardHandler.TimeShifter._asyncLock)
+            {
+              isAsyncTuning = true;
+              return true;
+            }
+          }
           TimeSpan ts = DateTime.Now - timeStart;
           Log.Write("card: WaitForRecordingFile - no audio was found after {0} seconds", ts.TotalSeconds);
           if (_cardHandler.IsScrambled(ref user))
@@ -211,7 +221,11 @@ namespace TvService
         }
         else if (_timeshiftCancelled)
         {
-          return true;
+          //lock (_cardHandler.TimeShifter._asyncLock)
+          {
+            isAsyncTuning = true;
+            return true;
+          }
         }
         else
         {

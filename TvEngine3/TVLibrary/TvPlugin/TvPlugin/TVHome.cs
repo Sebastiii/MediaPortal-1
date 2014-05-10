@@ -108,6 +108,7 @@ namespace TvPlugin
     private static VirtualCard _card = null;
     private static DateTime _updateTimer = DateTime.Now;
     private static bool _autoTurnOnTv = false;
+    private static bool _useasynctuning = false;
     private static int _waitonresume = 0;
     public static bool settingsLoaded = false;
     private TvCropManager _cropManager = new TvCropManager();
@@ -678,7 +679,7 @@ namespace TvPlugin
 
       if (control == btnTvOnOff)
       {
-        if (_tunePending)
+        if (_tunePending && _useasynctuning)
         {
           IUser currentUser;
           VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
@@ -1183,6 +1184,7 @@ namespace TvPlugin
       using (Settings xmlreader = new MPSettings())
       {
         m_navigator.LoadSettings(xmlreader);
+        _useasynctuning = xmlreader.GetValueAsBool("mytv", "useasynctuning", false);
         _autoTurnOnTv = xmlreader.GetValueAsBool("mytv", "autoturnontv", false);
         _showlastactivemodule = xmlreader.GetValueAsBool("general", "showlastactivemodule", false);
         _showlastactivemoduleFullscreen = xmlreader.GetValueAsBool("general", "lastactivemodulefullscreen", false);
@@ -3444,7 +3446,10 @@ namespace TvPlugin
         if (_status.IsSet(LiveTvStatus.WasPlaying))
         {
           RenderBlackImage();
-          //g_Player.PauseGraph();
+          if (!_useasynctuning)
+          {
+            g_Player.PauseGraph();
+          }
         }
         else
         {
@@ -3460,9 +3465,23 @@ namespace TvPlugin
           g_Player.OnZapping(0x80); // Setup Zapping for TsReader, requesting new PAT from stream
         }
 
-        ThreadStart work = () => DoAsynchTune(ref user, channel);
-        var tuneThread = new Thread(work) {Name = "Async Tune Thread for channel " + channel.IdChannel};
-        tuneThread.Start();
+        if (_useasynctuning)
+        {
+          ThreadStart work = () => DoAsynchTune(ref user, channel);
+          var tuneThread = new Thread(work) { Name = "Async Tune Thread for channel " + channel.IdChannel };
+          tuneThread.Start();
+        }
+        else
+        {
+          VirtualCard card;
+          bool cardChanged = false;
+          TvResult succeeded = server.StartTimeShifting(ref user, channel.IdChannel, out card, out cardChanged);
+          CompleteTune(channel, succeeded, card, cardChanged);
+          _playbackStopped = false;
+          _doingChannelChange = false;
+          _ServerNotConnectedHandled = false;
+          return true;
+        }
 
         return true;
       }
@@ -3474,6 +3493,16 @@ namespace TvPlugin
         g_Player.Stop();
         Card.StopTimeShifting();
         return false;
+      }
+      finally
+      {
+        if (_useasynctuning)
+        {
+          StopRenderBlackImage();
+          _userChannelChanged = false;
+          FireOnChannelChangedEvent();
+          Navigator.UpdateCurrentChannel();
+        }
       }
     }
 
@@ -3726,7 +3755,18 @@ namespace TvPlugin
           g_Player.OnZapping(-1);
       }
 
-      if (succeeded == TvResult.Succeeded)
+      if (succeeded != TvResult.Succeeded && !_useasynctuning)
+      {
+        //timeshifting new channel failed. 
+        g_Player.Stop();
+
+        // ensure right channel name, even if not watchable:Navigator.Channel = channel; 
+        ChannelTuneFailedNotifyUser(succeeded, _status.IsSet(LiveTvStatus.WasPlaying), channel);
+
+        // keep fullscreen false by setting _doingChannelChange to 'true' only when autoTurnOnTv is false
+        _doingChannelChange = !_autoTurnOnTv;
+      }
+      else if (succeeded == TvResult.Succeeded)
       {
         if (card != null && card.NrOfOtherUsersTimeshiftingOnCard > 0)
         {
@@ -3766,11 +3806,15 @@ namespace TvPlugin
           SeekToEnd(true);
         }
 
-
         // CardChange refactor it, so it reacts to changes in timeshifting path / URL.
 
         // continue graph
-        //g_Player.ContinueGraph();
+
+        if (!_useasynctuning)
+        {
+          g_Player.ContinueGraph();
+        }
+        
         if (!g_Player.Playing || _status.IsSet(LiveTvStatus.CardChange) ||
             (g_Player.Playing && !(g_Player.IsTV || g_Player.IsRadio)))
         {

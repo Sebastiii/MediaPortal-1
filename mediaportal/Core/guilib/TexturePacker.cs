@@ -647,7 +647,7 @@ namespace MediaPortal.GUI.Library
           {
             IntPtr ptr = DirectShowUtil.GetUnmanagedTexture(bigOne.texture);
             bigOne.textureNo = DXNative.FontEngineAddTextureSync(ptr.ToInt32(), true, ptr.ToPointer());
-            Log.Info("TexturePacker: fontengine add texure:{0}", bigOne.textureNo);
+            Log.Info("TexturePacker: fontengine add texure:{0} PTR {1}", bigOne.textureNo, (int)ptr.ToPointer());
           }
         }
         textureNo = bigOne.textureNo;

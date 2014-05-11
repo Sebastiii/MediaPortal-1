@@ -2741,8 +2741,17 @@ namespace MediaPortal.MusicPlayer.BASS
     {
       lock (_syncRoot)
       {
-        // Return the clone of the stream, because for a decoding channel, we can't get data from the original stream
+        // Return the GetData effect
         return BassWasapi.BASS_WASAPI_GetData(buffer, lenght);
+      }
+    }
+
+    public bool BASS_WASAPI_IsStarted()
+    {
+      lock (_syncRoot)
+      {
+        // Return if wasapi device is started
+        return BassWasapi.BASS_WASAPI_IsStarted();
       }
     }
 
@@ -2750,7 +2759,7 @@ namespace MediaPortal.MusicPlayer.BASS
     {
       lock (_syncRoot)
       {
-        // Return the clone of the stream, because for a decoding channel, we can't get data from the original stream
+        // Return the GetChannelData
         return Bass.BASS_ChannelGetData(handle, buffer, lenght);
       }
     }

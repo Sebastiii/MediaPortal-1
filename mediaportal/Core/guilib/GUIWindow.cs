@@ -448,18 +448,13 @@ namespace MediaPortal.GUI.Library
 
     #region load skin file
 
-    public virtual bool Load(string skinFileName)
-    {
-      return LoadingSkin(skinFileName);
-    }
-
     /// <summary>
     /// Load the XML file for this window which 
     /// contains a definition of which controls the GUI has
     /// </summary>
     /// <param name="skinFileName">filename of the .xml file</param>
     /// <returns></returns>
-    private bool LoadingSkin(string skinFileName)
+    public virtual bool Load(string skinFileName)
     {
       _isSkinLoaded = false;
       if (string.IsNullOrEmpty(skinFileName))
@@ -480,29 +475,18 @@ namespace MediaPortal.GUI.Library
       {
         AllocResources();
       }
+
       return true;
-    }
 
-    private delegate void LoadStringSkinMessageDelegate();
-
-    public void LoadSkin()
-    {
-      // Only load skin on main thread.
-      if (GUIGraphicsContext.form.InvokeRequired)
-      {
-        LoadStringSkinMessageDelegate d = new LoadStringSkinMessageDelegate(LoadSkin);
-        GUIGraphicsContext.form.Invoke(d);
-        return;
-      }
-      LoadSkinMaintThread();
     }
 
     /// <summary>
     /// Loads the xml file for the window.
     /// </summary>
     /// <returns></returns>
-    private bool LoadSkinMaintThread()
+    public bool LoadSkin()
     {
+
       // add thread check to log calls not running in main thread/GUI
       String threadName = Thread.CurrentThread.Name;
       if (threadName != "MPMain" && threadName != "Config Main")

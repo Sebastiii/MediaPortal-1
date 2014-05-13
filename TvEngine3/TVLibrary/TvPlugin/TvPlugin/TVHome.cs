@@ -3253,7 +3253,10 @@ namespace TvPlugin
     {
       if (GUIGraphicsContext.RenderBlackImage)
       {
-        Log.Debug("TvHome.OnVideoReceived() {0}", FramesBeforeStopRenderBlackImage);
+        if (!_tunePending)
+        {
+          Log.Debug("TvHome.OnVideoReceived() {0}", FramesBeforeStopRenderBlackImage);
+        }
         if (FramesBeforeStopRenderBlackImage != 0)
         {
           FramesBeforeStopRenderBlackImage--;
@@ -3652,7 +3655,7 @@ namespace TvPlugin
         }
         else if (succeeded == TvResult.Succeeded)
         {
-          if (card.IsTimeShifting)
+          //if (card.IsTimeShifting)
           {
             _tunePending = false;
           }
@@ -3725,6 +3728,7 @@ namespace TvPlugin
                                         {
                                           if (succeeded == TvResult.Succeeded)
                                           {
+                                            g_Player.ContinueGraph();
                                             StopRenderBlackImage();
                                             _userChannelChanged = false;
                                             FireOnChannelChangedEvent();
@@ -3734,13 +3738,9 @@ namespace TvPlugin
                                       }, null);
             }
           }
-          finally
+          catch (Exception ex)
           {
-            if (_currentChannelIdForTune == channel.IdChannel)
-            {
-              //_currentChannelIdForTune = 0;
-            }
-            _tunePending = false;
+            Log.Error("TvPlugin:ViewChannelandCheckV2 Exception {0}", ex);
           }
         }
       }
@@ -3831,6 +3831,7 @@ namespace TvPlugin
           {
             g_Player.ShowFullScreenWindow();
           }
+          StopRenderBlackImage();
         }
         try
         {

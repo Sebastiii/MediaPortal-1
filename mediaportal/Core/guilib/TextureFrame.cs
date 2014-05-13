@@ -23,7 +23,6 @@ namespace MediaPortal.guilib
       _imageName = name;
       _image = image;
       _duration = duration;
-      string fileName = name.ToLowerInvariant();
 
       if (image != null)
       {
@@ -34,7 +33,6 @@ namespace MediaPortal.guilib
 
           IntPtr ptr = DirectShowUtil.GetUnmanagedTexture(_image);
           _textureNumber = DXNative.FontEngineAddTextureSync(ptr.ToInt32(), true, (void*)ptr.ToPointer());
-          Log.Debug("TextureFrame : TextureNumber {0} DirectX {1} Image {2}, PTR : {3}", _textureNumber, _image, name, (int)ptr.ToPointer());
         }
       }
     }
@@ -62,11 +60,7 @@ namespace MediaPortal.guilib
 
     public int TextureNumber
     {
-      get
-      {
-        Log.Debug("TextureNumber {0}", _textureNumber);
-        return _textureNumber;
-      }
+      get { return _textureNumber; }
     }
 
     public Texture Image

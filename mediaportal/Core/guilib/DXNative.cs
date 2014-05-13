@@ -48,13 +48,11 @@ namespace MediaPortal.GUI.Library
       {
         try
         {
-          Log.Warn("DXNative ready to remove texture : {0} ", textureNo);
           FontEngineRemoveTexture(textureNo);
-          Log.Warn("DXNative texture removed : {0} ", textureNo);
         }
         catch (Exception ex)
         {
-          Log.Error("DXNative FontEngine exception : {0} ", ex);
+          Log.Error("fontEngine exeption : {0} ", ex);
         }
       }
     }
@@ -63,11 +61,7 @@ namespace MediaPortal.GUI.Library
     {
       lock (_lock)
       {
-        int _FontEngineAddTexture = -1;
-        Log.Warn("FontEngineAddTextureSync : _FontEngineAddTexture {0} TextureNumber {1}", _FontEngineAddTexture, hasCode);
-        _FontEngineAddTexture = FontEngineAddTexture(hasCode, useAlphaBlend, fontTexture);
-        Log.Warn("FontEngineAddTextureSync : _FontEngineAddTexture {0} and TextureNumber {1}", _FontEngineAddTexture, hasCode);
-        return _FontEngineAddTexture;
+        return FontEngineAddTexture(hasCode, useAlphaBlend, fontTexture);
       }
     }
 

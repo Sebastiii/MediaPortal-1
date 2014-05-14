@@ -2110,10 +2110,6 @@ public class MediaPortalApp : D3D, IRender
     }
     else
     {
-      //mmi.ptMaxSize.x      = Screen.PrimaryScreen.Bounds.Width;
-      //mmi.ptMaxSize.y      = Screen.PrimaryScreen.Bounds.Height;
-      //mmi.ptMaxPosition.x  = Screen.PrimaryScreen.Bounds.X;
-      //mmi.ptMaxPosition.y  = Screen.PrimaryScreen.Bounds.Y;
       mmi.ptMaxSize.x = screen.Bounds.Width;
       mmi.ptMaxSize.y = screen.Bounds.Height;
       mmi.ptMaxPosition.x = screen.Bounds.X;

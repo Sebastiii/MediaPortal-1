@@ -139,9 +139,8 @@ xcopy %1\MPE\MpeCore\bin\%2\MpeCore.* . /Y /D
 xcopy %1\MPE\MpeInstaller\bin\%2\MpeInstaller.* . /Y /D
 xcopy %1\MPE\MpeMaker\bin\%2\MpeMaker.* . /Y /D
 
-REM NuGet binaries
+REM Nuget 
 xcopy %1\Databases\bin\%2\HtmlAgilityPack.* . /Y /D
-xcopy %1\..\Packages\bass.asio.1.3.0.2\bassasio.dll . /Y /D
 xcopy %1\..\Packages\MediaInfo.0.7.69\MediaInfo.dll . /Y /D
 
 REM ffmpeg 

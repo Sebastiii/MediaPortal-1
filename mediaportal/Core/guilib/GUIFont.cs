@@ -26,6 +26,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
@@ -250,6 +251,10 @@ namespace MediaPortal.GUI.Library
       input = input.Replace((char)8223, '"');  // ‟
       input = input.Replace((char)8226, '*');  //	•
       input = input.Replace(((char)8230).ToString(), ". ");  //	…
+      foreach (char c in input.Where(c => c >= 255 && c != '\n'))
+      {
+        Log.Warn("RemapHighOrderChars: remaining high order char = '{0}', TypeCode = '{1}'", c.ToString(), (int)c);
+      }
       return input;
     }
 

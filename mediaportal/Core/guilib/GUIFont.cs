@@ -234,56 +234,14 @@ namespace MediaPortal.GUI.Library
       }
     }
 
-    public static string RemapHighOrderChars(string input)
-    {
-      if (string.IsNullOrEmpty(input)) return string.Empty;
-
-      // hack to remap high order unicode characters with a low order equivalents
-      // for now, this allows better usage of clipping. This can be removed, once the skin engine can properly render unicode without falling back to sprites
-      // as unicode is more widely used, this will hit us more with existing font rendering only allowing cached font textures with clipping
-
-      input = input.Replace((char)8211, '-');  //	–
-      input = input.Replace((char)8212, '-');  //	—
-      input = input.Replace((char)8216, '\''); //	‘
-      input = input.Replace((char)8217, '\''); //	’
-      input = input.Replace((char)8220, '"');  //	“
-      input = input.Replace((char)8221, '"');  //	”
-      input = input.Replace((char)8223, '"');  // ‟
-      input = input.Replace((char)8226, '*');  //	•
-      input = input.Replace(((char)8230).ToString(), ". ");  //	…
-      foreach (char c in input.Where(c => c >= 255 && c != '\n'))
-      {
-        Log.Warn("RemapHighOrderChars: remaining high order char = '{0}', TypeCode = '{1}'", c.ToString(), (int)c);
-      }
-      return input;
-    }
-
     public bool containsOutOfBoundsChar(string text)
     {
-      // Add some OutOfBoundsChar as valid to avoid overlap
-      ArrayList OutOfBoundsChar = new ArrayList
-                                       {
-                                         (char) 8211,
-                                         (char) 8212,
-                                         (char) 8216,
-                                         (char) 8217,
-                                         (char) 8220,
-                                         (char) 8221,
-                                         (char) 8223,
-                                         (char) 8226,
-                                         (char) 8230,
-                                         (char) 339
-                                       };
-      text = RemapHighOrderChars(text);
       for (int i = 0; i < text.Length; ++i)
       {
         char c = text[i];
         if ((c < _StartCharacter || c >= _EndCharacter) && c != '\n')
         {
-          if (!OutOfBoundsChar.Contains(c))
-          {
-            return true;
-          }
+          Log.Debug("GUIFont: remaining high order char = '{0}', TypeCode = '{1}'", c.ToString(), (int)c);
         }
       }
       return false;

@@ -1382,76 +1382,77 @@ public class MediaPortalApp : D3D, IRender
     return a;
   }
 
-  private void DispatchThreadMessages()
-  {
-    if (_listThreadMessages.Count > 0)
-    {
-      List<Message> list;
-      lock (_listThreadMessagesLock) // need lock when switching queues
-      {
-        list = _listThreadMessages;
-        _listThreadMessages = new List<Message>();
-      }
-      for (int i = 0; i < list.Count; ++i)
-      {
-        Message message = list[i];
-        WndProcProcess(ref message);
-      }
-    }
-    _WndProcMessage = false;
-  }
+  //private void DispatchThreadMessages()
+  //{
+  //  if (_listThreadMessages.Count > 0)
+  //  {
+  //    List<Message> list;
+  //    lock (_listThreadMessagesLock) // need lock when switching queues
+  //    {
+  //      list = _listThreadMessages;
+  //      _listThreadMessages = new List<Message>();
+  //    }
+  //    for (int i = 0; i < list.Count; ++i)
+  //    {
+  //      Message message = list[i];
+  //      WndProcProcess(ref message);
+  //    }
+  //  }
+  //  _WndProcMessage = false;
+  //}
 
-  /// <summary>
-  /// send thread message. Same as sendmessage() however message is placed on a queue
-  /// which is processed later.
-  /// </summary>
-  /// <param name="message">new message to send</param>
-  private static void SendThreadMessage(ref Message message)
-  {
-    if (OnThreadMessageHandler != null)
-    {
-      OnThreadMessageHandler(null, message);
-    }
-    if (message != null)
-    {
-      lock (_listThreadMessagesLock)
-      {
-        _listThreadMessages.Add(message);
-      }
-    }
-  }
+  ///// <summary>
+  ///// send thread message. Same as sendmessage() however message is placed on a queue
+  ///// which is processed later.
+  ///// </summary>
+  ///// <param name="message">new message to send</param>
+  //private static void SendThreadMessage(ref Message message)
+  //{
+  //  if (OnThreadMessageHandler != null)
+  //  {
+  //    OnThreadMessageHandler(null, message);
+  //  }
+  //  if (message != null)
+  //  {
+  //    lock (_listThreadMessagesLock)
+  //    {
+  //      _listThreadMessages.Add(message);
+  //    }
+  //  }
+  //}
 
-  /// <summary>
-  /// Message Pump
-  /// </summary>
-  /// <param name="msg"></param>
+  ///// <summary>
+  ///// Message Pump
+  ///// </summary>
+  ///// <param name="msg"></param>
+  //protected override void WndProc(ref Message msg)
+  //{
+  //  try
+  //  {
+  //    if (_listThreadMessages.Count == 1)
+  //    {
+  //      DispatchThreadMessages();
+  //    }
+  //    if (!_WndProcMessage)
+  //    {
+  //      _WndProcMessage = true;
+  //      {
+  //        WndProcProcess(ref msg);
+  //      }
+  //    }
+  //    else if (_WndProcMessage)
+  //    {
+  //      SendThreadMessage(ref msg);
+  //    }
+  //  }
+  //  catch (Exception ex)
+  //  {
+  //    Log.Error(ex);
+  //  }
+  //}
+
+  //protected void WndProcProcess(ref Message msg)
   protected override void WndProc(ref Message msg)
-  {
-    try
-    {
-      if (_listThreadMessages.Count == 1)
-      {
-        DispatchThreadMessages();
-      }
-      if (!_WndProcMessage)
-      {
-        _WndProcMessage = true;
-        {
-          WndProcProcess(ref msg);
-        }
-      }
-      else if (_WndProcMessage)
-      {
-        SendThreadMessage(ref msg);
-      }
-    }
-    catch (Exception ex)
-    {
-      Log.Error(ex);
-    }
-  }
-
-  protected void WndProcProcess(ref Message msg)
   {
     try
     {
@@ -1636,14 +1637,14 @@ public class MediaPortalApp : D3D, IRender
     {
       Log.Error(ex);
     }
-    finally
-    {
-      _WndProcMessage = false;
-      if (_listThreadMessages.Count == 1)
-      {
-        DispatchThreadMessages();
-      }
-    }
+    //finally
+    //{
+    //  _WndProcMessage = false;
+    //  if (_listThreadMessages.Count == 1)
+    //  {
+    //    DispatchThreadMessages();
+    //  }
+    //}
   }
 
 

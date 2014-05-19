@@ -199,6 +199,9 @@ public class MediaPortalApp : D3D, IRender
 
   private ShellNotifications Notifications = new ShellNotifications();
 
+  // Framegrabber instance
+  private FrameGrabber grabber = FrameGrabber.GetInstance();
+
   private static List<Message> _listThreadMessages = new List<Message>();
   private static readonly object _listThreadMessagesLock = new object();
   private static event ThreadMessageHandler OnThreadMessageHandler;
@@ -3173,6 +3176,17 @@ public class MediaPortalApp : D3D, IRender
               GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.SideBySideTo2D ||
               GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.TopAndBottomTo2D)
           {
+            // Call Framegrabber with UI Surface
+            // Needed for AtmoLight UI capture
+            Surface atmoLightSurface = GUIGraphicsContext.DX9Device.GetBackBuffer(0, 0, BackBufferType.Mono);
+            Int16 atmoLightWidth = (Int16)atmoLightSurface.Description.Width;
+            Int16 atmoLightHeight = (Int16)atmoLightSurface.Description.Height;
+            unsafe
+            {
+              grabber.OnFrame(atmoLightWidth, atmoLightHeight, 0, 0, (uint)atmoLightSurface.UnmanagedComPointer);
+            }
+            atmoLightSurface.Dispose();
+
             // clear the surface
             GUIGraphicsContext.DX9Device.Clear(ClearFlags.Target, Color.Black, 1.0f, 0);
             GUIGraphicsContext.DX9Device.BeginScene();
@@ -3205,6 +3219,15 @@ public class MediaPortalApp : D3D, IRender
             // 3D output either SBS or TAB
 
             Surface backbuffer = GUIGraphicsContext.DX9Device.GetBackBuffer(0, 0, BackBufferType.Mono);
+
+            // Call Framegrabber with UI Surface
+            // Needed for AtmoLight UI capture
+            Int16 atmoLightWidth = (Int16)backbuffer.Description.Width;
+            Int16 atmoLightHeight = (Int16)backbuffer.Description.Height;
+            unsafe
+            {
+              grabber.OnFrame(atmoLightWidth, atmoLightHeight, 0, 0, (uint)backbuffer.UnmanagedComPointer);
+            }
 
             // create texture/surface for preparation for 3D output if they don't exist
 

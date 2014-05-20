@@ -1136,6 +1136,16 @@ namespace MediaPortal.Plugins.Process
             _settings.AllowedSleepStopTimeOnWeekend = intSetting;
             Log.Debug("PS: Standby allowed until {0} o' clock on weekend", _settings.AllowedSleepStopTimeOnWeekend);
 
+            // Check allowed start time on weekend
+            intSetting = reader.GetValueAsInt("psclientplugin", "StandbyHoursOnWeekendFrom", 0);
+            _settings.AllowedSleepStartTimeOnWeekend = intSetting;
+            Log.Debug("PS: Standby allowed from {0} o' clock on weekend", _settings.AllowedSleepStartTimeOnWeekend);
+
+            // Check allowed stop time on weekend
+            intSetting = reader.GetValueAsInt("psclientplugin", "StandbyHoursOnWeekendTo", 24);
+            _settings.AllowedSleepStopTimeOnWeekend = intSetting;
+            Log.Debug("PS: Standby allowed until {0} o' clock on weekend", _settings.AllowedSleepStopTimeOnWeekend);
+
             // Check if PowerScheduler should wakeup the system automatically
             intSetting = reader.GetValueAsInt("psclientplugin", "Profile", 0);
             if (intSetting == 2)

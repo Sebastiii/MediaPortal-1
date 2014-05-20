@@ -997,9 +997,7 @@ namespace PowerScheduler.Setup
       // Legacy
       numericUpDownPreWakeupTime.Value = 60;
       numericUpDownPreNoStandbyTime.Value = 300;
-      //numericUpDownStandbyHoursFrom.Value = 0;
-      //numericUpDownStandbyHoursTo.Value = 24;
-      
+
       // Power Settings
       _recommendedSettingsAC = _defaultSettingsDesktopAC;
       _recommendedSettingsDC = _defaultSettingsDesktopDC;

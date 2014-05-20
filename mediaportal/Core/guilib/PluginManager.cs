@@ -342,17 +342,7 @@ namespace MediaPortal.GUI.Library
     /// </summary>
     public static void LoadWindowPlugins()
     {
-      using (Settings xmlreader = new MPSettings())
-      {
-        if (xmlreader.GetValueAsBool("general", "threadedstartup", false))
-        {
-          LoadWindowPluginsThreaded();
-        }
-        else
-        {
-          LoadWindowPluginsNonThreaded();
-        }
-      }
+      LoadWindowPluginsNonThreaded();
     }
 
     /// <summary>

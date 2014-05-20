@@ -1223,6 +1223,24 @@ namespace TvEngine.PowerScheduler
         changed = true;
       }
 
+      // Check allowed start time on weekend
+      intSetting = Int32.Parse(layer.GetSetting("PowerSchedulerStandbyHoursOnWeekendFrom", "0").Value);
+      if (_settings.AllowedSleepStartTimeOnWeekend != intSetting)
+      {
+        _settings.AllowedSleepStartTimeOnWeekend = intSetting;
+        Log.Debug("PS: Standby allowed from {0} o' clock on weekend", _settings.AllowedSleepStartTimeOnWeekend);
+        changed = true;
+      }
+
+      // Check allowed stop time on weekend
+      intSetting = Int32.Parse(layer.GetSetting("PowerSchedulerStandbyHoursOnWeekendTo", "24").Value);
+      if (_settings.AllowedSleepStopTimeOnWeekend != intSetting)
+      {
+        _settings.AllowedSleepStopTimeOnWeekend = intSetting;
+        Log.Debug("PS: Standby allowed until {0} o' clock on weekend", _settings.AllowedSleepStopTimeOnWeekend);
+        changed = true;
+      }
+
       // Check if PowerScheduler should wakeup the system automatically
       intSetting = Int32.Parse(layer.GetSetting("PowerSchedulerProfile", "0").Value);
       if (intSetting == 2)

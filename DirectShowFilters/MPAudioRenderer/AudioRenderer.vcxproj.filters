@@ -167,6 +167,7 @@
     <ClInclude Include="SoundTouch\source\InterpolateCubic.h" />
     <ClInclude Include="SoundTouch\source\InterpolateLinear.h" />
     <ClInclude Include="SoundTouch\source\InterpolateShannon.h" />
+    <ClInclude Include="source\IMPAudioSettings.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="source\MpAudioRenderer.rc" />

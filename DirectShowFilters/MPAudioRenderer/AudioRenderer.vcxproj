@@ -190,6 +190,7 @@
     <ClInclude Include="source\Globals.h" />
     <ClInclude Include="source\IAudioSink.h" />
     <ClInclude Include="source\IAVSyncClock.h" />
+    <ClInclude Include="source\IMPAudioSettings.h" />
     <ClInclude Include="source\IRenderFilter.h" />
     <ClInclude Include="source\ITimeStretch.h" />
     <ClInclude Include="source\MpAudioRenderer.h" />

@@ -501,7 +501,7 @@ namespace MediaPortal.GUI.Music
     {
       if (message.Message == GUIMessage.MessageType.GUI_MSG_ITEM_FOCUS)
       {
-        // Send SelectedListItemIndex if we are on view with root folder '..'
+        // Send SelectedListItemIndex to match message label in case of double name in playlist
         int iSelectedItem = facadeLayout.SelectedListItemIndex;
         message.Param4 = iSelectedItem;
         _currentPlaying = message.Label;
@@ -867,7 +867,7 @@ namespace MediaPortal.GUI.Music
         // add each item of the playlist to the playlistplayer
         for (int i = 0; i < newPlaylist.Count; ++i)
         {
-          PlayListItem playListItem = pl[i];
+          PlayListItem playListItem = newPlaylist[i];
           if (Util.Utils.FileExistsInCache(playListItem.FileName) ||
               playListItem.Type == PlayListItem.PlayListItemType.AudioStream)
           {

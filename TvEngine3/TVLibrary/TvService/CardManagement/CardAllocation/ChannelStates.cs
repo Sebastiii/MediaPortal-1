@@ -35,8 +35,11 @@ namespace TvService
     #region private members   
     
     private readonly object _lock = new object();
-    private readonly object _threadlock = new object();
-    private Thread _setChannelStatesThread;
+    private readonly object _queuelock = new object();
+    private readonly Queue<Action> workQueue = new Queue<Action>();
+    private readonly AutoResetEvent wakeupEvent = new AutoResetEvent(false);
+
+    private Thread _channelStatesThread;
 
     public ChannelStates(TvBusinessLayer businessLayer, TVController controller)
       : base(businessLayer, controller)
@@ -267,32 +270,63 @@ namespace TvService
         if (!user.IsAdmin)
         {
           bool checkTransponder = CheckTransponder(user, tvcard, tuningDetail);
-          if (checkTransponder)
-          {
-            UpdateChannelStateUser(user, ChannelState.tunable, ch.IdChannel);
-          }
-          else
-          {
-            UpdateChannelStateUser(user, ChannelState.nottunable, ch.IdChannel);
-          } 
-        }        
+          UpdateChannelStateUser(user, checkTransponder ? ChannelState.tunable : ChannelState.nottunable, ch.IdChannel);
+        }
       }
     }
+
+    private void WorkThread(object waiter)
+    {
+      ((EventWaitHandle) waiter).Set();
+
+      while (wakeupEvent.WaitOne(500))
+      {
+        while (true)
+        {
+          Action work;
+          lock (_queuelock)
+            work = workQueue.Count > 0 ? workQueue.Dequeue() : null;
+
+          if (work == null)
+          {
+            break;
+          }
+
+          work();
+        }
+      }
+    }
+
+
+    private void DoThreadWork(Action work)
+    {
+
+      lock (_queuelock)
+      {
+        workQueue.Enqueue(work);
+        wakeupEvent.Set();
+      }
+
+      if (_channelStatesThread == null || !_channelStatesThread.IsAlive)
+      {
+        _channelStatesThread = new Thread(WorkThread)
+                               {
+                                 Name = "Channel state",
+                                 IsBackground = true,
+                                 Priority = ThreadPriority.BelowNormal
+                               };
+        using (var waiter = new ManualResetEvent(false))
+        {
+          _channelStatesThread.Start(waiter);
+          waiter.WaitOne();
+        }
+      }
+    }
+
 
     #endregion
 
     #region public members
-
-    private void AbortChannelStates()
-    {
-      lock (_threadlock)
-      {
-        if (_setChannelStatesThread != null && _setChannelStatesThread.IsAlive)
-        {
-          _setChannelStatesThread.Abort();
-        }
-      }
-    }
 
     public void SetChannelStates(IDictionary<int, ITvCardHandler> cards, ICollection<Channel> channels,
                                  IController tvController)
@@ -301,22 +335,13 @@ namespace TvService
       {
         return;
       }
-      AbortChannelStates();
-      //call the real work as a thread in order to avoid slower channel changes.
-      // find all users      
-      ICollection<IUser> allUsers = GetActiveUsers(cards);
-      ThreadStart starter = () => DoSetChannelStates(cards, channels, allUsers, tvController);
-      lock (_threadlock)
-      {
-        _setChannelStatesThread = new Thread(starter)
-                                    {
-                                      Name = "Channel state thread",
-                                      IsBackground = true,
-                                      Priority = ThreadPriority.Lowest
-                                    };
-        _setChannelStatesThread.Start();
-      }
-    }    
+
+      // find all users
+      var allUsers = GetActiveUsers(cards);
+
+      //do the real work in thread in order to avoid slower channel changes.
+      DoThreadWork(new Action(() => DoSetChannelStates(cards, channels, allUsers, tvController)));
+    }
 
     /// <summary>
     /// Gets a list of all channel states    
@@ -332,15 +357,13 @@ namespace TvService
       }
 
       var allUsers = new List<IUser>();
-      allUsers.Add(user);
+      if (user != null)
+      {
+        allUsers.Add(user);
+      }
 
       DoSetChannelStates(cards, channels, allUsers, tvController);
-
-      if (allUsers.Count > 0)
-      {
-        return allUsers[0].ChannelStates;
-      }
-      return new Dictionary<int, ChannelState>();
+      return allUsers.Count > 0 ? allUsers[0].ChannelStates : new Dictionary<int, ChannelState>();
     }
 
     #endregion

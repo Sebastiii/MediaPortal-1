@@ -388,7 +388,7 @@ namespace TvService
     /// <summary>
     /// Stops the time shifting.
     /// </summary>
-    /// <returns></returns>    
+    /// <returns></returns>
     public bool Stop(ref IUser user)
     {
       bool stop = false;
@@ -415,9 +415,9 @@ namespace TvService
               _cardHandler.Users.RemoveUser(user);
             }
             context.Remove(user);
-            stop = true;        
-          }                      
-        }                  
+            stop = true;
+          }
+        }
       }
       catch (Exception ex)
       {
@@ -465,8 +465,16 @@ namespace TvService
     {
       Log.Debug("TimeShifter.OnBeforeTune: resetting audio/video events");
       _tuneInProgress = true;
-      _eventAudio.Reset();
-      _eventVideo.Reset();
+
+      if (IsTuneCancelled())
+      {
+        Log.Write("card: WaitForFile - Tune Cancelled");
+      }
+      else
+      {
+        _eventAudio.Reset();
+        _eventVideo.Reset(); 
+      }
     }
 
     public void OnAfterTune()
@@ -476,6 +484,12 @@ namespace TvService
       _timeVideoEvent = DateTime.MinValue;
 
       _tuneInProgress = false;
-    }      
+    }
+
+    public void CancelTimeshift()
+    {
+      _eventAudio.Set();
+      _eventVideo.Set();
+    }
   }
 }

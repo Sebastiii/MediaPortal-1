@@ -190,6 +190,7 @@ namespace TvService
 
     public ICardTuneReservationTicket RequestCardTuneReservation(ITvCardHandler tvcard, IChannel tuningDetail, IUser user, int idChannel)
     {
+      Log.Debug("RequestCardTuneReservation1");
       ICardTuneReservationTicket cardTuneReservationTicket = null;
       var layer = new TvBusinessLayer();
 
@@ -213,10 +214,13 @@ namespace TvService
           }          
         }
       }
+      Log.Debug("RequestCardTuneReservation2");
       if (!isCardAvail)
       {
+        Log.Debug("RequestCardTuneReservation3");
         if (hasUserHigherPriorityThanBlockingUser)
         {
+          Log.Debug("RequestCardTuneReservation4");
           tvcard.Tuner.CancelTune(tvcard.Tuner.ActiveCardTuneReservationTicket.PendingSubchannel);
           lock (tvcard.Tuner.CardReservationsLock)
           {

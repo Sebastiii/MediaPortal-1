@@ -19,6 +19,7 @@ namespace TvService
     private readonly int _waitForTimeshifting = 15;
     internal readonly ManualResetEvent _eventAudio = new ManualResetEvent(false); // gets signaled when audio PID is seen
     internal readonly ManualResetEvent _eventVideo = new ManualResetEvent(false); // gets signaled when video PID is seen
+    internal readonly ManualResetEvent _eventCancelled = new ManualResetEvent(false); // gets signaled when video PID is seen
     internal bool _cancelled;
     internal bool _timeshiftCancelled;
     internal readonly ManualResetEvent _eventTimeshift = new ManualResetEvent(true);
@@ -140,7 +141,7 @@ namespace TvService
         return false;
       }
 
-      int waitForEvent = _waitForTimeshifting * 1000; // in ms           
+      int waitForEvent = _waitForTimeshifting * 1000; // in ms
 
       DateTime timeStart = DateTime.Now;
 
@@ -170,12 +171,13 @@ namespace TvService
         {
           if (_timeshiftCancelled)
           {
-            //lock (_cardHandler.TimeShifter._asyncLock)
-            {
-              isAsyncTuning = true;
-              return true;
-            }
+            _eventCancelled.WaitOne();
+            isAsyncTuning = true;
+            return true;
           }
+          // Remove User from other cards (needed for async tuning)
+          RemoteControl.Instance.RemoveUserFromOtherCards(_cardHandler.DataBaseCard.IdCard, user);
+
           TimeSpan ts = DateTime.Now - timeStart;
           Log.Write("card: WaitForRecordingFile - no audio was found after {0} seconds", ts.TotalSeconds);
           if (_cardHandler.IsScrambled(ref user))
@@ -221,14 +223,15 @@ namespace TvService
         }
         else if (_timeshiftCancelled)
         {
-          //lock (_cardHandler.TimeShifter._asyncLock)
-          {
-            isAsyncTuning = true;
-            return true;
-          }
+          _eventCancelled.WaitOne();
+          isAsyncTuning = true;
+          return true;
         }
         else
         {
+          // Remove User from other cards (needed for async tuning)
+          RemoteControl.Instance.RemoveUserFromOtherCards(_cardHandler.DataBaseCard.IdCard, user);
+
           TimeSpan ts = DateTime.Now - timeStart;
           Log.Write("card: WaitForFile - no audio was found after {0} seconds", ts.TotalSeconds);
           if (_cardHandler.IsScrambled(ref user))

@@ -124,8 +124,7 @@ namespace SetupTv.Sections
         else
         {
           RemoteControl.Instance.CancelTimeShifting(ref currentUser);
-          card.StopTimeShifting();
-          //_tunePending = false; // TODO
+          _tunePending = false; // TODO
         }
         mpButtonRec.Enabled = false;
       }
@@ -142,11 +141,28 @@ namespace SetupTv.Sections
           }
         }
         IUser user = UserFactory.CreateSchedulerUser();
+        // To use for testing async tuning
+        //user.Name = "setuptv";
         user.Name = "setuptv-" + id + "-" + cardId;
         user.CardId = cardId;
 
         if (chkASynch.Checked)
         {
+          card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
+          if (_tunePending)
+          {
+            //if (card != null && card.IsTunerLocked)
+            {
+              RemoteControl.Instance.CancelTimeShifting(ref currentUser);
+              mpButtonRec.Enabled = false;
+              _currentChannelIdPendingTune = id;
+            }
+          }
+
+          if ((_currentChannelIdForTune == id) && card != null)
+          {
+            return;
+          }
           ThreadStart work = () => DoAsynchTune(ref user, id, cardId);
           var tuneThread = new Thread(work) {Name = "Async Tune Thread for channel " + id};
           tuneThread.Start();
@@ -757,29 +773,10 @@ namespace SetupTv.Sections
     {
       try
       {
-        IUser currentUser;
-        VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
-        if (_tunePending)
-        {
-          if (card != null && card.IsTunerLocked)
-          {
-            RemoteControl.Instance.CancelTimeShifting(ref currentUser);
-            //card.StopTimeShifting();
-            mpButtonRec.Enabled = false;
-            _currentChannelIdPendingTune = channelId;
-          }
-        }
-
-        if ((_currentChannelIdForTune == channelId) && card !=null)
-        {
-          return;
-        }
-
-        _tunePending = true;
-
         TvServer server = new TvServer();
         VirtualCard outCard;
         TvResult result;
+        _tunePending = true;
 
         _currentChannelIdPendingTune = channelId;
 

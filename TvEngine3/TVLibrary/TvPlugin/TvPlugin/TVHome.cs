@@ -3470,6 +3470,21 @@ namespace TvPlugin
 
         if (_useasynctuning)
         {
+          IUser currentUser;
+          VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
+          if (_tunePending)
+          {
+            if (card != null)
+            {
+              RemoteControl.Instance.CancelTimeShifting(ref currentUser);
+              _currentChannelIdPendingTune = channel.IdChannel;
+            }
+          }
+
+          if ((_currentChannelIdForTune == channel.IdChannel) && card != null)
+          {
+            return true;
+          }
           ThreadStart work = () => DoAsynchTune(ref user, channel);
           var tuneThread = new Thread(work) { Name = "Async Tune Thread for channel " + channel.IdChannel };
           tuneThread.Start();
@@ -3593,14 +3608,6 @@ namespace TvPlugin
 
       IUser currentUser;
       VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
-      if (_tunePending)
-      {
-        if (card != null)
-        {
-          RemoteControl.Instance.CancelTimeShifting(ref currentUser);
-          _currentChannelIdPendingTune = channel.IdChannel;
-        }
-      }
 
       if ((_currentChannelIdForTune == channel.IdChannel) && card != null)
       {

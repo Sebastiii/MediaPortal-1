@@ -544,7 +544,7 @@ namespace TvService
               ResetCardTuneStateToIdle(tvcard);
             }
             else
-            {              
+            {
               if (tvcard.Tuner.ReservationsForStop.Count > 1)
               {
                 tvcard.Tuner.CardStopState = CardStopState.StopPending;

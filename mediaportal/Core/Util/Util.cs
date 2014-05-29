@@ -2581,7 +2581,15 @@ namespace MediaPortal.Util
         {
           return false;
         }
+
         File.Delete(strFile);
+
+        if (File.Exists(strFile))
+        {
+          Log.Debug("Util: FileDelete {0} error. The file is in used.", strFile);
+          return false;
+        }
+
         Log.Debug("Util: FileDelete {0} successful.", strFile);
         return true;
       }

@@ -1853,6 +1853,70 @@ namespace TvService
                   subChannel[i].EventPMTCancelled.Reset();
                   subChannel[i].CancelPMT = true;
                   timeshiftingStopped = true;
+                  {
+                    //first, lets figure out if we are trying to stop a pending tune session
+                    bool userToRemove = false;
+                    bool currentCardTicket = false;
+
+                    // Create a fake user to do proper  Cancel Timeshifting
+                    user = UserFactory.CreateSchedulerUser();
+
+                    lock (cardHandler.Tuner.CardReservationsLock)
+                    {
+                      cardHandler.TimeShifter._eventCancelled.Reset();
+                      cardHandler.TimeShifter._timeshiftCancelled = true;
+                      while (cardHandler.Tuner.ReservationsForTune.Count > 0 && user != null && user.SubChannel != -1)
+                      {
+                        foreach (ICardTuneReservationTicket cardTuneReservationTicket in cardHandler.Tuner.ReservationsForTune)
+                        {
+                          if (cardTuneReservationTicket != null)
+                          {
+                            IUser userwWithPendingTicket = cardTuneReservationTicket.User;
+                            user.Name = userwWithPendingTicket.Name;
+                            user.CardId = cardHandler.DataBaseCard.IdCard;
+                            ITvCardContext context = cardHandler.Card.Context as ITvCardContext;
+                            user.SubChannel = subChannel[i].SubChannelId;
+                            user.IdChannel = idChannel;
+                            context.Add(user);
+
+                            if (user != null && userwWithPendingTicket.Name.Equals(user.Name))
+                            {
+                              if (context != null)
+                              {
+                                if (user.SubChannel > -1)
+                                {
+                                  if (!currentCardTicket)
+                                  {
+                                    cardHandler.TimeShifter.CancelTimeshift();
+                                    CardReservationHelper.CancelCardReservation(cardHandler, cardTuneReservationTicket);
+                                    CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
+                                    cardHandler.TimeShifter.Stop(ref user);
+                                    StopTimeShifting(ref user);
+                                    cardHandler.Users.RemoveUser(user);
+                                    RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, user);
+                                    userToRemove = true;
+                                    currentCardTicket = true;
+                                  }
+                                  else
+                                  {
+                                    CardReservationHelper.CancelCardReservation(cardHandler, cardTuneReservationTicket);
+                                    CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
+                                    userToRemove = false;
+                                  }
+                                }
+                              }
+                            }
+                            break;
+                          }
+                        }
+                      }
+
+                      if (userToRemove)
+                      {
+                        cardHandler.TimeShifter._eventCancelled.Set();
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -1890,6 +1954,8 @@ namespace TvService
                             cardHandler.TimeShifter.CancelTimeshift();
                             CardReservationHelper.CancelCardReservation(cardHandler, cardTuneReservationTicket);
                             CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
+                            cardHandler.TimeShifter.Stop(ref user);
+                            StopTimeShifting(ref user);
                             cardHandler.Users.RemoveUser(user);
                             RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, user);
                             userToRemove = true;
@@ -1904,8 +1970,8 @@ namespace TvService
                           timeshiftingStopped = true;
                         }
                       }
-                      break;
                     }
+                    break;
                   }
                 }
               }
@@ -1991,7 +2057,7 @@ namespace TvService
       {
         return TvResult.UnknownError;
       }
-      StopEPGgrabber();        
+      StopEPGgrabber();
       TvResult result = _cards[user.CardId].Recorder.Start(ref user, ref fileName);
 
       if (result == TvResult.Succeeded)

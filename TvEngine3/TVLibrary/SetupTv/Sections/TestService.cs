@@ -123,7 +123,7 @@ namespace SetupTv.Sections
         }
         else
         {
-          RemoteControl.Instance.CancelTimeShifting(ref currentUser);
+          RemoteControl.Instance.CancelTimeShifting(ref currentUser, _currentChannelIdPendingTune);
           _tunePending = false; // TODO
         }
         mpButtonRec.Enabled = false;
@@ -153,7 +153,7 @@ namespace SetupTv.Sections
           {
             //if (card != null && card.IsTunerLocked)
             {
-              RemoteControl.Instance.CancelTimeShifting(ref currentUser);
+              RemoteControl.Instance.CancelTimeShifting(ref currentUser, _currentChannelIdPendingTune);
               mpButtonRec.Enabled = false;
               _currentChannelIdPendingTune = id;
             }
@@ -351,6 +351,7 @@ namespace SetupTv.Sections
           MessageBox.Show(this, "Tune cancelled");
           break;
       }
+      _tunePending = false;
     }
 
     private void UpdateCardStatus()

@@ -142,6 +142,7 @@ namespace TvLibrary.Implementations.DVB
     {
       _cancelled = false;
       _listenCA = false;
+      _eventPMTCancelled = new ManualResetEvent(false);
       _eventPMT = new ManualResetEvent(false);
       _eventCA = new ManualResetEvent(false);
       _graphState = GraphState.Created;
@@ -172,6 +173,7 @@ namespace TvLibrary.Implementations.DVB
     {
       _cancelled = false;
       _listenCA = false;
+      _eventPMTCancelled = new ManualResetEvent(false);
       _eventPMT = new ManualResetEvent(false);
       _eventCA = new ManualResetEvent(false);
       _graphState = GraphState.Created;
@@ -392,6 +394,15 @@ namespace TvLibrary.Implementations.DVB
               }
               else
               {
+                // Set CancelPMT to avoid stop timeshift if a new channel is timeshifting.
+                if (_cancelPMT)
+                {
+                  // Wait that Cancel Timeshift is finishing
+                  EventPMTCancelled.WaitOne();
+                  foundPMT = true;
+                  break;
+                }
+
                 // Timeout waiting for PMT
                 TimeSpan ts = DateTime.Now - dtNow;
                 Log.Log.Debug("WaitForPMT: Timed out waiting for PMT after {0} seconds. Increase the PMT timeout value?",

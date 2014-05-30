@@ -1815,14 +1815,14 @@ namespace TvService
         if (tvcard.Recorder.IsRecording(ref user))
           return true;
 
-        Log.Write("Controller: StopTimeShifting {0}", cardId);       
-        return DoStopTimeShifting(ref user, cardId);                
+        Log.Write("Controller: StopTimeShifting {0}", cardId);
+        return DoStopTimeShifting(ref user, cardId);
       }
       catch (Exception ex)
       {
         Log.Write(ex);
       }
-                  
+
       return false;
     }
 
@@ -1833,68 +1833,102 @@ namespace TvService
     /// <param name="user">User</param>
     /// <param name="channelId"> </param>
     /// <returns></returns>
-    public bool CancelTimeShifting(ref IUser user)
+    public bool CancelTimeShifting(ref IUser user, int idChannel)
     {
       bool timeshiftingStopped = false;
       try
       {
-        bool isAnyUserTS;
-        bool isRec;
-        bool isUserTS;
-        bool isRecOrTS = RemoteControl.Instance.IsAnyCardRecordingOrTimeshifting(new User(), out isUserTS, out isAnyUserTS, out isRec);
-        //first, lets figure out if we are trying to stop a pending tune session
-        bool userToRemove = false;
-        bool currentCardTicket = false;
-
-        foreach (ITvCardHandler cardHandler in _cards.Values)
+        Channel channel = Channel.Retrieve(idChannel);
+        if (user == null)
         {
-          lock (cardHandler.Tuner.CardReservationsLock)
+          foreach (ITvCardHandler cardHandler in _cards.Values)
           {
-            cardHandler.TimeShifter._eventCancelled.Reset();
-            cardHandler.TimeShifter._timeshiftCancelled = true;
-            while (cardHandler.Tuner.ReservationsForTune.Count > 0)
+            ITvSubChannel[] subChannel = _cards[cardHandler.DataBaseCard.IdCard].Card.SubChannels;
+            for (int i = 0; i < subChannel.Length; ++i)
             {
-              foreach (ICardTuneReservationTicket cardTuneReservationTicket in cardHandler.Tuner.ReservationsForTune)
+              if (subChannel[i].CurrentChannel.Name == channel.DisplayName && !subChannel[i].IsTimeShifting)
               {
-                if (cardTuneReservationTicket != null)
+                if (subChannel[i] != null)
                 {
-                  IUser userwWithPendingTicket = cardTuneReservationTicket.User;
-
-                  if (userwWithPendingTicket.Name.Equals(user.Name))
-                  {
-                    ITvCardContext context = cardHandler.Card.Context as ITvCardContext;
-                    if (context != null)
-                    {
-                      if (user.SubChannel > -1)
-                      {
-                        if (!currentCardTicket)
-                        {
-                          cardHandler.TimeShifter.CancelTimeshift();
-                          CardReservationHelper.CancelCardReservation(cardHandler, cardTuneReservationTicket);
-                          CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
-                          cardHandler.Users.RemoveUser(user);
-                          RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, user);
-                          userToRemove = true;
-                          currentCardTicket = true;
-                        }
-                        else
-                        {
-                          CardReservationHelper.CancelCardReservation(cardHandler, cardTuneReservationTicket);
-                          CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
-                          userToRemove = false;
-                        }
-                        timeshiftingStopped = true;
-                      }
-                    }
-                    break;
-                  }
+                  subChannel[i].EventPMTCancelled.Reset();
+                  subChannel[i].CancelPMT = true;
+                  timeshiftingStopped = true;
                 }
               }
             }
+          }
+        }
+        else
+        {
+          //first, lets figure out if we are trying to stop a pending tune session
+          bool userToRemove = false;
+          bool currentCardTicket = false;
 
-            if (userToRemove)
+          foreach (ITvCardHandler cardHandler in _cards.Values)
+          {
+            lock (cardHandler.Tuner.CardReservationsLock)
             {
-              cardHandler.TimeShifter._eventCancelled.Set();
+              cardHandler.TimeShifter._eventCancelled.Reset();
+              cardHandler.TimeShifter._timeshiftCancelled = true;
+              while (cardHandler.Tuner.ReservationsForTune.Count > 0 && user != null && user.SubChannel != -1)
+              {
+                foreach (ICardTuneReservationTicket cardTuneReservationTicket in cardHandler.Tuner.ReservationsForTune)
+                {
+                  if (cardTuneReservationTicket != null)
+                  {
+                    IUser userwWithPendingTicket = cardTuneReservationTicket.User;
+
+                    if (user != null && userwWithPendingTicket.Name.Equals(user.Name))
+                    {
+                      ITvCardContext context = cardHandler.Card.Context as ITvCardContext;
+                      if (context != null)
+                      {
+                        if (user.SubChannel > -1)
+                        {
+                          if (!currentCardTicket)
+                          {
+                            cardHandler.TimeShifter.CancelTimeshift();
+                            CardReservationHelper.CancelCardReservation(cardHandler, cardTuneReservationTicket);
+                            CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
+                            cardHandler.Users.RemoveUser(user);
+                            RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, user);
+                            userToRemove = true;
+                            currentCardTicket = true;
+                          }
+                          else
+                          {
+                            CardReservationHelper.CancelCardReservation(cardHandler, cardTuneReservationTicket);
+                            CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
+                            userToRemove = false;
+                          }
+                          timeshiftingStopped = true;
+                        }
+                      }
+                      break;
+                    }
+                  }
+                }
+              }
+
+              if (userToRemove)
+              {
+                cardHandler.TimeShifter._eventCancelled.Set();
+              }
+            }
+          }
+        }
+
+        foreach (ITvCardHandler cardHandler in _cards.Values)
+        {
+          ITvSubChannel[] subChannel = _cards[cardHandler.DataBaseCard.IdCard].Card.SubChannels;
+          for (int i = 0; i < subChannel.Length; ++i)
+          {
+            if (subChannel[i].CurrentChannel.Name == channel.DisplayName && !subChannel[i].IsTimeShifting)
+            {
+              if (subChannel[i] != null)
+              {
+                subChannel[i].EventPMTCancelled.Set();
+              }
             }
           }
         }
@@ -1919,10 +1953,10 @@ namespace TvService
     {
       if (IsGrabbingEpg(cardId))
       {
-        StopEPGgrabber();        
+        StopEPGgrabber();
         // we need this, otherwise tvservice will hang in the event stoptimeshifting is called by heartbeat timeout function
       }
-      ITvCardHandler tvcard = _cards[cardId];      
+      ITvCardHandler tvcard = _cards[cardId];
       ICardStopReservationTicket ticket = CardReservationHelper.RequestAndWaitForCardStopReservation(tvcard, user);
       bool stopped = false;
       if (ticket != null)
@@ -2713,7 +2747,7 @@ namespace TvService
             }
           }
 
-          //tune to the new channel                  
+          //tune to the new channel
           IChannel tuneChannel = cardInfo.TuningDetail;
           result = CardTune(ref userCopy, tuneChannel, channel, ticket, cardResImpl);
           if (!HasTvSucceeded(result))

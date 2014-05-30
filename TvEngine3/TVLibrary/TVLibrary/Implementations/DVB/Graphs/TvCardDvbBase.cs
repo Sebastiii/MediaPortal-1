@@ -901,7 +901,7 @@ namespace TvLibrary.Implementations.DVB
       _epgGrabbing = false;
       if (_mapSubChannels.ContainsKey(subChannel))
       {
-        LockInOnSignal();        
+        LockInOnSignal();
         _mapSubChannels[subChannel].AfterTuneEvent -= new BaseSubChannel.OnAfterTuneDelegate(OnAfterTuneEvent);
         _mapSubChannels[subChannel].AfterTuneEvent += new BaseSubChannel.OnAfterTuneDelegate(OnAfterTuneEvent);
         _mapSubChannels[subChannel].OnGraphStarted();

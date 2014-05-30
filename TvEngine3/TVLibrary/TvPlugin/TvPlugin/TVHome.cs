@@ -683,10 +683,7 @@ namespace TvPlugin
         {
           IUser currentUser;
           VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
-          if (card != null)// && card.IsTunerLocked)
-          {
-            RemoteControl.Instance.CancelTimeShifting(ref currentUser);
-          }
+          RemoteControl.Instance.CancelTimeShifting(ref currentUser, _currentChannelIdPendingTune);
         }
 
         if (Card.IsTimeShifting && g_Player.IsTV && g_Player.Playing)
@@ -3474,11 +3471,8 @@ namespace TvPlugin
           VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
           if (_tunePending)
           {
-            if (card != null)
-            {
-              RemoteControl.Instance.CancelTimeShifting(ref currentUser);
-              _currentChannelIdPendingTune = channel.IdChannel;
-            }
+            RemoteControl.Instance.CancelTimeShifting(ref currentUser, _currentChannelIdPendingTune);
+            _currentChannelIdPendingTune = channel.IdChannel;
           }
 
           if ((_currentChannelIdForTune == channel.IdChannel) && card != null)
@@ -3631,28 +3625,20 @@ namespace TvPlugin
         succeeded = server.StartTimeShifting(ref user, channel.IdChannel, out card, out cardChanged);
         if (succeeded != TvResult.Succeeded && succeeded != TvResult.TuneAsync)
         {
-          card = GetCardTimeShiftingChannel(channel.IdChannel, out currentUser);
-          if (_tunePending)
-          {
-            if (card != null && card.IsTunerLocked)
-            {
-              RemoteControl.Instance.CancelTimeShifting(ref currentUser);
-              _currentChannelIdPendingTune = channel.IdChannel;
-            }
-            _tunePending = false;
-          }
           if (succeeded != TvResult.Succeeded)
           {
             _mainThreadContext.Send(delegate
                                     {
                                       lock (_guiWaitCursorLock)
                                       {
-                                        //timeshifting new channel failed. 
-                                        g_Player.Stop();
                                         if (_currentChannelIdForTune != channel.IdChannel)
                                         {
                                           return;
                                         }
+
+                                        //timeshifting new channel failed. 
+                                        g_Player.Stop();
+
                                         // ensure right channel name, even if not watchable:Navigator.Channel = channel; 
                                         ChannelTuneFailedNotifyUser(succeeded, _status.IsSet(LiveTvStatus.WasPlaying), channel);
                                         ChannelTvOnOff(false);
@@ -3662,10 +3648,7 @@ namespace TvPlugin
         }
         else if (succeeded == TvResult.Succeeded)
         {
-          //if (card.IsTimeShifting)
-          {
-            _tunePending = false;
-          }
+          _tunePending = false;
         }
       }
       catch (Exception ex)

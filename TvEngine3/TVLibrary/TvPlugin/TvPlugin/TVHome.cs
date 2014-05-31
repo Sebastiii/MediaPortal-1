@@ -3236,6 +3236,7 @@ namespace TvPlugin
         // show notify dialog 
         pDlgNotify.DoModal((int)GUIWindowManager.ActiveWindowEx);
       }
+      _tunePending = false;
     }
 
     private static void OnBlackImageRendered()
@@ -3451,7 +3452,7 @@ namespace TvPlugin
           {
             g_Player.PauseGraph();
           }
-          else
+          else if (_tunePending)
           {
             g_Player.Stop();
           }

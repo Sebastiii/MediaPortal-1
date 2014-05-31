@@ -142,8 +142,8 @@ namespace SetupTv.Sections
         }
         IUser user = UserFactory.CreateSchedulerUser();
         // To use for testing async tuning
-        //user.Name = "setuptv";
-        user.Name = "setuptv-" + id + "-" + cardId;
+        user.Name = "setuptv";
+        //user.Name = "setuptv-" + id + "-" + cardId;
         user.CardId = cardId;
 
         if (chkASynch.Checked)

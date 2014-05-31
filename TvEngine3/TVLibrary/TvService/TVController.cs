@@ -1846,10 +1846,11 @@ namespace TvService
             ITvSubChannel[] subChannel = _cards[cardHandler.DataBaseCard.IdCard].Card.SubChannels;
             for (int i = 0; i < subChannel.Length; ++i)
             {
-              if (subChannel[i].CurrentChannel.Name == channel.DisplayName && !subChannel[i].IsTimeShifting)
+              if (subChannel[i] != null)
               {
-                if (subChannel[i] != null)
+                if (subChannel[i].CurrentChannel.Name == channel.DisplayName)// && !subChannel[i].IsTimeShifting)
                 {
+                  Log.Write("Controller: CancelTimeShifting remove ticket when user is null on card:{0} for channel {1}", cardHandler.DataBaseCard.IdCard, channel.DisplayName);
                   subChannel[i].EventPMTCancelled.Reset();
                   subChannel[i].CancelPMT = true;
                   timeshiftingStopped = true;
@@ -1915,6 +1916,8 @@ namespace TvService
                       if (userToRemove)
                       {
                         cardHandler.TimeShifter._eventCancelled.Set();
+                        Log.Write("Controller: CancelTimeShifting reset  EventPMTCancelled on card:{0} for channel {1}", cardHandler.DataBaseCard.IdCard, channel.DisplayName);
+                        subChannel[i].EventPMTCancelled.Set();
                       }
                     }
                   }
@@ -1922,6 +1925,21 @@ namespace TvService
               }
             }
           }
+          //foreach (ITvCardHandler cardHandler in _cards.Values)
+          //{
+          //  ITvSubChannel[] subChannel = _cards[cardHandler.DataBaseCard.IdCard].Card.SubChannels;
+          //  for (int i = 0; i < subChannel.Length; ++i)
+          //  {
+          //    if (subChannel[i].CurrentChannel.Name == channel.DisplayName)
+          //    {
+          //      if (subChannel[i] != null)
+          //      {
+          //        Log.Write("Controller: CancelTimeShifting reset  EventPMTCancelled on card:{0} for channel {1}", cardHandler.DataBaseCard.IdCard, channel.DisplayName);
+          //        subChannel[i].EventPMTCancelled.Set();
+          //      }
+          //    }
+          //  }
+          //}
         }
         else
         {
@@ -1952,6 +1970,7 @@ namespace TvService
                         {
                           if (!currentCardTicket)
                           {
+                            Log.Write("Controller: CancelTimeShifting remove ticket with defined user {0} on card:{1} for channel {2}", user.Name, cardHandler.DataBaseCard.IdCard, channel.DisplayName);
                             cardHandler.TimeShifter.CancelTimeshift();
                             CardReservationHelper.CancelCardReservation(cardHandler, cardTuneReservationTicket);
                             CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
@@ -1981,21 +2000,6 @@ namespace TvService
               if (userToRemove)
               {
                 cardHandler.TimeShifter._eventCancelled.Set();
-              }
-            }
-          }
-        }
-
-        foreach (ITvCardHandler cardHandler in _cards.Values)
-        {
-          ITvSubChannel[] subChannel = _cards[cardHandler.DataBaseCard.IdCard].Card.SubChannels;
-          for (int i = 0; i < subChannel.Length; ++i)
-          {
-            if (subChannel[i].CurrentChannel.Name == channel.DisplayName && !subChannel[i].IsTimeShifting)
-            {
-              if (subChannel[i] != null)
-              {
-                subChannel[i].EventPMTCancelled.Set();
               }
             }
           }

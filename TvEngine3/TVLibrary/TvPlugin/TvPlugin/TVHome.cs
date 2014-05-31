@@ -3237,6 +3237,7 @@ namespace TvPlugin
         pDlgNotify.DoModal((int)GUIWindowManager.ActiveWindowEx);
       }
       _tunePending = false;
+      _currentChannelIdForTune = 0;
     }
 
     private static void OnBlackImageRendered()
@@ -3478,6 +3479,10 @@ namespace TvPlugin
           if (_tunePending)
           {
             g_Player.Stop();
+            if ((_currentChannelIdPendingTune == channel.IdChannel))
+            {
+              return true;
+            }
             RemoteControl.Instance.CancelTimeShifting(ref currentUser, _currentChannelIdPendingTune);
             _currentChannelIdPendingTune = channel.IdChannel;
           }

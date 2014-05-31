@@ -429,6 +429,7 @@ namespace TvService
         {
           // Reset CancelPMT to set future cancel when async tuning is used when PMT failed for channel
           result.CancelPMT = false;
+          result.EventPMTCancelled.Set();
           return TvResult.Succeeded;
         }
         Log.Debug("card: tuned user: {0} subchannel: {1}", user.Name, result.SubChannelId);

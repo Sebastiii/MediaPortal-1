@@ -1894,7 +1894,7 @@ namespace TvService
                                     cardHandler.TimeShifter.Stop(ref usercopy);
                                     //StopTimeShifting(ref usercopy);
                                     //cardHandler.Users.RemoveUser(usercopy);
-                                    //RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, usercopy);
+                                    RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, usercopy);
                                     userToRemove = true;
                                     currentCardTicket = true;
                                   }
@@ -1959,7 +1959,7 @@ namespace TvService
                             cardHandler.TimeShifter.Stop(ref user);
                             //StopTimeShifting(ref user);
                             //cardHandler.Users.RemoveUser(user);
-                            //RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, user);
+                            RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, user);
                             userToRemove = true;
                             currentCardTicket = true;
                           }

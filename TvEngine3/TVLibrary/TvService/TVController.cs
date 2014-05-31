@@ -1859,41 +1859,42 @@ namespace TvService
                     bool currentCardTicket = false;
 
                     // Create a fake user to do proper  Cancel Timeshifting
-                    user = UserFactory.CreateSchedulerUser();
+                    IUser usercopy = UserFactory.CreateSchedulerUser();
+                    usercopy.SubChannel = subChannel[i].SubChannelId;
+                    usercopy.CardId = cardHandler.DataBaseCard.IdCard;
+                    usercopy.IdChannel = idChannel;
 
                     lock (cardHandler.Tuner.CardReservationsLock)
                     {
                       cardHandler.TimeShifter._eventCancelled.Reset();
                       cardHandler.TimeShifter._timeshiftCancelled = true;
-                      while (cardHandler.Tuner.ReservationsForTune.Count > 0 && user != null && user.SubChannel != -1)
+                      while (cardHandler.Tuner.ReservationsForTune.Count > 0 && usercopy != null && usercopy.SubChannel != -1)
                       {
                         foreach (ICardTuneReservationTicket cardTuneReservationTicket in cardHandler.Tuner.ReservationsForTune)
                         {
                           if (cardTuneReservationTicket != null)
                           {
                             IUser userwWithPendingTicket = cardTuneReservationTicket.User;
-                            user.Name = userwWithPendingTicket.Name;
-                            user.CardId = cardHandler.DataBaseCard.IdCard;
+                            usercopy.Name = userwWithPendingTicket.Name;
                             ITvCardContext context = cardHandler.Card.Context as ITvCardContext;
-                            user.SubChannel = subChannel[i].SubChannelId;
-                            user.IdChannel = idChannel;
-                            context.Add(user);
+                            context.Add(usercopy);
 
-                            if (user != null && userwWithPendingTicket.Name.Equals(user.Name))
+                            if (usercopy != null && userwWithPendingTicket.Name.Equals(usercopy.Name))
                             {
                               if (context != null)
                               {
-                                if (user.SubChannel > -1)
+                                if (usercopy.SubChannel > -1)
                                 {
                                   if (!currentCardTicket)
                                   {
                                     cardHandler.TimeShifter.CancelTimeshift();
                                     CardReservationHelper.CancelCardReservation(cardHandler, cardTuneReservationTicket);
                                     CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
-                                    cardHandler.TimeShifter.Stop(ref user);
-                                    StopTimeShifting(ref user);
-                                    cardHandler.Users.RemoveUser(user);
-                                    RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, user);
+                                    cardHandler.TimeShifter._eventTimeshift.Set();
+                                    cardHandler.TimeShifter.Stop(ref usercopy);
+                                    //StopTimeShifting(ref usercopy);
+                                    //cardHandler.Users.RemoveUser(usercopy);
+                                    //RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, usercopy);
                                     userToRemove = true;
                                     currentCardTicket = true;
                                   }
@@ -1954,10 +1955,11 @@ namespace TvService
                             cardHandler.TimeShifter.CancelTimeshift();
                             CardReservationHelper.CancelCardReservation(cardHandler, cardTuneReservationTicket);
                             CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
+                            cardHandler.TimeShifter._eventTimeshift.Set();
                             cardHandler.TimeShifter.Stop(ref user);
-                            StopTimeShifting(ref user);
-                            cardHandler.Users.RemoveUser(user);
-                            RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, user);
+                            //StopTimeShifting(ref user);
+                            //cardHandler.Users.RemoveUser(user);
+                            //RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, user);
                             userToRemove = true;
                             currentCardTicket = true;
                           }

@@ -683,6 +683,7 @@ namespace TvPlugin
         {
           IUser currentUser;
           VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
+          g_Player.Stop();
           RemoteControl.Instance.CancelTimeShifting(ref currentUser, _currentChannelIdPendingTune);
         }
 
@@ -3450,6 +3451,10 @@ namespace TvPlugin
           {
             g_Player.PauseGraph();
           }
+          else
+          {
+            g_Player.Stop();
+          }
         }
         else
         {
@@ -3471,6 +3476,7 @@ namespace TvPlugin
           VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
           if (_tunePending)
           {
+            g_Player.Stop();
             RemoteControl.Instance.CancelTimeShifting(ref currentUser, _currentChannelIdPendingTune);
             _currentChannelIdPendingTune = channel.IdChannel;
           }
@@ -3569,27 +3575,34 @@ namespace TvPlugin
     /// <returns>virtual card</returns>
     private static VirtualCard GetCardTimeShiftingChannel(int channelId, out IUser users)
     {
-      IList<Card> cards = TvDatabase.Card.ListAll();
-      foreach (Card card in cards)
+      try
       {
-        if (card.Enabled == false) continue;
-        if (!RemoteControl.Instance.CardPresent(card.IdCard)) continue;
-        IUser[] usersForCard = RemoteControl.Instance.GetUsersForCard(card.IdCard);
-        if (usersForCard == null) continue;
-        if (usersForCard.Length == 0) continue;
-        for (int i = 0; i < usersForCard.Length; ++i)
+        IList<Card> cards = TvDatabase.Card.ListAll();
+        foreach (Card card in cards)
         {
-          if (usersForCard[i].IdChannel == channelId)
+          if (card.Enabled == false) continue;
+          if (!RemoteControl.Instance.CardPresent(card.IdCard)) continue;
+          IUser[] usersForCard = RemoteControl.Instance.GetUsersForCard(card.IdCard);
+          if (usersForCard == null) continue;
+          if (usersForCard.Length == 0) continue;
+          for (int i = 0; i < usersForCard.Length; ++i)
           {
-            VirtualCard vcard = new VirtualCard(usersForCard[i], RemoteControl.HostName);
-            if (vcard.IsTimeShifting)
+            if (usersForCard[i].IdChannel == channelId)
             {
-              vcard.RecordingFolder = card.RecordingFolder;
-              users = usersForCard[i];
-              return vcard;
+              VirtualCard vcard = new VirtualCard(usersForCard[i], RemoteControl.HostName);
+              if (vcard.IsTimeShifting)
+              {
+                vcard.RecordingFolder = card.RecordingFolder;
+                users = usersForCard[i];
+                return vcard;
+              }
             }
           }
         }
+      }
+      catch (Exception ex)
+      {
+        Log.Error("TVPlugin : GetCardTimeShiftingChannel Exception {0}", ex);
       }
       users = null;
       return null;

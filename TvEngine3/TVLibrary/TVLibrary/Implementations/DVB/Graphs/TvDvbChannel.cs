@@ -322,7 +322,7 @@ namespace TvLibrary.Implementations.DVB
               DVBIPChannel dvbipChannel = _currentChannel as DVBIPChannel;
               if (dvbipChannel != null)
               {
-                timeoutPMT = 1000;
+                timeoutPMT = 3000;
               }
 
               if (_eventPMT.WaitOne(timeoutPMT, true))

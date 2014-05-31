@@ -176,7 +176,7 @@ namespace TvService
             return true;
           }
           // Remove User from other cards (needed for async tuning)
-          RemoteControl.Instance.RemoveUserFromOtherCards(_cardHandler.DataBaseCard.IdCard, user);
+          // RemoteControl.Instance.RemoveUserFromOtherCards(_cardHandler.DataBaseCard.IdCard, user);
 
           TimeSpan ts = DateTime.Now - timeStart;
           Log.Write("card: WaitForRecordingFile - no audio was found after {0} seconds", ts.TotalSeconds);

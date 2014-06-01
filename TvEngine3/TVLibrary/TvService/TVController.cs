@@ -1848,7 +1848,7 @@ namespace TvService
             {
               if (subChannel[i] != null)
               {
-                if (subChannel[i].CurrentChannel.Name == channel.DisplayName)// && !subChannel[i].IsTimeShifting)
+                if (subChannel[i].CurrentChannel.Name == channel.DisplayName)
                 {
                   Log.Write("Controller: CancelTimeShifting remove ticket when user is null on card:{0} for channel {1}", cardHandler.DataBaseCard.IdCard, channel.DisplayName);
                   subChannel[i].EventPMTCancelled.Reset();
@@ -1893,8 +1893,6 @@ namespace TvService
                                     CardReservationHelper.RemoveTuneTicket(cardHandler, cardTuneReservationTicket, true);
                                     cardHandler.TimeShifter._eventTimeshift.Set();
                                     cardHandler.TimeShifter.Stop(ref usercopy);
-                                    //StopTimeShifting(ref usercopy);
-                                    //cardHandler.Users.RemoveUser(usercopy);
                                     RemoteControl.Instance.RemoveUserFromOtherCards(cardHandler.DataBaseCard.IdCard, usercopy);
                                     userToRemove = true;
                                     currentCardTicket = true;
@@ -1925,21 +1923,6 @@ namespace TvService
               }
             }
           }
-          //foreach (ITvCardHandler cardHandler in _cards.Values)
-          //{
-          //  ITvSubChannel[] subChannel = _cards[cardHandler.DataBaseCard.IdCard].Card.SubChannels;
-          //  for (int i = 0; i < subChannel.Length; ++i)
-          //  {
-          //    if (subChannel[i].CurrentChannel.Name == channel.DisplayName)
-          //    {
-          //      if (subChannel[i] != null)
-          //      {
-          //        Log.Write("Controller: CancelTimeShifting reset  EventPMTCancelled on card:{0} for channel {1}", cardHandler.DataBaseCard.IdCard, channel.DisplayName);
-          //        subChannel[i].EventPMTCancelled.Set();
-          //      }
-          //    }
-          //  }
-          //}
         }
         else
         {

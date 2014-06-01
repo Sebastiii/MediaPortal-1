@@ -3464,9 +3464,9 @@ namespace TvPlugin
         }
         if (_status.IsSet(LiveTvStatus.WasPlaying))
         {
-          RenderBlackImage();
           if (!_useasynctuning)
           {
+            RenderBlackImage();
             g_Player.PauseGraph();
           }
         }
@@ -3490,11 +3490,11 @@ namespace TvPlugin
           VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
           if (_tunePending)
           {
-            g_Player.Stop();
             if ((_currentChannelIdPendingTune == channel.IdChannel))
             {
               return true;
             }
+            g_Player.Stop();
             bool timeshiftingStopped = RemoteControl.Instance.CancelTimeShifting(ref currentUser, _currentChannelIdPendingTune);
             if (!timeshiftingStopped)
             {
@@ -3665,6 +3665,8 @@ namespace TvPlugin
           Navigator.UpdateCurrentChannel();
         }
 
+        RenderBlackImage();
+
         ChannelTvOnOff(true);
         succeeded = server.StartTimeShifting(ref user, channel.IdChannel, out card, out cardChanged);
         if (succeeded != TvResult.Succeeded && succeeded != TvResult.TuneAsync)
@@ -3756,21 +3758,19 @@ namespace TvPlugin
         {
           try
           {
-            {
-              _mainThreadContext.Send(delegate
+            _mainThreadContext.Send(delegate
+                                    {
+                                      if (_currentChannelIdForTune == channel.IdChannel)
                                       {
-                                        if (_currentChannelIdForTune == channel.IdChannel)
+                                        if (succeeded == TvResult.Succeeded)
                                         {
-                                          if (succeeded == TvResult.Succeeded)
-                                          {
-                                            StopRenderBlackImage();
-                                            _userChannelChanged = false;
-                                            FireOnChannelChangedEvent();
-                                            Navigator.UpdateCurrentChannel();
-                                          }
+                                          StopRenderBlackImage();
+                                          _userChannelChanged = false;
+                                          FireOnChannelChangedEvent();
+                                          Navigator.UpdateCurrentChannel();
                                         }
-                                      }, null);
-            }
+                                      }
+                                    }, null);
           }
           catch (Exception ex)
           {

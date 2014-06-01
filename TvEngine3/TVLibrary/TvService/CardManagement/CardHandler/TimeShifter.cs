@@ -353,10 +353,13 @@ namespace TvService
       bool isAsyncTuning;
       if (WaitForFile(ref user, out isScrambled, out isAsyncTuning))
       {
-        context.OnZap(user);
-        StartLinkageScanner();
-        StartTimeShiftingEPGgrabber(user);
         result = isAsyncTuning ? TvResult.TuneAsync : TvResult.Succeeded;
+        if (result != TvResult.TuneAsync)
+        {
+          context.OnZap(user);
+          StartLinkageScanner();
+          StartTimeShiftingEPGgrabber(user);
+        }
       }
       else
       {

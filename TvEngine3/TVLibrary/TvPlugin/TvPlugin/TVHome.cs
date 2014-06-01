@@ -684,7 +684,11 @@ namespace TvPlugin
           IUser currentUser;
           VirtualCard card = GetCardTimeShiftingChannel(_currentChannelIdPendingTune, out currentUser);
           g_Player.Stop();
-          RemoteControl.Instance.CancelTimeShifting(ref currentUser, _currentChannelIdPendingTune);
+          bool timeshiftingStopped = RemoteControl.Instance.CancelTimeShifting(ref currentUser, _currentChannelIdPendingTune);
+          if (!timeshiftingStopped)
+          {
+            _tunePending = false;
+          }
         }
 
         if (Card.IsTimeShifting && g_Player.IsTV && g_Player.Playing)
@@ -780,6 +784,10 @@ namespace TvPlugin
     {
       _updateTimer = DateTime.Now.AddMilliseconds(-1 * (PROCESS_UPDATE_INTERVAL+1));
       _updateProgressTimer = DateTime.Now.AddMilliseconds(-1 * (PROGRESS_PERCENTAGE_UPDATE_INTERVAL+1));
+      if (_tunePending)
+      {
+        Navigator.CheckChannelChange();
+      }
     }
 
     public override void Process()
@@ -1448,33 +1456,35 @@ namespace TvPlugin
 
     private void HeartBeatTransmitter()
     {
-      RemoteControl.Clear();
-      int countToHBLoop = 5;
-
-      while (true)
+      try
       {
-        // 1 second loop
-        if (Connected)
-        {
-          _isAnyCardRecording = TvServer.IsAnyCardRecording();
-        }
+        RemoteControl.Clear();
+        int countToHBLoop = 5;
 
-        // HeartBeat loop (5 seconds)
-        if (countToHBLoop >= 5)
+        while (true)
         {
-          countToHBLoop = 0;
-          if (!Connected) // is this needed to update connection status
-            RefreshConnectionState();
-          if (Connected && !_suspended)
+          // 1 second loop
+          if (Connected)
           {
-            bool isTS = (Card != null && Card.IsTimeShifting);
-            if (Connected && isTS)
-            {
-              // send heartbeat to tv server each 5 sec.
-              // this way we signal to the server that we are alive thus avoid being kicked.
-              // Log.Debug("TVHome: sending HeartBeat signal to server.");
+            _isAnyCardRecording = TvServer.IsAnyCardRecording();
+          }
 
-              // when debugging we want to disable heartbeats
+          // HeartBeat loop (5 seconds)
+          if (countToHBLoop >= 5)
+          {
+            countToHBLoop = 0;
+            if (!Connected) // is this needed to update connection status
+              RefreshConnectionState();
+            if (Connected && !_suspended)
+            {
+              bool isTS = (Card != null && Card.IsTimeShifting);
+              if (Connected && isTS)
+              {
+                // send heartbeat to tv server each 5 sec.
+                // this way we signal to the server that we are alive thus avoid being kicked.
+                // Log.Debug("TVHome: sending HeartBeat signal to server.");
+
+                // when debugging we want to disable heartbeats
 #if !DEBUG
             try
             {
@@ -1485,45 +1495,50 @@ namespace TvPlugin
               Log.Error("TVHome: failed sending HeartBeat signal to server. ({0})", e.Message);
             }
 #endif
-            }
-            else if (Connected && !isTS && !_playbackStopped && _onPageLoadDone &&
-                     (!g_Player.IsTVRecording && (g_Player.IsTV || g_Player.IsRadio)))
-            {
-              // check the possible reason why timeshifting has suddenly stopped
-              // maybe the server kicked the client b/c a recording on another transponder was due.
-
-              TvStoppedReason result = Card.GetTimeshiftStoppedReason;
-              if (result != TvStoppedReason.UnknownReason)
+              }
+              else if (Connected && !isTS && !_playbackStopped && _onPageLoadDone &&
+                       (!g_Player.IsTVRecording && (g_Player.IsTV || g_Player.IsRadio)))
               {
-                Log.Debug("TVHome: Timeshifting seems to have stopped - TvStoppedReason:{0}", result);
-                string errMsg = "";
+                // check the possible reason why timeshifting has suddenly stopped
+                // maybe the server kicked the client b/c a recording on another transponder was due.
 
-                switch (result)
+                TvStoppedReason result = Card.GetTimeshiftStoppedReason;
+                if (result != TvStoppedReason.UnknownReason)
                 {
-                  case TvStoppedReason.HeartBeatTimeOut:
-                    errMsg = GUILocalizeStrings.Get(1515);
-                    break;
-                  case TvStoppedReason.KickedByAdmin:
-                    errMsg = GUILocalizeStrings.Get(1514);
-                    break;
-                  case TvStoppedReason.RecordingStarted:
-                    errMsg = GUILocalizeStrings.Get(1513);
-                    break;
-                  case TvStoppedReason.OwnerChangedTS:
-                    errMsg = GUILocalizeStrings.Get(1517);
-                    break;
-                  default:
-                    errMsg = GUILocalizeStrings.Get(1516);
-                    break;
+                  Log.Debug("TVHome: Timeshifting seems to have stopped - TvStoppedReason:{0}", result);
+                  string errMsg = "";
+
+                  switch (result)
+                  {
+                    case TvStoppedReason.HeartBeatTimeOut:
+                      errMsg = GUILocalizeStrings.Get(1515);
+                      break;
+                    case TvStoppedReason.KickedByAdmin:
+                      errMsg = GUILocalizeStrings.Get(1514);
+                      break;
+                    case TvStoppedReason.RecordingStarted:
+                      errMsg = GUILocalizeStrings.Get(1513);
+                      break;
+                    case TvStoppedReason.OwnerChangedTS:
+                      errMsg = GUILocalizeStrings.Get(1517);
+                      break;
+                    default:
+                      errMsg = GUILocalizeStrings.Get(1516);
+                      break;
+                  }
+                  NotifyUser(errMsg);
+                  ChannelTvOnOff(false);
                 }
-                NotifyUser(errMsg);
-                ChannelTvOnOff(false);
               }
             }
           }
+          Thread.Sleep(HEARTBEAT_INTERVAL*1000); //sleep for 1 sec. before sending heartbeat again
+          countToHBLoop++;
         }
-        Thread.Sleep(HEARTBEAT_INTERVAL * 1000); //sleep for 1 sec. before sending heartbeat again
-        countToHBLoop++;
+      }
+      catch (Exception ex)
+      {
+        Log.Error("TVHome: HeartBeatTransmitter exception :{0}", ex);
       }
     }
 
@@ -2157,10 +2172,12 @@ namespace TvPlugin
     private void UpdateGUIonPlaybackStateChange()
     {
       bool isTimeShiftingTV = (Connected && Card.IsTimeShifting && g_Player.IsTV);
-
-      if (btnTvOnOff.Selected != isTimeShiftingTV)
+      if (!_tunePending)
       {
-        btnTvOnOff.Selected = isTimeShiftingTV;
+        if (btnTvOnOff.Selected != isTimeShiftingTV)
+        {
+          btnTvOnOff.Selected = isTimeShiftingTV;
+        }
       }
 
       UpdateProgressPercentageBar();
@@ -3404,7 +3421,6 @@ namespace TvPlugin
 
       try
       {
-        //_tunePending = true;
         bool doContinue;
         bool checkResult = PreTuneChecks(channel, out doContinue);
         if (doContinue == false)
@@ -3438,7 +3454,7 @@ namespace TvPlugin
           RegisterCiMenu(newCardId);
         }
 
-        // we need to stop player HERE if card has changed.        
+        // we need to stop player HERE if card has changed.
         if (_status.AllSet(LiveTvStatus.WasPlaying | LiveTvStatus.CardChange))
         {
           Log.Debug("TVHome.ViewChannelAndCheck(): Stopping player. CardId:{0}/{1}, RTSP:{2}", Card.Id, newCardId,
@@ -3452,10 +3468,6 @@ namespace TvPlugin
           if (!_useasynctuning)
           {
             g_Player.PauseGraph();
-          }
-          else if (_tunePending)
-          {
-            g_Player.Stop();
           }
         }
         else
@@ -3483,7 +3495,11 @@ namespace TvPlugin
             {
               return true;
             }
-            RemoteControl.Instance.CancelTimeShifting(ref currentUser, _currentChannelIdPendingTune);
+            bool timeshiftingStopped = RemoteControl.Instance.CancelTimeShifting(ref currentUser, _currentChannelIdPendingTune);
+            if (!timeshiftingStopped)
+            {
+              _tunePending = false;
+            }
             _currentChannelIdPendingTune = channel.IdChannel;
           }
 
@@ -3634,12 +3650,21 @@ namespace TvPlugin
 
       _currentChannelIdForTune = channel.IdChannel;
 
+      // Update current channel needed when zap channel when async tuning
+      Navigator.m_currentChannel = channel;
+
       TvResult succeeded = TvResult.UnknownError;
 
       bool cardChanged = false;
 
       try
       {
+        if (!g_Player.Playing)
+        {
+          UpdateProgressPercentageBar();
+          Navigator.UpdateCurrentChannel();
+        }
+
         ChannelTvOnOff(true);
         succeeded = server.StartTimeShifting(ref user, channel.IdChannel, out card, out cardChanged);
         if (succeeded != TvResult.Succeeded && succeeded != TvResult.TuneAsync)
@@ -3652,6 +3677,7 @@ namespace TvPlugin
                                       {
                                         if (_currentChannelIdForTune != channel.IdChannel)
                                         {
+                                          _tunePending = false;
                                           return;
                                         }
 
@@ -3737,7 +3763,6 @@ namespace TvPlugin
                                         {
                                           if (succeeded == TvResult.Succeeded)
                                           {
-                                            g_Player.ContinueGraph();
                                             StopRenderBlackImage();
                                             _userChannelChanged = false;
                                             FireOnChannelChangedEvent();
@@ -3760,9 +3785,13 @@ namespace TvPlugin
       if (_status.IsSet(LiveTvStatus.WasPlaying))
       {
         if (card != null)
-            g_Player.OnZapping((int)card.Type);
+        {
+          g_Player.OnZapping((int) card.Type);
+        }
         else
+        {
           g_Player.OnZapping(-1);
+        }
       }
 
       if (succeeded != TvResult.Succeeded && !_useasynctuning)
@@ -3778,6 +3807,11 @@ namespace TvPlugin
       }
       else if (succeeded == TvResult.Succeeded)
       {
+        Log.Info("TvPlugin:CompleteTune TvResult Succeeded");
+        if (_useasynctuning)
+        {
+          g_Player.PauseGraph();
+        }
         if (card != null && card.NrOfOtherUsersTimeshiftingOnCard > 0)
         {
           _status.Set(LiveTvStatus.SeekToEndAfterPlayback);
@@ -3820,11 +3854,8 @@ namespace TvPlugin
 
         // continue graph
 
-        if (!_useasynctuning)
-        {
-          g_Player.ContinueGraph();
-        }
-        
+        g_Player.ContinueGraph();
+
         if (!g_Player.Playing || _status.IsSet(LiveTvStatus.CardChange) ||
             (g_Player.Playing && !(g_Player.IsTV || g_Player.IsRadio)))
         {

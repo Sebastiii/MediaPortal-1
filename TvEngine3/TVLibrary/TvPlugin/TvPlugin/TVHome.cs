@@ -3651,6 +3651,7 @@ namespace TvPlugin
       _currentChannelIdForTune = channel.IdChannel;
 
       // Update current channel needed when zap channel when async tuning
+      Navigator.LastViewedChannel = Navigator.Channel;
       Navigator.m_currentChannel = channel;
 
       TvResult succeeded = TvResult.UnknownError;

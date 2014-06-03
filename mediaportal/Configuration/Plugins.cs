@@ -84,7 +84,14 @@ namespace MediaPortal.Configuration
         try
         {
           Log.Debug("PluginsNew: loadPlugins {0}", pluginFile);
-          pluginAssembly = Assembly.LoadFrom(pluginFile);
+          if (pluginFile == "D:\\svnroot\\MediaPortal-1_Fork_1\\mediaportal\\MediaPortal.Application\\bin\\Debug\\Plugins\\windows\\OnlineVideos.MediaPortal1.dll")
+          {
+            pluginAssembly = Assembly.LoadFrom(pluginFile);
+          }
+          else
+          {
+            pluginAssembly = Assembly.LoadFrom(pluginFile);
+          }
         }
         catch (BadImageFormatException)
         {

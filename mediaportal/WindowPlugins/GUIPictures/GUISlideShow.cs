@@ -581,6 +581,10 @@ namespace MediaPortal.GUI.Pictures
           {
             GUIPictureSlideShow._slideDirection = -1;
           }
+          else if (Util.Utils.IsVideo(_slideList[_currentSlideIndex - 1]))
+          {
+            GUIPictureSlideShow._slideDirection = -1;
+          }
           else
           {
             GUIPictureSlideShow._slideDirection = 0;
@@ -610,6 +614,10 @@ namespace MediaPortal.GUI.Pictures
             GUIPictureSlideShow._slideDirection = 1;
           }
           else if (_isSlideShow)
+          {
+            GUIPictureSlideShow._slideDirection = 1;
+          }
+          else if (Util.Utils.IsVideo(_slideList[_currentSlideIndex + 1]))
           {
             GUIPictureSlideShow._slideDirection = 1;
           }

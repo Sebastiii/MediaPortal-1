@@ -655,6 +655,16 @@ namespace MediaPortal.GUI.Music
             LoadDirectory(currentFolder);
           }
           break;
+
+        case GUIMessage.MessageType.GUI_MSG_LAYOUT_CHANGED:
+          FolderSetting folderSettingL = new FolderSetting();
+          folderSettingL.UpdateFolders(-1, CurrentSortAsc, (int)CurrentLayout);
+          break;
+
+        case GUIMessage.MessageType.GUI_MSG_SORT_CHANGED:
+          FolderSetting folderSettingS = new FolderSetting();
+          folderSettingS.UpdateFolders((int)CurrentSortMethod, CurrentSortAsc, -1);
+          break;
       }
       return base.OnMessage(message);
     }
@@ -2225,6 +2235,11 @@ namespace MediaPortal.GUI.Music
     public static void ResetExtensions(ArrayList extensions)
     {
       _virtualDirectory.SetExtensions(extensions);
+    }
+
+    public static string GetCurrentFolder
+    {
+      get { return currentFolder; }
     }
 
     #region ISetupForm Members

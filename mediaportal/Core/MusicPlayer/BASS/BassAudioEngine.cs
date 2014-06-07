@@ -1929,8 +1929,8 @@ namespace MediaPortal.MusicPlayer.BASS
           {
             if (_state == PlayState.Paused)
             {
-            // Resume paused stream
-            currentStream.ResumePlayback();
+              // Resume paused stream
+              currentStream.ResumePlayback();
             }
 
             result = Bass.BASS_Start();
@@ -2098,6 +2098,7 @@ namespace MediaPortal.MusicPlayer.BASS
           // The only way to resolve this is to Stop the Stream and restart it
           if (stream.Filetype.FileMainType == FileMainType.WebStream)
           {
+            _state = PlayState.Ended;
             var filePath = stream.FilePath;
             Log.Debug("BASS: Stopping and Restarting Webstream {0}", stream.FilePath);
             g_Player.OnStopped();

@@ -899,6 +899,7 @@ namespace MediaPortal.MusicPlayer.BASS
           if (MusicStreamMessage != null)
           {
             MusicStreamMessage(musicstream, MusicStream.StreamAction.InternetStreamChanged);
+            return;
           }
         }
 

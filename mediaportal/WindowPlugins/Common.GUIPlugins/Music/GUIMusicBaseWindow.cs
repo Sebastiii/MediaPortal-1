@@ -2241,7 +2241,14 @@ namespace MediaPortal.GUI.Music
         else
         {
           // actually add items to the playlist
-          pl.Add(pItem);
+          if (pItem != pItems[pItems.Count - 1])
+          {
+            pl.Add(pItem, false);
+          }
+          else
+          {
+            pl.Add(pItem, true);
+          }
         }
       }
 

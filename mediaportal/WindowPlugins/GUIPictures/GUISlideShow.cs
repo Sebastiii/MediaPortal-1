@@ -143,9 +143,12 @@ namespace MediaPortal.GUI.Pictures
           }
           g_Player.ShowFullScreenWindow();
 
-          if (_isSlideShow)
+          if ((_currentSlideIndex + 1 < _slideList.Count))
           {
-            GUIPictureSlideShow._slideDirection = 1;
+            if (Util.Utils.IsVideo(_slideList[_currentSlideIndex + 1]) || _isSlideShow)
+            {
+              GUIPictureSlideShow._slideDirection = 1;
+            }
           }
 
           _loadVideoPlayback = false;

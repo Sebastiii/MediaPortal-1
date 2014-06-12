@@ -3011,7 +3011,7 @@ namespace MediaPortal.GUI.Pictures
                 }
                 catch (Exception)
                 {
-                  // Catch the COM execption but continue code with Music Database instead.
+                  // Catch the COM exception but continue code with Music Database instead.
                 }
               }
 

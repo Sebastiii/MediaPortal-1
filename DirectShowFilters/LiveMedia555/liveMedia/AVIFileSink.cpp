@@ -360,6 +360,9 @@ void AVISubsessionIOState::setAVIstate(unsigned subsessionIndex) {
       fAVICodecHandlerType = fourChar('H','2','6','3');
     } else if (strcmp(fOurSubsession.codecName(), "H264") == 0) {
       fAVICodecHandlerType = fourChar('H','2','6','4');
+    }
+    else if (strcmp(fOurSubsession.codecName(), "H264") == 0) {
+      fAVICodecHandlerType = fourChar('H', '2', '6', '5');
     } else {
       fAVICodecHandlerType = fourChar('?','?','?','?');
     }

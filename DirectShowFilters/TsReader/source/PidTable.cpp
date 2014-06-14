@@ -182,6 +182,8 @@ LPCTSTR CPidTable::StreamFormatAsString(int streamType)
 		return _T("MPEG4");
 	case 0x1B:
 		return _T("H264");
+  case 0x24:
+    return _T("H265");
 	case 0xEA:
 		return _T("VC1");
 	case 0x80:

@@ -207,15 +207,16 @@ void CPatParser::AnalyzePidInfo(vector<PidInfo2> pidInfo,int &hasVideo, int &has
 	while (it!=pidInfo.end())
 	{
 		PidInfo2 info=*it;
+    LogDebug("AnalyzePidInfo: SEB elementaryPid:%4x", info.elementaryPid);
     //ITV HD workaround, this enables the channel to be scanned as a TV channel rather than a Radio channel
     if (info.streamType==SERVICE_TYPE_DVB_SUBTITLES2 && info.logicalStreamType==0xffffffff && info.elementaryPid==0xd49)
     {
-      info.streamType=SERVICE_TYPE_VIDEO_H264;
-      info.logicalStreamType=SERVICE_TYPE_VIDEO_H264;
+      info.streamType=SERVICE_TYPE_VIDEO_H265;
+      info.logicalStreamType=SERVICE_TYPE_VIDEO_H265;
       LogDebug("AnalyzePidInfo: set ITV HD video stream to H.264");
     }
     //end of workaround
-		if (info.logicalStreamType==SERVICE_TYPE_VIDEO_MPEG1 || info.logicalStreamType==SERVICE_TYPE_VIDEO_MPEG2 || info.logicalStreamType==SERVICE_TYPE_VIDEO_MPEG4 || info.logicalStreamType==SERVICE_TYPE_VIDEO_H264 || info.logicalStreamType==SERVICE_TYPE_VIDEO_MPEG2_DCII)
+    if (info.logicalStreamType == SERVICE_TYPE_VIDEO_MPEG1 || info.logicalStreamType == SERVICE_TYPE_VIDEO_MPEG2 || info.logicalStreamType == SERVICE_TYPE_VIDEO_MPEG4 || info.logicalStreamType == SERVICE_TYPE_VIDEO_H264 || info.logicalStreamType == SERVICE_TYPE_VIDEO_H265 || info.logicalStreamType == SERVICE_TYPE_VIDEO_MPEG2_DCII)
 			hasVideo=1;
     if (info.logicalStreamType==SERVICE_TYPE_AUDIO_MPEG1 || info.logicalStreamType==SERVICE_TYPE_AUDIO_MPEG2 || info.logicalStreamType==SERVICE_TYPE_AUDIO_AC3 || info.logicalStreamType==SERVICE_TYPE_AUDIO_E_AC3 || info.logicalStreamType==SERVICE_TYPE_AUDIO_AAC || info.logicalStreamType==SERVICE_TYPE_AUDIO_LATM_AAC)
 			hasAudio=1;

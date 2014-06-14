@@ -207,7 +207,6 @@ void CPatParser::AnalyzePidInfo(vector<PidInfo2> pidInfo,int &hasVideo, int &has
 	while (it!=pidInfo.end())
 	{
 		PidInfo2 info=*it;
-    LogDebug("AnalyzePidInfo: SEB elementaryPid:%4x", info.elementaryPid);
     //ITV HD workaround, this enables the channel to be scanned as a TV channel rather than a Radio channel
     if (info.streamType==SERVICE_TYPE_DVB_SUBTITLES2 && info.logicalStreamType==0xffffffff && info.elementaryPid==0xd49)
     {

@@ -120,7 +120,6 @@ bool CPmtParser::DecodePmt(CSection sections, int& pcr_pid, bool& hasCaDescripto
     //ITV HD workaround
     if (pidInfo2.streamType==SERVICE_TYPE_DVB_SUBTITLES2 && program_number==10510)
     {
-      LogDebug("pmt SEB parser check elementaryPid:%4x", pidInfo2.elementaryPid);
       if (pidInfo2.logicalStreamType==0xffffffff && pidInfo2.elementaryPid==0xd49)
       {
         pidInfo2.streamType=SERVICE_TYPE_VIDEO_H265;

@@ -590,7 +590,7 @@ HRESULT CVideoPin::FillBuffer(IMediaSample *pSample)
             m_bDiscontinuity=FALSE;
           }
 
-          LogDebug("vidPin: SEB video buffer type = %d", buffer->GetVideoServiceType());
+          //LogDebug("vidPin: video buffer type = %d", buffer->GetVideoServiceType());
 
           if (HasTimestamp)
           {

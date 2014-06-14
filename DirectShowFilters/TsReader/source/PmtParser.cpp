@@ -102,7 +102,7 @@ void CPmtParser::OnNewSection(CSection& section)
       stream_type = section.Data[pointer];
       elementary_PID = ((section.Data[pointer+1]&0x1F)<<8)+section.Data[pointer+2];
       ES_info_length = ((section.Data[pointer+3] & 0xF)<<8)+section.Data[pointer+4];
-      LogDebug("pmt: SEB pid:%x type:%x",elementary_PID, stream_type);
+      //LogDebug("pmt: pid:%x type:%x",elementary_PID, stream_type);
       if(stream_type==SERVICE_TYPE_VIDEO_MPEG1 
         || stream_type==SERVICE_TYPE_VIDEO_MPEG2
         || stream_type==SERVICE_TYPE_VIDEO_MPEG4

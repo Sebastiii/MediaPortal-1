@@ -38,6 +38,10 @@ namespace TvLibrary.Interfaces
     /// </summary>
     H264,
     /// <summary>
+    /// H264 video video
+    /// </summary>
+    H265,
+    /// <summary>
     /// unknown video
     /// </summary>
     Unknown

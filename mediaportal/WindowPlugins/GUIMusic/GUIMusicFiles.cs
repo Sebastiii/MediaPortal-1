@@ -540,8 +540,7 @@ namespace MediaPortal.GUI.Music
                                            item.Selected = true;
                                          }
 
-                                         item.OnRetrieveArt +=
-                                           new GUIListItem.RetrieveCoverArtHandler(OnRetrieveCoverArt);
+                                         item.OnRetrieveArt += new GUIListItem.RetrieveCoverArtHandler(OnRetrieveCoverArt);
                                          item.OnItemSelected += new GUIListItem.ItemSelectedHandler(item_OnItemSelected);
 
                                          facadeLayout.Add(item);

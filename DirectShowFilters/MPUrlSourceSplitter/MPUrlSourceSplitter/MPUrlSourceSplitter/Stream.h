@@ -24,11 +24,14 @@
 #define __STREAM_DEFINED
 
 #include "StreamInfo.h"
+#include "SeekIndexEntryCollection.h"
 
 class CStream
 {
 public:
-  CStream(void);
+  enum StreamType { Video, Audio, Subpic, Unknown };
+
+  CStream(HRESULT *result);
   ~CStream(void);
 
   /* get methods */
@@ -37,24 +40,36 @@ public:
   // @return : stream info or NULL if error
   CStreamInfo *GetStreamInfo(void);
 
-  // gets stream PID
-  // @return : stream PID
+  // gets stream PID in demuxer
+  // @return : stream PID in demuxer
   unsigned int GetPid(void);
 
   // gets stream language
   // @return : stream language or NULL if error
   const wchar_t *GetLanguage(void);
 
+  // gets stream type
+  // @return : stream type
+  StreamType GetStreamType(void);
+
+  // gets seek index entry collection
+  // @return : seek index entry collection
+  CSeekIndexEntryCollection *GetSeekIndexEntries(void);
+
   /* set methods */
 
-  // sets stream PID
-  // @param pid : the stream PID to set
+  // sets stream PID in demuxer
+  // @param pid : the stream PID in demuxer to set
   void SetPid(unsigned int pid);
 
   // sets stream language
   // @param language : the language to set
   // @return : true if successful, false otherwise
   bool SetLanguage(const wchar_t *language);
+
+  // sets stream type
+  // @param streamType : stream type to set
+  void SetStreamType(StreamType streamType);
 
   /* other methods */
 
@@ -67,13 +82,17 @@ public:
   HRESULT CreateStreamInfo(AVFormatContext *formatContext, AVStream *stream, const wchar_t *containerFormat);
 
 protected:
-
   // holds stream info
   CStreamInfo *streamInfo;
 
   unsigned int pid;
 
   wchar_t *language;
+
+  StreamType streamType;
+
+  // holds seek index entries
+  CSeekIndexEntryCollection *seekIndexEntries;
 };
 
 

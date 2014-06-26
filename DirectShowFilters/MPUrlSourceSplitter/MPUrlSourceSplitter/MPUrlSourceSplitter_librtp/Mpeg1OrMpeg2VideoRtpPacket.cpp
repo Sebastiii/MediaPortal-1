@@ -25,8 +25,8 @@
 
 #include <stdint.h>
 
-CMpeg1OrMpeg2VideoRtpPacket::CMpeg1OrMpeg2VideoRtpPacket(void)
-  : CRtpPacket()
+CMpeg1OrMpeg2VideoRtpPacket::CMpeg1OrMpeg2VideoRtpPacket(HRESULT *result)
+  : CRtpPacket(result)
 {
   this->pictureType = UINT_MAX;
   this->temporalReference = UINT_MAX;
@@ -131,32 +131,32 @@ unsigned int CMpeg1OrMpeg2VideoRtpPacket::GetPayloadSize(void)
 
 bool CMpeg1OrMpeg2VideoRtpPacket::IsMpeg2HeaderExtension(void)
 {
-  return ((this->flags & FLAG_MPEG1_OR_MPEG2_VIDEO_PAYLOAD_MPEG2_HEADER_EXTENSION) != 0);
+  return this->IsSetFlags(MPEG1_OR_MPEG2_VIDEO_RTP_PACKET_FLAG_PAYLOAD_MPEG2_HEADER_EXTENSION);
 }
 
 bool CMpeg1OrMpeg2VideoRtpPacket::IsActiveNBit(void)
 {
-  return ((this->flags & FLAG_MPEG1_OR_MPEG2_VIDEO_PAYLOAD_ACTIVE_N_BIT) != 0);
+  return this->IsSetFlags(MPEG1_OR_MPEG2_VIDEO_RTP_PACKET_FLAG_PAYLOAD_ACTIVE_N_BIT);
 }
 
 bool CMpeg1OrMpeg2VideoRtpPacket::IsNewPictureHeader(void)
 {
-  return ((this->flags & FLAG_MPEG1_OR_MPEG2_VIDEO_PAYLOAD_NEW_PICTURE_HEADER) != 0);
+  return this->IsSetFlags(MPEG1_OR_MPEG2_VIDEO_RTP_PACKET_FLAG_PAYLOAD_NEW_PICTURE_HEADER);
 }
 
 bool CMpeg1OrMpeg2VideoRtpPacket::IsSequenceHeader(void)
 {
-  return ((this->flags & FLAG_MPEG1_OR_MPEG2_VIDEO_PAYLOAD_SEQUENCE_HEADER) != 0);
+  return this->IsSetFlags(MPEG1_OR_MPEG2_VIDEO_RTP_PACKET_FLAG_PAYLOAD_SEQUENCE_HEADER);
 }
 
 bool CMpeg1OrMpeg2VideoRtpPacket::IsBeginingOfSlice(void)
 {
-  return ((this->flags & FLAG_MPEG1_OR_MPEG2_VIDEO_PAYLOAD_BEGINING_OF_SLICE) != 0);
+  return this->IsSetFlags(MPEG1_OR_MPEG2_VIDEO_RTP_PACKET_FLAG_PAYLOAD_BEGINING_OF_SLICE);
 }
 
 bool CMpeg1OrMpeg2VideoRtpPacket::IsEndOfSlice(void)
 {
-  return ((this->flags & FLAG_MPEG1_OR_MPEG2_VIDEO_PAYLOAD_END_OF_SLICE) != 0);
+  return this->IsSetFlags(MPEG1_OR_MPEG2_VIDEO_RTP_PACKET_FLAG_PAYLOAD_END_OF_SLICE);
 }
 
 void CMpeg1OrMpeg2VideoRtpPacket::Clear(void)
@@ -187,15 +187,15 @@ bool CMpeg1OrMpeg2VideoRtpPacket::Parse(const unsigned char *buffer, unsigned in
       unsigned int position = 0;
       RBE32INC_DEFINE(this->payload, position, temp, unsigned int);
 
-      this->flags |= ((temp & 0x04000000) != 0) ? FLAG_MPEG1_OR_MPEG2_VIDEO_PAYLOAD_MPEG2_HEADER_EXTENSION : FLAG_RTP_PACKET_NONE;
+      this->flags |= ((temp & 0x04000000) != 0) ? MPEG1_OR_MPEG2_VIDEO_RTP_PACKET_FLAG_PAYLOAD_MPEG2_HEADER_EXTENSION : RTP_PACKET_FLAG_NONE;
       this->temporalReference = temp & 0x03FF0000;
       this->temporalReference >>= 16;
 
-      this->flags |= ((temp & 0x00008000) != 0) ? FLAG_MPEG1_OR_MPEG2_VIDEO_PAYLOAD_ACTIVE_N_BIT : FLAG_RTP_PACKET_NONE;
-      this->flags |= ((temp & 0x00004000) != 0) ? FLAG_MPEG1_OR_MPEG2_VIDEO_PAYLOAD_NEW_PICTURE_HEADER : FLAG_RTP_PACKET_NONE;
-      this->flags |= ((temp & 0x00002000) != 0) ? FLAG_MPEG1_OR_MPEG2_VIDEO_PAYLOAD_SEQUENCE_HEADER : FLAG_RTP_PACKET_NONE;
-      this->flags |= ((temp & 0x00001000) != 0) ? FLAG_MPEG1_OR_MPEG2_VIDEO_PAYLOAD_BEGINING_OF_SLICE : FLAG_RTP_PACKET_NONE;
-      this->flags |= ((temp & 0x00000800) != 0) ? FLAG_MPEG1_OR_MPEG2_VIDEO_PAYLOAD_END_OF_SLICE : FLAG_RTP_PACKET_NONE;
+      this->flags |= ((temp & 0x00008000) != 0) ? MPEG1_OR_MPEG2_VIDEO_RTP_PACKET_FLAG_PAYLOAD_ACTIVE_N_BIT : RTP_PACKET_FLAG_NONE;
+      this->flags |= ((temp & 0x00004000) != 0) ? MPEG1_OR_MPEG2_VIDEO_RTP_PACKET_FLAG_PAYLOAD_NEW_PICTURE_HEADER : RTP_PACKET_FLAG_NONE;
+      this->flags |= ((temp & 0x00002000) != 0) ? MPEG1_OR_MPEG2_VIDEO_RTP_PACKET_FLAG_PAYLOAD_SEQUENCE_HEADER : RTP_PACKET_FLAG_NONE;
+      this->flags |= ((temp & 0x00001000) != 0) ? MPEG1_OR_MPEG2_VIDEO_RTP_PACKET_FLAG_PAYLOAD_BEGINING_OF_SLICE : RTP_PACKET_FLAG_NONE;
+      this->flags |= ((temp & 0x00000800) != 0) ? MPEG1_OR_MPEG2_VIDEO_RTP_PACKET_FLAG_PAYLOAD_END_OF_SLICE : RTP_PACKET_FLAG_NONE;
 
       this->pictureType = temp & 0x00000700;
       this->pictureType >>= 8;
@@ -211,7 +211,12 @@ bool CMpeg1OrMpeg2VideoRtpPacket::Parse(const unsigned char *buffer, unsigned in
 
 CRtpPacket *CMpeg1OrMpeg2VideoRtpPacket::CreateRtpPacket(void)
 {
-  return new CMpeg1OrMpeg2VideoRtpPacket();
+  HRESULT result = S_OK;
+  CMpeg1OrMpeg2VideoRtpPacket *packet = new CMpeg1OrMpeg2VideoRtpPacket(&result);
+  CHECK_POINTER_HRESULT(result, packet, result, E_OUTOFMEMORY);
+
+  CHECK_CONDITION_EXECUTE(FAILED(result), FREE_MEM_CLASS(packet));
+  return packet;
 }
 
 bool CMpeg1OrMpeg2VideoRtpPacket::CloneInternal(CRtpPacket *rtpPacket)

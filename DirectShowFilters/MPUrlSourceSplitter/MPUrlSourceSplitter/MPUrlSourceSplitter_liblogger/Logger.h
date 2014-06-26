@@ -39,6 +39,7 @@
 
 // methods' common string formats
 #define METHOD_START_FORMAT                                                   L"%s: %s: Start"
+#define METHOD_CONSTRUCTOR_START_FORMAT                                       L"%s: %s: Start, instance address: 0x%p"
 #define METHOD_END_FORMAT                                                     L"%s: %s: End"
 #define METHOD_END_HRESULT_FORMAT                                             L"%s: %s: End, result: 0x%08X"
 #define METHOD_END_INT_FORMAT                                                 L"%s: %s: End, result: %d"
@@ -57,12 +58,12 @@ public:
   // initializes a new instance of CLogger class
   // @param staticLogger : the instance of static logger
   // @param configuration : the collection of configuration parameters to initialize logger (verbosity and max log size)
-  CLogger(CStaticLogger *staticLogger, CParameterCollection *configuration);
+  CLogger(HRESULT *result, CStaticLogger *staticLogger, CParameterCollection *configuration);
 
   // initializes a new instance of CLogger class with specified CLogger instance
   // new logger instance have same mutex, verbosity, log file and max log size
   // @param logger : logger instance to initialize new instance
-  CLogger(CLogger *logger);
+  CLogger(HRESULT *result, CLogger *logger);
 
   ~CLogger(void);
 
@@ -84,6 +85,15 @@ public:
   // gets static logger context
   // @return : static logger context
   CStaticLoggerContext *GetStaticLoggerContext(void);
+
+  // registers module with specified file name
+  // @param moduleFileName : the full path to module file to register
+  // @return : true if successful, false otherwise
+  bool RegisterModule(const wchar_t *moduleFileName);
+
+  // unregisters module with specified file name
+  // @param moduleFileName : the full path to module file to unregister
+  void UnregisterModule(const wchar_t *moduleFileName);
 
 protected:
   // mutex for accessing log file

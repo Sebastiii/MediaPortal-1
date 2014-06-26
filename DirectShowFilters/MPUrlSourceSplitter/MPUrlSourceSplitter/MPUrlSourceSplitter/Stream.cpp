@@ -22,17 +22,26 @@
 
 #include "Stream.h"
 
-CStream::CStream(void)
+CStream::CStream(HRESULT *result)
 {
   this->language = NULL;
   this->pid = 0;
   this->streamInfo = NULL;
+  this->streamType = Unknown;
+  this->seekIndexEntries = NULL;
+
+  if ((result != NULL) && (SUCCEEDED(*result)))
+  {
+    this->seekIndexEntries = new CSeekIndexEntryCollection(result);
+    CHECK_POINTER_HRESULT(*result, this->seekIndexEntries, *result, E_OUTOFMEMORY);
+  }
 }
 
 CStream::~CStream(void)
 {
   FREE_MEM(this->language);
   FREE_MEM_CLASS(this->streamInfo);
+  FREE_MEM_CLASS(this->seekIndexEntries);
 }
 
 /* get methods */
@@ -52,6 +61,16 @@ const wchar_t *CStream::GetLanguage(void)
   return this->language;
 }
 
+CStream::StreamType CStream::GetStreamType(void)
+{
+  return this->streamType;
+}
+
+CSeekIndexEntryCollection *CStream::GetSeekIndexEntries(void)
+{
+  return this->seekIndexEntries;
+}
+
 /* set methods */
 
 void CStream::SetPid(unsigned int pid)
@@ -64,14 +83,22 @@ bool CStream::SetLanguage(const wchar_t *language)
   SET_STRING_RETURN_WITH_NULL(this->language, language);
 }
 
+void CStream::SetStreamType(StreamType streamType)
+{
+  this->streamType = streamType;
+}
+
 /* other methods */
 
 HRESULT CStream::CreateStreamInfo(void)
 {
   FREE_MEM_CLASS(this->streamInfo);
-  this->streamInfo = new CStreamInfo();
+  HRESULT result = S_OK;
+  this->streamInfo = new CStreamInfo(&result);
+  CHECK_POINTER_HRESULT(result, this->streamInfo, result, E_OUTOFMEMORY);
 
-  return (this->streamInfo != NULL) ? S_OK : E_OUTOFMEMORY;
+  CHECK_CONDITION_EXECUTE(FAILED(result), FREE_MEM_CLASS(this->streamInfo));
+  return result;
 }
 
 HRESULT CStream::CreateStreamInfo(AVFormatContext *formatContext, AVStream *stream, const wchar_t *containerFormat)
@@ -79,7 +106,7 @@ HRESULT CStream::CreateStreamInfo(AVFormatContext *formatContext, AVStream *stre
   FREE_MEM_CLASS(this->streamInfo);
   HRESULT result = S_OK;
 
-  this->streamInfo = new CStreamInfo(formatContext, stream, containerFormat, &result);
+  this->streamInfo = new CStreamInfo(&result, formatContext, stream, containerFormat);
   CHECK_POINTER_HRESULT(result, this->streamInfo, result, E_OUTOFMEMORY);
 
   CHECK_CONDITION_EXECUTE(FAILED(result), FREE_MEM_CLASS(this->streamInfo));

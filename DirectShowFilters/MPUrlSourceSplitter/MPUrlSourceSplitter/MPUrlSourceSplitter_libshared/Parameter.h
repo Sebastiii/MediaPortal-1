@@ -26,24 +26,16 @@
 class CParameter
 {
 public:
-  CParameter(const wchar_t *name, const wchar_t *value);
+  CParameter(HRESULT *result, const wchar_t *name, const wchar_t *value);
   ~CParameter(void);
 
   // get parameter name
   // @return : the reference to parameter name
   const wchar_t *GetName(void);
 
-  // get parameter name length
-  // @return : parameter name length or UINT_MAX if error
-  unsigned int GetNameLength(void);
-
   // get parameter value
   // @return : the reference to parameter value
   const wchar_t *GetValue(void);
-
-  // get parameter value length
-  // @return : parameter value length or UINT_MAX if error
-  unsigned int GetValueLength(void);
 
   // clear stored parameter and its value
   void Clear(void);

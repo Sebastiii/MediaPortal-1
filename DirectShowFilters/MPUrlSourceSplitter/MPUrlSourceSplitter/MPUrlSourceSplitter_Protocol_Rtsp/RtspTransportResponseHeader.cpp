@@ -25,11 +25,9 @@
 #include "hex.h"
 #include "BufferHelper.h"
 
-CRtspTransportResponseHeader::CRtspTransportResponseHeader(void)
-  : CRtspResponseHeader()
+CRtspTransportResponseHeader::CRtspTransportResponseHeader(HRESULT *result)
+  : CRtspResponseHeader(result)
 {
-  this->flags = FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_NONE;
-
   this->destination = NULL;
   this->source = NULL;
   this->layers = 0;
@@ -152,115 +150,72 @@ const wchar_t *CRtspTransportResponseHeader::GetSource(void)
 
 bool CRtspTransportResponseHeader::IsUnicast(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_UNICAST);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_UNICAST);
 }
 
 bool CRtspTransportResponseHeader::IsMulticast(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_MULTICAST);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_MULTICAST);
 }
 
 bool CRtspTransportResponseHeader::IsInterleaved(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_INTERLEAVED);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_INTERLEAVED);
 }
 
 bool CRtspTransportResponseHeader::IsTransportProtocolRTP(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_TRANSPORT_PROTOCOL_RTP);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_TRANSPORT_PROTOCOL_RTP);
 }
 
 bool CRtspTransportResponseHeader::IsProfileAVP(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_PROFILE_AVP);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_PROFILE_AVP);
 }
 
 bool CRtspTransportResponseHeader::IsLowerTransportTCP(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_LOWER_TRANSPORT_TCP);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_LOWER_TRANSPORT_TCP);
 }
 
 bool CRtspTransportResponseHeader::IsLowerTransportUDP(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_LOWER_TRANSPORT_UDP);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_LOWER_TRANSPORT_UDP);
 }
 
 bool CRtspTransportResponseHeader::IsAppend(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_APPEND);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_APPEND);
 }
 
 bool CRtspTransportResponseHeader::IsTimeToLive(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_TIME_TO_LIVE);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_TIME_TO_LIVE);
 }
 
 bool CRtspTransportResponseHeader::IsLayers(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_LAYERS);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_LAYERS);
 }
 
 bool CRtspTransportResponseHeader::IsPort(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_PORT);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_PORT);
 }
 
 bool CRtspTransportResponseHeader::IsClientPort(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_CLIENT_PORT);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_CLIENT_PORT);
 }
 
 bool CRtspTransportResponseHeader::IsServerPort(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_SERVER_PORT);
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_SERVER_PORT);
 }
 
 bool CRtspTransportResponseHeader::IsSynchronizationSourceIdentifier(void)
 {
-  return this->IsSetFlag(FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_SSRC);
-}
-
-CRtspTransportResponseHeader *CRtspTransportResponseHeader::Clone(void)
-{
-  return (CRtspTransportResponseHeader *)__super::Clone();
-}
-
-bool CRtspTransportResponseHeader::CloneInternal(CHttpHeader *clonedHeader)
-{
-  bool result = __super::CloneInternal(clonedHeader);
-  CRtspTransportResponseHeader *header = dynamic_cast<CRtspTransportResponseHeader *>(clonedHeader);
-  result &= (header != NULL);
-
-  if (result)
-  {
-    header->flags = this->flags;
-
-    SET_STRING_AND_RESULT_WITH_NULL(header->destination, this->destination, result);
-    SET_STRING_AND_RESULT_WITH_NULL(header->source, this->source, result);
-    SET_STRING_AND_RESULT_WITH_NULL(header->lowerTransport, this->lowerTransport, result);
-    SET_STRING_AND_RESULT_WITH_NULL(header->mode, this->mode, result);
-    SET_STRING_AND_RESULT_WITH_NULL(header->profile, this->profile, result);
-    SET_STRING_AND_RESULT_WITH_NULL(header->transportProtocol, this->transportProtocol, result);
-
-    header->layers = this->layers;
-    header->maxClientPort = this->maxClientPort;
-    header->maxInterleaved = this->maxInterleaved;
-    header->maxPort = this->maxPort;
-    header->maxServerPort = this->maxServerPort;
-    header->minClientPort = this->minClientPort;
-    header->minInterleaved = this->minInterleaved;
-    header->minPort = this->minPort;
-    header->minServerPort = this->minServerPort;
-    header->synchronizationSourceIdentifier = this->synchronizationSourceIdentifier;
-    header->timeToLive = this->timeToLive;
-  }
-
-  return result;
-}
-
-CHttpHeader *CRtspTransportResponseHeader::GetNewHeader(void)
-{
-  return new CRtspTransportResponseHeader();
+  return this->IsSetFlags(RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_SSRC);
 }
 
 bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int length)
@@ -318,24 +273,24 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
             // set flags
             if (wcscmp(this->transportProtocol, RTSP_TRANSPORT_RESPONSE_HEADER_PROTOCOL_RTP) == 0)
             {
-              this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_TRANSPORT_PROTOCOL_RTP;
+              this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_TRANSPORT_PROTOCOL_RTP;
             }
 
             if (wcscmp(this->profile, RTSP_TRANSPORT_RESPONSE_HEADER_PROFILE_AVP) == 0)
             {
-              this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_PROFILE_AVP;
+              this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_PROFILE_AVP;
             }
 
             if (this->lowerTransport != NULL)
             {
               if (wcscmp(this->lowerTransport, RTSP_TRANSPORT_RESPONSE_HEADER_LOWER_TRANSPORT_TCP) == 0)
               {
-                this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_LOWER_TRANSPORT_TCP;
+                this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_LOWER_TRANSPORT_TCP;
               }
 
               if (wcscmp(this->lowerTransport, RTSP_TRANSPORT_RESPONSE_HEADER_LOWER_TRANSPORT_UDP) == 0)
               {
-                this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_LOWER_TRANSPORT_UDP;
+                this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_LOWER_TRANSPORT_UDP;
               }
             }
           }
@@ -352,11 +307,11 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
 
         if (wcsncmp(this->value + position, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_UNICAST, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_UNICAST_LENGTH) == 0)
         {
-          this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_UNICAST;
+          this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_UNICAST;
         }
         else if (wcsncmp(this->value + position, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_MULTICAST, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_MULTICAST_LENGTH) == 0)
         {
-          this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_MULTICAST;
+          this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_MULTICAST;
         }
         else if (wcsncmp(this->value + position, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_DESTINATION, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_DESTINATION_LENGTH) == 0)
         {
@@ -379,7 +334,7 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
               // without range, set min and max interleaved values to same value
               this->minInterleaved = this->maxInterleaved = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH, 0);
 
-              this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_INTERLEAVED;
+              this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_INTERLEAVED;
             }
             else
             {
@@ -387,13 +342,13 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
               this->minInterleaved = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH, 0);
               this->maxInterleaved = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH + index3 + RTSP_TRANSPORT_RESPONSE_HEADER_RANGE_SEPARATOR_LENGTH, 0);
 
-              this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_INTERLEAVED;
+              this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_INTERLEAVED;
             }
           }
         }
         else if (wcsncmp(this->value + position, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_APPEND, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_APPEND_LENGTH) == 0)
         {
-          this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_APPEND;
+          this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_APPEND;
         }
         else if (wcsncmp(this->value + position, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_TIME_TO_LIVE, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_TIME_TO_LIVE_LENGTH) == 0)
         {
@@ -404,7 +359,7 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
           {
             this->timeToLive = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH, 0);
 
-            this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_TIME_TO_LIVE;
+            this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_TIME_TO_LIVE;
           }
         }
         else if (wcsncmp(this->value + position, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_LAYERS, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_LAYERS_LENGTH) == 0)
@@ -416,7 +371,7 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
           {
             this->layers = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH, 0);
 
-            this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_LAYERS;
+            this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_LAYERS;
           }
         }
         else if (wcsncmp(this->value + position, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_PORT, RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_PORT_LENGTH) == 0)
@@ -434,7 +389,7 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
               // without range, set min and max port values to same value
               this->minPort = this->maxPort = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH, 0);
 
-              this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_PORT;
+              this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_PORT;
             }
             else
             {
@@ -442,7 +397,7 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
               this->minPort = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH, 0);
               this->maxPort = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH + index3 + RTSP_TRANSPORT_RESPONSE_HEADER_RANGE_SEPARATOR_LENGTH, 0);
 
-              this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_PORT;
+              this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_PORT;
             }
           }
         }
@@ -461,7 +416,7 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
               // without range, set min and max client port values to same value
               this->minClientPort = this->maxClientPort = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH, 0);
 
-              this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_CLIENT_PORT;
+              this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_CLIENT_PORT;
             }
             else
             {
@@ -469,7 +424,7 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
               this->minClientPort = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH, 0);
               this->maxClientPort = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH + index3 + RTSP_TRANSPORT_RESPONSE_HEADER_RANGE_SEPARATOR_LENGTH, 0);
 
-              this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_CLIENT_PORT;
+              this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_CLIENT_PORT;
             }
           }
         }
@@ -488,7 +443,7 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
               // without range, set min and max server port values to same value
               this->minServerPort = this->maxServerPort = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH, 0);
 
-              this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_SERVER_PORT;
+              this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_SERVER_PORT;
             }
             else
             {
@@ -496,7 +451,7 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
               this->minServerPort = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH, 0);
               this->maxServerPort = GetValueUnsignedInt(this->value + position + index2 + RTSP_TRANSPORT_RESPONSE_HEADER_PARAMETER_VALUE_SEPARATOR_LENGTH + index3 + RTSP_TRANSPORT_RESPONSE_HEADER_RANGE_SEPARATOR_LENGTH, 0);
 
-              this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_SERVER_PORT;
+              this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_SERVER_PORT;
             }
           }
         }
@@ -516,7 +471,7 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
             if (result)
             {
               this->synchronizationSourceIdentifier = RBE32(output, 0);
-              this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_SSRC;
+              this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_SSRC;
             }
 
             FREE_MEM(output);
@@ -534,7 +489,7 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
 
             if (result)
             {
-              this->flags |= FLAG_RTSP_TRANSPORT_RESPONSE_HEADER_MODE;
+              this->flags |= RTSP_TRANSPORT_RESPONSE_HEADER_FLAG_MODE;
             }
           }
         }
@@ -543,7 +498,7 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
           // unknown parameter, ignore
         }
 
-        position += tempLength + 1;
+        position += tempLength + RTSP_TRANSPORT_RESPONSE_HEADER_SEPARATOR_LENGTH;
       }
     }
   }
@@ -557,7 +512,45 @@ bool CRtspTransportResponseHeader::Parse(const wchar_t *header, unsigned int len
   return result;
 }
 
-bool CRtspTransportResponseHeader::IsSetFlag(unsigned int flag)
+/* protected methods */
+
+bool CRtspTransportResponseHeader::CloneInternal(CHttpHeader *clone)
 {
-  return ((this->flags & flag) == flag);
+  bool result = __super::CloneInternal(clone);
+  CRtspTransportResponseHeader *header = dynamic_cast<CRtspTransportResponseHeader *>(clone);
+  result &= (header != NULL);
+
+  if (result)
+  {
+    SET_STRING_AND_RESULT_WITH_NULL(header->destination, this->destination, result);
+    SET_STRING_AND_RESULT_WITH_NULL(header->source, this->source, result);
+    SET_STRING_AND_RESULT_WITH_NULL(header->lowerTransport, this->lowerTransport, result);
+    SET_STRING_AND_RESULT_WITH_NULL(header->mode, this->mode, result);
+    SET_STRING_AND_RESULT_WITH_NULL(header->profile, this->profile, result);
+    SET_STRING_AND_RESULT_WITH_NULL(header->transportProtocol, this->transportProtocol, result);
+
+    header->layers = this->layers;
+    header->maxClientPort = this->maxClientPort;
+    header->maxInterleaved = this->maxInterleaved;
+    header->maxPort = this->maxPort;
+    header->maxServerPort = this->maxServerPort;
+    header->minClientPort = this->minClientPort;
+    header->minInterleaved = this->minInterleaved;
+    header->minPort = this->minPort;
+    header->minServerPort = this->minServerPort;
+    header->synchronizationSourceIdentifier = this->synchronizationSourceIdentifier;
+    header->timeToLive = this->timeToLive;
+  }
+
+  return result;
+}
+
+CHttpHeader *CRtspTransportResponseHeader::CreateHeader(void)
+{
+  HRESULT result = S_OK;
+  CRtspTransportResponseHeader *header = new CRtspTransportResponseHeader(&result);
+  CHECK_POINTER_HRESULT(result, header, result, E_OUTOFMEMORY);
+
+  CHECK_CONDITION_EXECUTE(FAILED(result), FREE_MEM_CLASS(header));
+  return header;
 }

@@ -22,11 +22,10 @@
 
 #include "ControlAttribute.h"
 
-CControlAttribute::CControlAttribute(void)
-  : CAttribute()
+CControlAttribute::CControlAttribute(HRESULT *result)
+  : CAttribute(result)
 {
   this->controlUrl = NULL;
-  this->flags = FLAG_CONTROL_ATTRIBUTE_NONE;
 }
 
 CControlAttribute::~CControlAttribute(void)
@@ -47,7 +46,7 @@ const wchar_t *CControlAttribute::GetControlUrl(void)
 
 bool CControlAttribute::IsAsterisk(void)
 {
-  return ((this->flags & FLAG_CONTROL_ATTRIBUTE_ASTERISK) != 0);
+  return this->IsSetFlags(CONTROL_ATTRIBUTE_FLAG_ASTERISK);
 }
 
 unsigned int CControlAttribute::Parse(const wchar_t *buffer, unsigned int length)
@@ -87,7 +86,7 @@ unsigned int CControlAttribute::Parse(const wchar_t *buffer, unsigned int length
     // set flags
     if (wcscmp(this->value, CONTROL_ATTRIBUTE_ASTERISK) == 0)
     {
-      this->flags |= FLAG_CONTROL_ATTRIBUTE_ASTERISK;
+      this->flags |= CONTROL_ATTRIBUTE_FLAG_ASTERISK;
     }
   }
 
@@ -96,6 +95,7 @@ unsigned int CControlAttribute::Parse(const wchar_t *buffer, unsigned int length
 
 void CControlAttribute::Clear(void)
 {
+  __super::Clear();
+
   FREE_MEM(this->controlUrl);
-  this->flags = FLAG_CONTROL_ATTRIBUTE_NONE;
 }

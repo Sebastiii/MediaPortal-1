@@ -25,13 +25,19 @@
 
 #include <stdint.h>
 
-CGoodbyeRtcpPacket::CGoodbyeRtcpPacket(void)
-  : CRtcpPacket()
+CGoodbyeRtcpPacket::CGoodbyeRtcpPacket(HRESULT *result)
+  : CRtcpPacket(result)
 {
   this->reason = NULL;
-  this->senderSynchronizationSourceIdentifiers = new CIdentifierCollection();
+  this->senderSynchronizationSourceIdentifiers = NULL;
 
   this->packetType = GOODBYE_RTCP_PACKET_TYPE;
+
+  if ((result != NULL) && (SUCCEEDED(*result)))
+  {
+    this->senderSynchronizationSourceIdentifiers = new CIdentifierCollection(result);
+    CHECK_POINTER_HRESULT(*result, this->senderSynchronizationSourceIdentifiers, *result, E_OUTOFMEMORY);
+  }
 }
 
 CGoodbyeRtcpPacket::~CGoodbyeRtcpPacket(void)
@@ -132,12 +138,12 @@ bool CGoodbyeRtcpPacket::GetPacket(unsigned char *buffer, unsigned int length)
 
 bool CGoodbyeRtcpPacket::SetReason(const wchar_t *reason)
 {
-  this->flags &= ~FLAG_GOODBYE_RTCP_PACKET_REASON;
+  this->flags &= ~GOODBYE_RTCP_PACKET_FLAG_REASON;
   SET_STRING_RESULT_WITH_NULL_DEFINE(this->reason, reason, result);
 
   if (result && (this->reason != NULL))
   {
-    this->flags |= FLAG_GOODBYE_RTCP_PACKET_REASON;
+    this->flags |= GOODBYE_RTCP_PACKET_FLAG_REASON;
   }
 
   return result;
@@ -147,7 +153,7 @@ bool CGoodbyeRtcpPacket::SetReason(const wchar_t *reason)
 
 bool CGoodbyeRtcpPacket::HasReason(void)
 {
-  return ((this->flags & FLAG_GOODBYE_RTCP_PACKET_REASON) != 0);
+  return this->IsSetFlags(GOODBYE_RTCP_PACKET_FLAG_REASON);
 }
 
 void CGoodbyeRtcpPacket::Clear(void)
@@ -217,7 +223,7 @@ bool CGoodbyeRtcpPacket::Parse(const unsigned char *buffer, unsigned int length)
 
           if (result)
           {
-            this->flags |= FLAG_GOODBYE_RTCP_PACKET_REASON;
+            this->flags |= GOODBYE_RTCP_PACKET_FLAG_REASON;
           }
         }
 

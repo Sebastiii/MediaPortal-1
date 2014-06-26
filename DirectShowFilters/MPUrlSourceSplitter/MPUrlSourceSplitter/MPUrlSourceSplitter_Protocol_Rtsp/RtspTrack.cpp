@@ -22,7 +22,8 @@
 
 #include "RtspTrack.h"
 
-CRtspTrack::CRtspTrack(void)
+CRtspTrack::CRtspTrack(HRESULT *result)
+  : CFlags()
 {
   this->serverControlPort = PORT_UNSPECIFIED;
   this->serverDataPort = PORT_UNSPECIFIED;
@@ -34,20 +35,34 @@ CRtspTrack::CRtspTrack(void)
   this->transportResponseHeader = NULL;
   this->lastReceiverReportTime = 0;
   this->receiverReportInterval = 0;
-  this->payloadType = new CPayloadType();
-  this->rtpPackets = new CRtpPacketCollection();
+  this->payloadType = NULL;
+  this->rtpPackets = NULL;
   this->flags = RTSP_TRACK_FLAG_NONE;
-
-  // create GUID and set SSRC to its first 4 bytes (Data1)
-  GUID guid;
-  if (CoCreateGuid(&guid) == S_OK)
-  {
-    this->synchronizationSourceIdentifier = (unsigned int)guid.Data1;
-  }
-
+  this->statistics = NULL;
   this->senderSynchronizationSourceIdentifier = 0;
+  this->synchronizationSourceIdentifier = 0;
 
-  this->statistics = new CRtspTrackStatistics();
+  if ((result != NULL) && (SUCCEEDED(*result)))
+  {
+    this->payloadType = new CRtspPayloadType(result);
+    this->rtpPackets = new CRtpPacketCollection(result);
+    this->statistics = new CRtspTrackStatistics(result);
+
+    CHECK_POINTER_HRESULT(*result, this->payloadType, *result, E_OUTOFMEMORY);
+    CHECK_POINTER_HRESULT(*result, this->rtpPackets, *result, E_OUTOFMEMORY);
+    CHECK_POINTER_HRESULT(*result, this->statistics, *result, E_OUTOFMEMORY);
+
+    if (SUCCEEDED(*result))
+    {
+      // create GUID and set SSRC to its first 4 bytes (Data1)
+      GUID guid;
+      *result = CoCreateGuid(&guid);
+      if (SUCCEEDED(*result))
+      {
+        this->synchronizationSourceIdentifier = (unsigned int)guid.Data1;
+      }
+    }
+  }
 }
 
 CRtspTrack::~CRtspTrack(void)
@@ -128,14 +143,14 @@ CRtspTrackStatistics *CRtspTrack::GetStatistics(void)
   return this->statistics;
 }
 
-CPayloadType *CRtspTrack::GetPayloadType(void)
-{
-  return this->payloadType;
-}
-
 CRtpPacketCollection *CRtspTrack::GetRtpPackets(void)
 {
   return this->rtpPackets;
+}
+
+CRtspPayloadType *CRtspTrack::GetPayloadType(void)
+{
+  return this->payloadType;
 }
 
 /* set methods */
@@ -183,7 +198,7 @@ bool CRtspTrack::SetTransportResponseHeader(CRtspTransportResponseHeader *header
   bool result = true;
   if (header != NULL)
   {
-    this->transportResponseHeader = header->Clone();
+    this->transportResponseHeader = (CRtspTransportResponseHeader *)header->Clone();
     result &= (this->transportResponseHeader != NULL);
   }
   return result;
@@ -240,47 +255,10 @@ bool CRtspTrack::IsClientControlPort(unsigned int port)
 
 bool CRtspTrack::IsSetSenderSynchronizationSourceIdentifier(void)
 {
-  return this->IsFlags(RTSP_TRACK_FLAG_SENDER_SYNCHRONIZATION_SOURCE_IDENTIFIER_SET);
-}
-
-CRtspTrack *CRtspTrack::Clone(void)
-{
-  CRtspTrack *clone = new CRtspTrack();
-  bool result = (clone != NULL);
-
-  if (result)
-  {
-    clone->clientControlPort = this->clientControlPort;
-    clone->clientDataPort = this->clientDataPort;
-    clone->serverControlPort = this->serverControlPort;
-    clone->serverDataPort = this->serverDataPort;
-    clone->lastReceiverReportTime = this->lastReceiverReportTime;
-    clone->receiverReportInterval = this->receiverReportInterval;
-    clone->synchronizationSourceIdentifier = this->synchronizationSourceIdentifier;
-    clone->senderSynchronizationSourceIdentifier = this->senderSynchronizationSourceIdentifier;
-    clone->flags = this->flags;
-
-    SET_STRING_AND_RESULT_WITH_NULL(clone->trackUrl, this->trackUrl, result);
-
-    if (this->transportResponseHeader != NULL)
-    {
-      clone->transportResponseHeader = this->transportResponseHeader->Clone();
-      result &= (clone->transportResponseHeader != NULL);
-    }
-
-    result &= clone->rtpPackets->Append(this->rtpPackets);
-  }
-
-  CHECK_CONDITION_EXECUTE(!result, FREE_MEM_CLASS(clone));
-  return clone;
+  return this->IsSetFlags(RTSP_TRACK_FLAG_SENDER_SYNCHRONIZATION_SOURCE_IDENTIFIER_SET);
 }
 
 bool CRtspTrack::IsEndOfStream(void)
 {
-  return this->IsFlags(RTSP_TRACK_FLAG_END_OF_STREAM);
-}
-
-bool CRtspTrack::IsFlags(unsigned int flags)
-{
-  return ((this->flags & flags) == flags);
+  return this->IsSetFlags(RTSP_TRACK_FLAG_END_OF_STREAM);
 }

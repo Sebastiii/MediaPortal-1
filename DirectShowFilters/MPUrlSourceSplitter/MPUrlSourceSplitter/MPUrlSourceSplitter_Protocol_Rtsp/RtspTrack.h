@@ -23,26 +23,30 @@
 #ifndef __RTSP_TRACK_DEFINED
 #define __RTSP_TRACK_DEFINED
 
+#include "Flags.h"
 #include "SimpleServer.h"
 #include "RtspTransportResponseHeader.h"
 #include "IpAddress.h"
 #include "RtspTrackStatistics.h"
-#include "PayloadType.h"
 #include "RtpPacketCollection.h"
+#include "RtspPayloadType.h"
 
 #define PORT_UNSPECIFIED                                              UINT_MAX
 // receiver report minimum time is 5000 ms
 #define RECEIVER_REPORT_MIN_TIME                                      5000
 
-#define RTSP_TRACK_FLAG_NONE                                          0x00000000
-#define RTSP_TRACK_FLAG_SENDER_SYNCHRONIZATION_SOURCE_IDENTIFIER_SET  0x00000001
-#define RTSP_TRACK_FLAG_END_OF_STREAM                                 0x00000002
+#define RTSP_TRACK_FLAG_NONE                                          FLAGS_NONE
 
-class CRtspTrack
+#define RTSP_TRACK_FLAG_SENDER_SYNCHRONIZATION_SOURCE_IDENTIFIER_SET  (1 << (FLAGS_LAST + 0))
+#define RTSP_TRACK_FLAG_END_OF_STREAM                                 (1 << (FLAGS_LAST + 1))
+
+#define RTSP_TRACK_FLAG_LAST                                          (FLAGS_LAST + 2)
+
+class CRtspTrack : public CFlags
 {
 public:
   // initializes a new instance of CRtspTrack class
-  CRtspTrack(void);
+  CRtspTrack(HRESULT *result);
   ~CRtspTrack(void);
 
   /* get methods */
@@ -101,13 +105,13 @@ public:
   // @return : RTSP strack statistical information
   CRtspTrackStatistics *GetStatistics(void);
 
-  // gets payload type from media description
-  // @return : payload type
-  CPayloadType *GetPayloadType(void);
-
   // gets received RTP packets for current track
   // @return : RTP packets for current track
   CRtpPacketCollection *GetRtpPackets(void);
+
+  // gets payload type from media description
+  // @return : payload type
+  CRtspPayloadType *GetPayloadType(void);
 
   /* set methods */
 
@@ -193,23 +197,11 @@ public:
   // @return : true if SSRC is set, false otherwise
   bool IsSetSenderSynchronizationSourceIdentifier(void);
 
-  // deeply clones current instance
-  // curl handle is not cloned
-  // @result : deep clone of current instance or NULL if error
-  CRtspTrack *Clone(void);
-
   // tests if end of stream is set
   // @return : true if end of stream is set, false otherwise
   bool IsEndOfStream(void);
 
-  // tests if specific combination of flags is set
-  // @return : true if specific combination of flags is set, false otherwise
-  bool IsFlags(unsigned int flags);
-
 protected:
-  // holds flags
-  unsigned int flags;
-
   // holds remote server data and control ports
   unsigned int serverDataPort;
   unsigned int serverControlPort;
@@ -241,7 +233,7 @@ protected:
   CRtspTrackStatistics *statistics;
 
   // holds payload type from SDP media description
-  CPayloadType *payloadType;
+  CRtspPayloadType *payloadType;
 
   // holds collection of received and unprocessed RTP packets
   CRtpPacketCollection *rtpPackets;

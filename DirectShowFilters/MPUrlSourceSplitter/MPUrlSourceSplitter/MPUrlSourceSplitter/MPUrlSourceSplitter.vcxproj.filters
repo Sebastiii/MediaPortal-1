@@ -30,18 +30,6 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AsyncRequest.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ParserHoster.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ProtocolHoster.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="OutputStreamHoster.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MPUrlSourceSplitter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -93,8 +81,29 @@
     <ClInclude Include="Demuxer.h">
       <Filter>Demuxers\Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="IOutputPinFilter.h">
+    <ClInclude Include="DemuxerCollection.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PacketInputFormat.h">
+      <Filter>Demuxers\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IPacketDemuxer.h">
+      <Filter>Demuxers\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MPUrlSourceSplitterOutputSplitterPin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MPUrlSourceSplitterOutputDownloadPin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MPUrlSourceSplitterInputDownloadPin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SeekIndexEntry.h">
+      <Filter>Demuxers\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SeekIndexEntryCollection.h">
+      <Filter>Demuxers\Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -102,18 +111,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dllmain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AsyncRequest.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ParserHoster.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ProtocolHoster.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="OutputStreamHoster.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MPUrlSourceSplitter.cpp">
@@ -165,6 +162,27 @@
       <Filter>Demuxers\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Demuxer.cpp">
+      <Filter>Demuxers\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DemuxerCollection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PacketInputFormat.cpp">
+      <Filter>Demuxers\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MPUrlSourceSplitterOutputSplitterPin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MPUrlSourceSplitterOutputDownloadPin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MPUrlSourceSplitterInputDownloadPin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SeekIndexEntry.cpp">
+      <Filter>Demuxers\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SeekIndexEntryCollection.cpp">
       <Filter>Demuxers\Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -23,8 +23,8 @@
 
 #include "RtspTrackCollection.h"
 
-CRtspTrackCollection::CRtspTrackCollection(void)
-  : CCollection()
+CRtspTrackCollection::CRtspTrackCollection(HRESULT *result)
+  : CCollection(result)
 {
 }
 
@@ -34,5 +34,5 @@ CRtspTrackCollection::~CRtspTrackCollection(void)
 
 CRtspTrack *CRtspTrackCollection::Clone(CRtspTrack *item)
 {
-  return item->Clone();
+  return NULL;
 }

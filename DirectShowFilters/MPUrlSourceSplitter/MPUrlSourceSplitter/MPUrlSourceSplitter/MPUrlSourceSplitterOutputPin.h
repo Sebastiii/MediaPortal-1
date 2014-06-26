@@ -23,9 +23,12 @@
 #ifndef __MP_URL_SOURCE_SPLITTER_OUTPUT_PIN_DEFINED
 #define __MP_URL_SOURCE_SPLITTER_OUTPUT_PIN_DEFINED
 
-#include "IOutputPinFilter.h"
+#include "Logger.h"
+#include "ParameterCollection.h"
 #include "OutputPinPacketCollection.h"
 #include "MediaTypeCollection.h"
+#include "CacheFile.h"
+#include "Flags.h"
 
 #include <streams.h>
 
@@ -35,18 +38,28 @@
 #define OUTPUT_PIN_DUMP_DATA_LENGTH                                   1048576
 #define OUTPUT_PIN_DUMP_METADATA_COUNT                                1024
 
-#define OUTPUT_PIN_FLAG_NONE                                          0x00000000
-#define OUTPUT_PIN_FLAG_CONTAINER_MPEG_TS                             0x00000001
-#define OUTPUT_PIN_FLAG_CONTAINER_MPEG                                0x00000002
-#define OUTPUT_PIN_FLAG_CONTAINER_WTV                                 0x00000004
-#define OUTPUT_PIN_FLAG_CONTAINER_ASF                                 0x00000008
-#define OUTPUT_PIN_FLAG_CONTAINER_OGG                                 0x00000010
-#define OUTPUT_PIN_FLAG_CONTAINER_MATROSKA                            0x00000020
-#define OUTPUT_PIN_FLAG_CONTAINER_AVI                                 0x00000040
-#define OUTPUT_PIN_FLAG_CONTAINER_MP4                                 0x00000080
-#define OUTPUT_PIN_FLAG_HAS_ACCESS_UNIT_DELIMITERS                    0x00000100
-#define OUTPUT_PIN_FLAG_PGS_DROP_STATE                                0x00000200
-#define OUTPUT_PIN_FLAG_DUMPING_DATA_AND_SIZES                        0x00000400
+#define MP_URL_SOURCE_SPLITTER_OUTPUT_PIN_FLAG_NONE                   FLAGS_NONE
+
+#define MP_URL_SOURCE_SPLITTER_OUTPUT_PIN_FLAG_END_OF_STREAM          (1 << (FLAGS_LAST + 0))
+#define MP_URL_SOURCE_SPLITTER_OUTPUT_PIN_FLAG_DUMPING_DATA_AND_SIZES (1 << (FLAGS_LAST + 1))
+
+#define MP_URL_SOURCE_SPLITTER_OUTPUT_PIN_FLAG_LAST                   (FLAGS_LAST + 2)
+
+#define METHOD_GET_MEDIA_TYPE_NAME                                    L"GetMediaType()"
+#define METHOD_CONNECT_NAME                                           L"Connect()"
+#define METHOD_DECIDE_ALLOCATOR_NAME                                  L"DecideAllocator()"
+#define METHOD_DECIDE_BUFFER_SIZE_NAME                                L"DecideBufferSize()"
+#define METHOD_ACTIVE_NAME                                            L"Active()"
+#define METHOD_INACTIVE_NAME                                          L"Inactive()"
+#define METHOD_CHECK_MEDIA_TYPE_NAME                                  L"CheckMediaType()"
+
+#define METHOD_THREAD_PROC_NAME                                       L"ThreadProc()"
+#define METHOD_QUEUE_END_OF_STREAM_NAME                               L"QueueEndOfStream()"
+
+#define METHOD_PIN_MESSAGE_FORMAT                                     L"%s: %s: pin '%s', %s"
+#define METHOD_PIN_START_FORMAT                                       L"%s: %s: pin '%s', Start"
+#define METHOD_PIN_END_FORMAT                                         L"%s: %s: pin '%s', End"
+#define METHOD_PIN_END_FAIL_RESULT_FORMAT                             L"%s: %s: pin '%s', End, Fail, result: 0x%08X"
 
 struct DumpMetadata
 {
@@ -54,13 +67,11 @@ struct DumpMetadata
   SYSTEMTIME time;
 };
 
-class CMPUrlSourceSplitterOutputPin
-  : public CBaseOutputPin
-  , protected CAMThread
+class CMPUrlSourceSplitterOutputPin : public CBaseOutputPin, public CFlags, protected CAMThread
 {
 public:
-  CMPUrlSourceSplitterOutputPin(CMediaTypeCollection *mediaTypes, LPCWSTR pName, CBaseFilter *pFilter, CCritSec *pLock, HRESULT *phr, const wchar_t *containerFormat);
-  ~CMPUrlSourceSplitterOutputPin();
+  CMPUrlSourceSplitterOutputPin(LPCWSTR pName, CBaseFilter *pFilter, CCritSec *pLock, HRESULT *phr, CLogger *logger, CParameterCollection *parameters, CMediaTypeCollection *mediaTypes);
+  virtual ~CMPUrlSourceSplitterOutputPin();
 
   DECLARE_IUNKNOWN;
   STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void** ppv);
@@ -70,7 +81,7 @@ public:
   // determines if the pin accepts a specific media type
   // @param pmt : pointer to a CMediaType object that contains the proposed media type
   // @return : S_OK if media type is acceptable, error code otherwise
-  HRESULT CheckMediaType(const CMediaType* pmt);
+  virtual HRESULT CheckMediaType(const CMediaType* pmt);
 
   // retrieves a preferred media type, by index value
   // @param iPosition : zero-based index value
@@ -80,18 +91,18 @@ public:
   // VFW_S_NO_MORE_ITEMS if index out of range
   // E_INVALIDARD if index lower than zero
   // error code otherwise
-  HRESULT GetMediaType(int iPosition, CMediaType* pMediaType);
+  virtual HRESULT GetMediaType(int iPosition, CMediaType* pMediaType);
 
   // connects the pin to another pin
   // @param pReceivePin : pointer to the receiving pin's IPin interface
   // @param pMediaType : pointer to an AM_MEDIA_TYPE structure that specifies the media type for the connection
-  STDMETHODIMP Connect(IPin *pReceivePin, const AM_MEDIA_TYPE *pMediaType);
+  virtual STDMETHODIMP Connect(IPin *pReceivePin, const AM_MEDIA_TYPE *pMediaType);
 
   // notifies the pin that a quality change is requested
   // @param pSender : pointer to the IBaseFilter interface of the filter that delivered the quality-control message
   // @param q : specifies a Quality structure that contains the quality-control message
   // @return : always E_NOTIMPL
-  STDMETHODIMP Notify(IBaseFilter* pSender, Quality q);
+  virtual STDMETHODIMP Notify(IBaseFilter* pSender, Quality q);
 
   // CBaseOutputPin
 
@@ -99,129 +110,94 @@ public:
   // @param pPin : pointer to the input pin's IMemInputPin interface
   // @param pAlloc : address of a variable that receives a pointer to the allocator's IMemAllocator interface
   // @return : S_OK if successful, error code otherwise
-  HRESULT DecideAllocator(IMemInputPin * pPin, IMemAllocator ** pAlloc);
+  virtual HRESULT DecideAllocator(IMemInputPin * pPin, IMemAllocator ** pAlloc);
 
   // sets the buffer requirements
   // @param pAlloc : pointer to the allocator's IMemAllocator interface
   // @param pProperties : pointer to an ALLOCATOR_PROPERTIES structure that contains the input pin's buffer requirements. If the input pin does not have any requirements, the caller should zero out the members of this structure before calling the method.
-  HRESULT DecideBufferSize(IMemAllocator* pAlloc, ALLOCATOR_PROPERTIES* pProperties);
+  virtual HRESULT DecideBufferSize(IMemAllocator* pAlloc, ALLOCATOR_PROPERTIES* pProperties);
 
   // notifies the pin that the filter is now active
   // @return : S_OK if successful, VFW_E_NO_ALLOCATOR if no allocator is available, error code otherwise
-  HRESULT Active();
+  virtual HRESULT Active();
 
   // notifies the pin that the filter is no longer active
   // @return : S_OK if successful, VFW_E_NO_ALLOCATOR if no allocator is available, error code otherwise
-  HRESULT Inactive();
+  virtual HRESULT Inactive();
 
   // Requests the connected input pin to begin a flush operation
   // @return : S_OK if successful, VFW_E_NOT_CONNECTED if pin is not connected, error code otherwise
-  HRESULT DeliverBeginFlush();
+  virtual HRESULT DeliverBeginFlush();
 
   // requests the connected input pin to end a flush operation
   // @return : S_OK if successful, VFW_E_NOT_CONNECTED if pin is not connected, error code otherwise
-  HRESULT DeliverEndFlush();
+  virtual HRESULT DeliverEndFlush();
 
   // queues output pin packet
   // @param packet : the packet to queue to output pin
   // @param timeout : the timeout in ms to queue to output pin
   // @return : S_OK if successful, VFW_E_TIMEOUT if timeout occured, error code otherwise
-  HRESULT QueuePacket(COutputPinPacket *packet, DWORD timeout);
+  virtual HRESULT QueuePacket(COutputPinPacket *packet, DWORD timeout);
 
   // queues end of stream
   // @return : S_OK if successful, VFW_E_TIMEOUT if timeout occured, error code otherwise
-  HRESULT QueueEndOfStream(void);
+  virtual HRESULT QueueEndOfStream(void);
 
   // delivers a new-segment notification to the connected input pin
   // @param tStart : starting media position of the segment, in 100-nanosecond units
   // @param tStop : end media position of the segment, in 100-nanosecond units
   // @param dRate : rate at which this segment should be processed, as a percentage of the original rate
   // @return : S_OK if successful, error code otherwise
-  HRESULT DeliverNewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate);
+  virtual HRESULT DeliverNewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate);
 
   /* get methods */
+
+  // gets demuxer ID
+  // it is specified for splitter, which needs to identify output pin for specific output packet
+  // @return : demuxer ID or DEMUXER_ID_UNSPECIFIED if not specified
+  virtual unsigned int GetDemuxerId(void);
 
   // gets stream PID
   // it is specified for splitter, which needs to identify output pin for specific output packet
   // @return : stream PID or STREAM_PID_UNSPECIFIED if not specified
-  unsigned int GetStreamPid(void);
+  virtual unsigned int GetStreamPid(void);
 
   /* set methods */
 
+  // sets demuxer ID
+  // @param demuxerId : the demuxer ID to set
+  virtual void SetDemuxerId(unsigned int demuxerId);
+
   // sets stream PID
   // @param streamPid : the stream PID to set
-  void SetStreamPid(unsigned int streamPid);
+  virtual void SetStreamPid(unsigned int streamPid);
 
   // sets new media types for output pin
   // @param mediaTypes : the media types to set
   // @return : true if successful, false otherwise
-  bool SetNewMediaTypes(CMediaTypeCollection *mediaTypes);
+  virtual bool SetNewMediaTypes(CMediaTypeCollection *mediaTypes);
 
   /* other methods */
 
   // requests thread with CMD_PLAY command
   // @return : S_OK if successful, false otherwise
-  HRESULT DeliverPlay();
+  virtual HRESULT DeliverPlay();
 
   // requests thread with CMD_APUSE command
   // @return : S_OK if successful, false otherwise
-  HRESULT DeliverPause();
+  virtual HRESULT DeliverPause();
 
   // sends specified media type with next queued packet
   // @param mediaType : media type to send
   // @return : S_OK if successful, false otherwise
-  HRESULT SendMediaType(CMediaType *mediaType);
+  virtual HRESULT SendMediaType(CMediaType *mediaType);
 
-  // tests if container is MPEG TS
-  // @return : true if container if MPEG TS, false otherwise
-  bool IsContainerMpegTs(void);
+  // tests if end of stream flag is set
+  // @return : true if end of stream flag is set, false otherwise
+  virtual bool IsEndOfStream(void);
 
-  // tests if container is MPEG
-  // @return : true if container if MPEG, false otherwise
-  bool IsContainerMpeg(void);
-
-  // tests if container is WTV
-  // @return : true if container if WTV, false otherwise
-  bool IsContainerWtv(void);
-
-  // tests if container is ASF
-  // @return : true if container if ASF, false otherwise
-  bool IsContainerAsf(void);
-
-  // tests if container is OGG
-  // @return : true if container if OGG, false otherwise
-  bool IsContainerOgg(void);
-
-  // tests if container is MATROSKA
-  // @return : true if container if MATROSKA, false otherwise
-  bool IsContainerMatroska(void);
-
-  // tests if container is AVI
-  // @return : true if container if AVI, false otherwise
-  bool IsContainerAvi(void);
-
-  // tests if container is MP4
-  // @return : true if container if MP4, false otherwise
-  bool IsContainerMp4(void);
-
-  // tests if has access unit delimiters (for H264)
-  // @return : true if has access unit delimiters, false otherwise
-  bool HasAccessUnitDelimiters(void);
-
-  // tests if PGS drop state flag is set
-  // @return : true if PGS drop state flag is set, false otherwise
-  bool IsPGSDropState(void);
-
-  // tests if specific combination of flags is set
-  // @param flags : the combination of flags to test
-  // @return : true if specific combination of flags is set, false otherwise
-  bool IsFlags(unsigned int flags);
- 
 protected:
   enum { CMD_EXIT, CMD_BEGIN_FLUSH, CMD_END_FLUSH, CMD_PLAY, CMD_PAUSE };
-
-  // holds various flags
-  unsigned int flags;
 
   // lock mutex for access to media packets
   HANDLE mediaPacketsLock;
@@ -232,8 +208,14 @@ protected:
   // holds media types associated with output pin
   CMediaTypeCollection *mediaTypes;
 
-  // holds filter reference
-  IOutputPinFilter *filter;
+  // holds logger instance
+  CLogger *logger;
+  // holds configuration parameters
+  CParameterCollection *parameters;
+
+  // holds demuxer ID
+  // it is specified for splitter, which needs to identify output pin for specific demuxer
+  unsigned int demuxerId;
 
   // holds stream PID
   // it is specified for splitter, which needs to identify output pin for specific output packet
@@ -248,11 +230,10 @@ protected:
   // media type sub type for parser
   GUID mediaTypeSubType;
 
-  /* data for H264 Annex B stream */
-
-  // holds data for parsing of H264 Annex B stream
-  COutputPinPacket *h264Buffer;
-  COutputPinPacketCollection *h264PacketCollection;
+  // holds last store time to cache file
+  unsigned int lastStoreTime;
+  // holds cache file
+  CCacheFile *cacheFile;
 
   /* statistical data */
 
@@ -272,22 +253,14 @@ protected:
 
   /* methods */
 
-  DWORD ThreadProc();
-
-  // parses output pin packet
-  // @return : S_OK if successful, error code otherwise
-  HRESULT Parse(GUID subType, COutputPinPacket *packet);
-
-  // sets if has access unit delimiters (for H264)
-  // @param hasAccessUnitDelimiters : true if has access unit delimiters, false otherwise
-  void SetHasAccessUnitDelimiters(bool hasAccessUnitDelimiters);
-
-  // sets PGS drop state
-  // @param pgsDropState : true if PGS drop state, false otherwise
-  void SetPGSDropState(bool pgsDropState);
+  virtual DWORD ThreadProc();
 
   // dumps outgoing data and its sizes to dump file
   void DumpDataAndDumpDataSizes(void);
+
+  // gets store file name
+  // @return : store file name or NULL if error
+  wchar_t *GetStoreFile(void);
 };
 
 #endif

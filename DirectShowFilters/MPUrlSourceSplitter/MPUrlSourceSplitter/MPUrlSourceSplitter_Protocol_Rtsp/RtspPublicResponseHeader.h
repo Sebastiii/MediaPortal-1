@@ -51,23 +51,26 @@
 #define RTSP_PUBLIC_RESPONSE_HEADER_METHOD_SET_PARAMETER_LENGTH       13
 #define RTSP_PUBLIC_RESPONSE_HEADER_METHOD_TEARDOWN_LENGTH            8
 
-#define FLAG_RTSP_PUBLIC_RESPONSE_HEADER_METHOD_NONE                  0x00000000
-#define FLAG_RTSP_PUBLIC_RESPONSE_HEADER_METHOD_DESCRIBE              0x00000001
-#define FLAG_RTSP_PUBLIC_RESPONSE_HEADER_METHOD_ANNOUNCE              0x00000002
-#define FLAG_RTSP_PUBLIC_RESPONSE_HEADER_METHOD_GET_PARAMETER         0x00000004
-#define FLAG_RTSP_PUBLIC_RESPONSE_HEADER_METHOD_OPTIONS               0x00000008
-#define FLAG_RTSP_PUBLIC_RESPONSE_HEADER_METHOD_PAUSE                 0x00000010
-#define FLAG_RTSP_PUBLIC_RESPONSE_HEADER_METHOD_PLAY                  0x00000020
-#define FLAG_RTSP_PUBLIC_RESPONSE_HEADER_METHOD_RECORD                0x00000040
-#define FLAG_RTSP_PUBLIC_RESPONSE_HEADER_METHOD_REDIRECT              0x00000080
-#define FLAG_RTSP_PUBLIC_RESPONSE_HEADER_METHOD_SETUP                 0x00000100
-#define FLAG_RTSP_PUBLIC_RESPONSE_HEADER_METHOD_SET_PARAMETER         0x00000200
-#define FLAG_RTSP_PUBLIC_RESPONSE_HEADER_METHOD_TEARDOWN              0x00000400
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_NONE                         RTSP_RESPONSE_HEADER_FLAG_NONE
+
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_METHOD_DESCRIBE              (1 << (RTSP_RESPONSE_HEADER_FLAG_LAST + 0))
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_METHOD_ANNOUNCE              (1 << (RTSP_RESPONSE_HEADER_FLAG_LAST + 1))
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_METHOD_GET_PARAMETER         (1 << (RTSP_RESPONSE_HEADER_FLAG_LAST + 2))
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_METHOD_OPTIONS               (1 << (RTSP_RESPONSE_HEADER_FLAG_LAST + 3))
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_METHOD_PAUSE                 (1 << (RTSP_RESPONSE_HEADER_FLAG_LAST + 4))
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_METHOD_PLAY                  (1 << (RTSP_RESPONSE_HEADER_FLAG_LAST + 5))
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_METHOD_RECORD                (1 << (RTSP_RESPONSE_HEADER_FLAG_LAST + 6))
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_METHOD_REDIRECT              (1 << (RTSP_RESPONSE_HEADER_FLAG_LAST + 7))
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_METHOD_SETUP                 (1 << (RTSP_RESPONSE_HEADER_FLAG_LAST + 8))
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_METHOD_SET_PARAMETER         (1 << (RTSP_RESPONSE_HEADER_FLAG_LAST + 9))
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_METHOD_TEARDOWN              (1 << (RTSP_RESPONSE_HEADER_FLAG_LAST + 10))
+
+#define RTSP_PUBLIC_RESPONSE_HEADER_FLAG_LAST                         (RTSP_RESPONSE_HEADER_FLAG_LAST + 11)
 
 class CRtspPublicResponseHeader : public CRtspResponseHeader
 {
 public:
-  CRtspPublicResponseHeader(void);
+  CRtspPublicResponseHeader(HRESULT *result);
   virtual ~CRtspPublicResponseHeader(void);
 
   /* get methods */
@@ -120,15 +123,6 @@ public:
   // @return : true if method is defined, false otherwise
   virtual bool IsDefinedTeardownMethod(void);
 
-  // tests if flag is set
-  // @param flag : the flag to test
-  // @return : true if flag is set, false otherwise
-  virtual bool IsSetFlag(unsigned int flag);
-
-  // deep clones of current instance
-  // @return : deep clone of current instance or NULL if error
-  virtual CRtspPublicResponseHeader *Clone(void);
-
   // parses header and stores name and value to internal variables
   // @param header : header to parse
   // @param length : the length of header
@@ -137,16 +131,14 @@ public:
 
 protected:
 
-  unsigned int flags;
-
   // deeply clones current instance to cloned header
-  // @param  clonedHeader : cloned header to hold clone of current instance
+  // @param  clone : cloned header to hold clone of current instance
   // @return : true if successful, false otherwise
-  virtual bool CloneInternal(CHttpHeader *clonedHeader);
+  virtual bool CloneInternal(CHttpHeader *clone);
 
   // returns new header object to be used in cloning
   // @return : header object or NULL if error
-  virtual CHttpHeader *GetNewHeader(void);
+  virtual CHttpHeader *CreateHeader(void);
 };
 
 #endif

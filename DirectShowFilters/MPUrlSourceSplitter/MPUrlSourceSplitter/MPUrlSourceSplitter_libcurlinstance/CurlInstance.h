@@ -27,8 +27,18 @@
 #include "LinearBuffer.h"
 #include "DownloadRequest.h"
 #include "DownloadResponse.h"
+#include "Flags.h"
 
 #include <curl/curl.h>
+
+FORCEINLINE HRESULT HRESULT_FROM_CURL_CODE(CURLcode curlCode) { return ((curlCode != 0) ? (HRESULT)((curlCode << 8) | 0x80000000) : 0); }
+FORCEINLINE HRESULT HRESULT_FROM_CURLM_CODE(CURLMcode curlmCode) { return ((curlmCode != 0) ? (HRESULT)((curlmCode << 8) | 0x80008000) : 0); }
+
+FORCEINLINE bool IS_CURL_ERROR(HRESULT error) { return ((error & 0xFFFF00FF) == 0x80000000); }
+
+#define CURL_INSTANCE_FLAG_NONE                                               FLAGS_NONE
+
+#define CURL_INSTANCE_FLAG_LAST                                               (FLAGS_LAST + 0)
 
 #define METHOD_CREATE_CURL_WORKER_NAME                                        L"CreateCurlWorker()"
 #define METHOD_DESTROY_CURL_WORKER_NAME                                       L"DestroyCurlWorker()"
@@ -52,7 +62,7 @@
 
 #include "NetworkInterfaceCollection.h"
 
-class CCurlInstance
+class CCurlInstance : public CFlags
 {
 public:
   // initializes a new instance of CCurlInstance class
@@ -60,7 +70,7 @@ public:
   // @param mutex : mutex for locking access to receive data buffer
   // @param protocolName : the protocol name instantiating
   // @param instanceName : the name of CURL instance
-  CCurlInstance(CLogger *logger, HANDLE mutex, const wchar_t *protocolName, const wchar_t *instanceName);
+  CCurlInstance(HRESULT *result, CLogger *logger, HANDLE mutex, const wchar_t *protocolName, const wchar_t *instanceName);
 
   // destructor
   virtual ~CCurlInstance(void);
@@ -104,8 +114,8 @@ public:
 
   // sets network interface name
   // @param networkInterfaceName : the network interface name to set
-  // @return : true if successful, false otherwise
-  virtual bool SetNetworkInterfaceName(const wchar_t *networkInterfaceName);
+  // @return : S_OK if successful, error code otherwise
+  virtual HRESULT SetNetworkInterfaceName(const wchar_t *networkInterfaceName);
 
   // set finish time (methods like Initialize(), StartReceivingData() and StopReceivingData() must finish before this time)
   // @param finishTime : the finish time to set
@@ -113,54 +123,45 @@ public:
 
   /* other methods */
 
-  // report libcurl error into log file
-  // @param logLevel : the verbosity level of logged message
-  // @param protocolName : name of protocol calling ReportCurlErrorMessage()
-  // @param functionName : name of function calling ReportCurlErrorMessage()
-  // @param message : optional message to log (can be NULL)
-  // @param errorCode : the error code returned by libcurl
-  virtual void ReportCurlErrorMessage(unsigned int logLevel, const wchar_t *protocolName, const wchar_t *functionName, const wchar_t *message, CURLcode errorCode);
-
-  // report libcurl error into log file
-  // @param logLevel : the verbosity level of logged message
-  // @param protocolName : name of protocol calling ReportCurlErrorMessage()
-  // @param functionName : name of function calling ReportCurlErrorMessage()
-  // @param message : optional message to log (can be NULL)
-  // @param errorCode : the error code returned by libcurl (multi)
-  virtual void ReportCurlErrorMessage(unsigned int logLevel, const wchar_t *protocolName, const wchar_t *functionName, const wchar_t *message, CURLMcode errorCode);
-
   // initializes CURL instance
   // @param downloadRequest : download request
-  // @return : true if successful, false otherwise
-  virtual bool Initialize(CDownloadRequest *downloadRequest);
+  // @return : S_OK if successful, error code otherwise
+  virtual HRESULT Initialize(CDownloadRequest *downloadRequest);
 
   // starts receiving data
   // @return : true if successful, false otherwise
-  virtual bool StartReceivingData(void);
+  virtual HRESULT StartReceivingData(void);
 
   // stops receiving data
   // @return : true if successful, false otherwise
-  virtual bool StopReceivingData(void);
+  virtual HRESULT StopReceivingData(void);
 
   // sets string to CURL option
   // @param curl : curl handle to set CURL option
   // @param option : CURL option to set
   // @param string : the string to set to CURL option
   // @return : CURLE_OK if successful, error code otherwise
-  static CURLcode SetString(CURL *curl, CURLoption option, const wchar_t *string);
+  static HRESULT SetString(CURL *curl, CURLoption option, const wchar_t *string);
 
   // sends data through current CURL instance
   // @param data : data to send
   // @param length : the length of data to send
-  // @param timeout : the timeout for sending data
+  // @param timeout : the timeout in us (microseconds) for sending data
   // @return : CURLE_OK is successful, error code otherwise
-  virtual CURLcode SendData(const unsigned char *data, unsigned int length, unsigned int timeout);
+  virtual HRESULT SendData(const unsigned char *data, unsigned int length, unsigned int timeout);
 
   // reads data through current CURL instance
   // @param data : data buffer to store read data
   // @param length : the length of data buffer
   // @return : the length of read data or error code (lower than zero) if error
-  virtual int ReadData(unsigned char *data, unsigned int length);
+  virtual HRESULT ReadData(unsigned char *data, unsigned int length);
+
+  // tests if current instance is in readable (there are data to read) or writable (we can send data) state
+  // @param read : true if testing for readable state, false otherwise
+  // @param write : true if testing for writable state, false otherwise
+  // @param timeout : the timeout in us (microseconds), UINT_MAX for no timeout
+  // @return : S_OK if successful, E_NOT_VALID_STATE if no CURL instance or can't get internal socket, E_INVALIDARG if read and write are false, error code if another error
+  virtual HRESULT Select(bool read, bool write, unsigned int timeout);
 
 protected:
   CURL *curl;
@@ -222,11 +223,11 @@ protected:
 
   // creates libcurl worker
   // @return : S_OK if successful
-  HRESULT CreateCurlWorker(void);
+  virtual HRESULT CreateCurlWorker(void);
 
   // destroys libcurl worker
   // @return : S_OK if successful
-  HRESULT DestroyCurlWorker(void);
+  virtual HRESULT DestroyCurlWorker(void);
 
   // callback function for receiving data from libcurl
   // its default write callback when not specified other callback
@@ -253,13 +254,13 @@ protected:
 
   // gets new instance of download response
   // @return : new download response or NULL if error
-  virtual CDownloadResponse *GetNewDownloadResponse(void);
+  virtual CDownloadResponse *CreateDownloadResponse(void);
 
   // sets string to CURL option
   // @param option : CURL option to set
   // @param string : the string to set to CURL option
   // @return : CURLE_OK if successful, error code otherwise
-  virtual CURLcode SetString(CURLoption option, const wchar_t *string);
+  virtual HRESULT SetString(CURLoption option, const wchar_t *string);
 
   // sets write callback for CURL
   // @param writeCallback : callback method for writing data received by CURL

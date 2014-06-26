@@ -22,7 +22,8 @@
 
 #include "DownloadRequest.h"
 
-CDownloadRequest::CDownloadRequest(void)
+CDownloadRequest::CDownloadRequest(HRESULT *result)
+  : CFlags()
 {
   this->url = NULL;
 }
@@ -50,23 +51,38 @@ bool CDownloadRequest::SetUrl(const wchar_t *url)
 
 CDownloadRequest *CDownloadRequest::Clone(void)
 {
-  CDownloadRequest *result = new CDownloadRequest();
+  HRESULT result = S_OK;
+  CDownloadRequest *clone = this->CreateDownloadRequest();
+  CHECK_POINTER_HRESULT(result, clone, result, E_OUTOFMEMORY);
 
-  if (!this->CloneInternal(result))
-  {
-    FREE_MEM_CLASS(result);
-  }
+  CHECK_CONDITION_HRESULT(result, this->CloneInternal(clone), result, E_OUTOFMEMORY);
 
-  return result;
+  CHECK_CONDITION_EXECUTE(FAILED(result), FREE_MEM_CLASS(clone));
+  return clone;
 }
 
-bool CDownloadRequest::CloneInternal(CDownloadRequest *clonedRequest)
+/* protected methods */
+
+CDownloadRequest *CDownloadRequest::CreateDownloadRequest(void)
 {
-  bool result = false;
-  if (clonedRequest != NULL)
+  HRESULT result = S_OK;
+  CDownloadRequest *request = new CDownloadRequest(&result);
+  CHECK_POINTER_HRESULT(result, request, result, E_OUTOFMEMORY);
+
+  CHECK_CONDITION_EXECUTE(FAILED(result), FREE_MEM_CLASS(request));
+  return request;
+}
+
+bool CDownloadRequest::CloneInternal(CDownloadRequest *clone)
+{
+  bool result = (clone != NULL);
+
+  if (result)
   {
-    clonedRequest->url = Duplicate(this->url);
-    result = TEST_STRING_WITH_NULL(clonedRequest->url, this->url);
+    clone->flags = this->flags;
+    clone->url = Duplicate(this->url);
+    result = TEST_STRING_WITH_NULL(clone->url, this->url);
   }
+
   return result;
 }

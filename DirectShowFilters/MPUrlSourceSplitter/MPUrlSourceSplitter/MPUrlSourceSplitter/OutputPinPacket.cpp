@@ -22,29 +22,23 @@
 
 #include "OutputPinPacket.h"
 
-COutputPinPacket::COutputPinPacket(void)
+COutputPinPacket::COutputPinPacket(HRESULT *result)
+  : CCacheFileItem(result)
 {
-  this->buffer = NULL;
-  this->flags = OUTPUT_PIN_PACKET_FLAG_NONE;
   this->startTime = COutputPinPacket::INVALID_TIME;
   this->endTime = COutputPinPacket::INVALID_TIME;
   this->mediaType = NULL;
+  this->demuxerId = DEMUXER_ID_UNSPECIFIED;
   this->streamPid = STREAM_PID_UNSPECIFIED;
 }
 
 COutputPinPacket::~COutputPinPacket(void)
 {
-  FREE_MEM_CLASS(this->buffer);
   DeleteMediaType(this->mediaType);
   this->mediaType = NULL;
 }
 
 /* get methods */
-
-CLinearBuffer *COutputPinPacket::GetBuffer(void)
-{
-  return this->buffer;
-}
 
 REFERENCE_TIME COutputPinPacket::GetStartTime(void)
 {
@@ -61,14 +55,14 @@ AM_MEDIA_TYPE *COutputPinPacket::GetMediaType(void)
   return this->mediaType;
 }
 
+unsigned int COutputPinPacket::GetDemuxerId(void)
+{
+  return this->demuxerId;
+}
+
 unsigned int COutputPinPacket::GetStreamPid(void)
 {
   return this->streamPid;
-}
-
-unsigned int COutputPinPacket::GetFlags(void)
-{
-  return this->flags;
 }
 
 /* set methods */
@@ -91,11 +85,6 @@ void COutputPinPacket::SetEndOfStream(bool endOfStream)
   this->flags |= (endOfStream) ? OUTPUT_PIN_PACKET_FLAG_END_OF_STREAM : OUTPUT_PIN_PACKET_FLAG_NONE;
 }
 
-void COutputPinPacket::SetFlags(unsigned int flags)
-{
-  this->flags = flags;
-}
-
 void COutputPinPacket::SetStartTime(REFERENCE_TIME startTime)
 {
   this->startTime = startTime;
@@ -109,6 +98,11 @@ void COutputPinPacket::SetEndTime(REFERENCE_TIME endTime)
 void COutputPinPacket::SetMediaType(AM_MEDIA_TYPE *mediaType)
 {
   this->mediaType = mediaType;
+}
+
+void COutputPinPacket::SetDemuxerId(unsigned int demuxerId)
+{
+  this->demuxerId = demuxerId;
 }
 
 void COutputPinPacket::SetStreamPid(unsigned int streamPid)
@@ -148,16 +142,14 @@ bool COutputPinPacket::IsPacketMovText(void)
   return this->IsSetFlags(OUTPUT_PIN_PACKET_FLAG_PACKET_MOV_TEXT);
 }
 
-bool COutputPinPacket::IsSetFlags(unsigned int flags)
+/* protected methods */
+
+CCacheFileItem *COutputPinPacket::CreateItem(void)
 {
-  return ((this->flags & flags) == flags);
+  return NULL;
 }
 
-bool COutputPinPacket::CreateBuffer(unsigned int size)
+bool COutputPinPacket::InternalClone(CCacheFileItem *item)
 {
-  FREE_MEM_CLASS(this->buffer);
-
-  this->buffer = new CLinearBuffer(size);
-
-  return (this->buffer != NULL);
+  return false;
 }

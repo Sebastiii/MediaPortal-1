@@ -25,22 +25,44 @@
 
 #include "Logger.h"
 #include "StreamCollection.h"
-#include "OutputPinPacket.h"
-#include "IFilter.h"
+#include "IDemuxerOwner.h"
+#include "OutputPinPacketCollection.h"
+#include "MediaPacketCollection.h"
+#include "IPacketDemuxer.h"
+#include "CacheFile.h"
+#include "PacketInputFormat.h"
+#include "Flags.h"
+#include "StreamInformation.h"
 
-#define FLAG_DEMUXER_NONE                                             0x00000000
-#define FLAG_DEMUXER_FLV                                              0x00000001
-#define FLAG_DEMUXER_ASF                                              0x00000002
-#define FLAG_DEMUXER_MP4                                              0x00000004
-#define FLAG_DEMUXER_MATROSKA                                         0x00000008
-#define FLAG_DEMUXER_OGG                                              0x00000010
-#define FLAG_DEMUXER_AVI                                              0x00000020
-#define FLAG_DEMUXER_MPEG_TS                                          0x00000040
-#define FLAG_DEMUXER_MPEG_PS                                          0x00000080
-#define FLAG_DEMUXER_EVO                                              0x00000100
-#define FLAG_DEMUXER_RM                                               0x00000200
-#define FLAG_DEMUXER_VC1_SEEN_TIMESTAMP                               0x00000400
-#define FLAG_DEMUXER_VC1_CORRECTION                                   0x00000800
+#define DEMUXER_FLAG_NONE                                             FLAGS_NONE
+
+#define DEMUXER_FLAG_FLV                                              (1 << (FLAGS_LAST + 0))
+#define DEMUXER_FLAG_ASF                                              (1 << (FLAGS_LAST + 1))
+#define DEMUXER_FLAG_MP4                                              (1 << (FLAGS_LAST + 2))
+#define DEMUXER_FLAG_MATROSKA                                         (1 << (FLAGS_LAST + 3))
+#define DEMUXER_FLAG_OGG                                              (1 << (FLAGS_LAST + 4))
+#define DEMUXER_FLAG_AVI                                              (1 << (FLAGS_LAST + 5))
+#define DEMUXER_FLAG_MPEG_TS                                          (1 << (FLAGS_LAST + 6))
+#define DEMUXER_FLAG_MPEG_PS                                          (1 << (FLAGS_LAST + 7))
+#define DEMUXER_FLAG_RM                                               (1 << (FLAGS_LAST + 8))
+
+#define DEMUXER_FLAG_ALL_CONTAINERS                                   (DEMUXER_FLAG_RM | DEMUXER_FLAG_MPEG_PS | DEMUXER_FLAG_MPEG_TS | DEMUXER_FLAG_AVI | DEMUXER_FLAG_OGG | DEMUXER_FLAG_MATROSKA | DEMUXER_FLAG_MP4 | DEMUXER_FLAG_ASF | DEMUXER_FLAG_FLV)
+
+#define DEMUXER_FLAG_VC1_SEEN_TIMESTAMP                               (1 << (FLAGS_LAST + 9))
+#define DEMUXER_FLAG_VC1_CORRECTION                                   (1 << (FLAGS_LAST + 10))
+
+// specifies if filter created demuxer successfully
+#define DEMUXER_FLAG_CREATED_DEMUXER                                  (1 << (FLAGS_LAST + 11))
+// specifies if create demuxer worker finished its work
+#define DEMUXER_FLAG_CREATE_DEMUXER_WORKER_FINISHED                   (1 << (FLAGS_LAST + 12))
+// specifies if real demuxing is needed (in another case are input media packets moved to output packets)
+#define DEMUXER_FLAG_REAL_DEMUXING_NEEDED                             (1 << (FLAGS_LAST + 13))
+// specifies that received media packets contains stream in container (e.g. avi, mkv, flv, ...)
+#define DEMUXER_FLAG_STREAM_IN_CONTAINER                              (1 << (FLAGS_LAST + 14))
+// specifies that received media packets contains demuxed packets ready for output pins
+#define DEMUXER_FLAG_STREAM_IN_PACKETS                                (1 << (FLAGS_LAST + 15))
+// specifies that end of stream output packet is queued into output packet collection
+#define DEMUXER_FLAG_END_OF_STREAM_OUTPUT_PACKET_QUEUED               (1 << (FLAGS_LAST + 16))
 
 #define NO_SUBTITLE_PID                                               DWORD_MAX
 #define FORCED_SUBTITLE_PID                                           (NO_SUBTITLE_PID - 1)
@@ -59,25 +81,45 @@ static const AVRational AV_RATIONAL_TIMEBASE = {1, AV_TIME_BASE};
 //  bool needRecalculate;
 //};
 
-#define FLV_TIMESTAMP_MAX                                             1024
+//#define FLV_TIMESTAMP_MAX                                             1024
 
-class CDemuxer
+class CDemuxer : public CFlags, public IPacketDemuxer
 {
 public:
-  enum StreamType { Video, Audio, Subpic, Unknown };
+  enum { CMD_EXIT, CMD_PAUSE, CMD_DEMUX, CMD_CREATE_DEMUXER };
 
   // initializes a new instance of CDemuxer class
   // @param logger : logger for logging purposes
   // @param filter : filter
+  // @param configuration : the configuration for filter/splitter
   // @param result : reference for variable, which holds result
-  CDemuxer(CLogger *logger, IFilter *filter, HRESULT *result);
+  CDemuxer(HRESULT *result, CLogger *logger, IDemuxerOwner *filter, CParameterCollection *configuration);
   ~CDemuxer(void);
 
+  // IPacketDemuxer methods
+
+  // gets next available media packet
+  // @param mediaPacket : reference to variable to store to reference to media packet
+  // @param flags : the flags
+  // @return : 
+  // S_OK     = media packet returned
+  // S_FALSE  = no media packet available
+  // negative values are error
+  HRESULT GetNextMediaPacket(CMediaPacket **mediaPacket, uint64_t flags);
+
+  // reads data from stream from specified position into buffer
+  // @param position : the position in stream to start reading data
+  // @param buffer : the buffer to store data
+  // @param length : the size of requested data
+  // @param flags : the flags
+  // @return : the length of read data, negative values are errors
+  int StreamReadPosition(int64_t position, uint8_t *buffer, int length, uint64_t flags);
+  
   /* get methods */
 
   // gets stream collection of specified type
   // @return : stream collection of specified type
-  CStreamCollection *GetStreams(StreamType type);
+  CStreamCollection *GetStreams(CStream::StreamType type);
 
   // gets duration for stream
   int64_t GetDuration(void);
@@ -86,30 +128,48 @@ public:
   // @return : container format or NULL if error
   const wchar_t *GetContainerFormat(void);
 
-  // gets next output pin packet
-  // @param packet : pointer to output packet
-  // @return : S_OK if successful, S_FALSE if no output pin packet available, error code otherwise
-  HRESULT GetNextPacket(COutputPinPacket *packet);
+  // gets output pin packet
+  // @param packet : output pin packet to get
+  // @return : S_OK if successful, S_FALSE if no packet, error code otherwise
+  HRESULT GetOutputPinPacket(COutputPinPacket *packet);
+
+  // gets demuxer ID
+  // @return : demuxer ID
+  unsigned int GetDemuxerId(void);
+
+  // gets associated filter instance
+  // @return : filter instance
+  IDemuxerOwner *GetDemuxerOwner(void);
+
+  // gets create demuxer error (error which occurred while creating demuxer and demuxer worker stopped its work)
+  // @return : create demuxer error code
+  HRESULT GetCreateDemuxerError(void);
 
   /* set methods */
 
   // sets active stream for specific stream type
   // @param streamType : the type of stream to set active stream (Video, Audio, Subpic, Unknown)
-  // @param activeStreamId : the ID of active stream
-  void SetActiveStream(StreamType streamType, int activeStreamId);
+  // @param activeStreamId : the ID of active stream or ACTIVE_STREAM_NOT_SPECIFIED if no stream is specified for type of stream
+  void SetActiveStream(CStream::StreamType streamType, int activeStreamId);
+
+  // sets demuxer ID
+  // @param demuxerId : the demuxer ID to set
+  void SetDemuxerId(unsigned int demuxerId);
+
+  // sets pause, seek or stop request flag
+  // @param pauseSeekStopRequest : true if pause, seek or stop, false otherwise
+  void SetPauseSeekStopRequest(bool pauseSeekStopRequest);
+
+  // sets real demuxing needed flag
+  // @param realDemuxingNeeded : true if real demuxing is needed, false otherwise
+  void SetRealDemuxingNeeded(bool realDemuxingNeeded);
+
+  // sets stream information to demuxer
+  // @param streamInformation : the stream information reported by parser or protocol
+  // @return : S_OK if successful, error code otherwise
+  HRESULT SetStreamInformation(CStreamInformation *streamInformation);
 
   /* other methods */
-
-  // opens stream
-  // @param demuxerContext : demuxer context
-  // @param streamUrl : the stream url to open
-  // @return : S_OK if successful, error code otherwise
-  HRESULT OpenStream(AVIOContext *demuxerContext, const wchar_t *streamUrl);
-
-  // tests if specific combination of flags is set
-  // @param flags : the set of flags to test
-  // @return : true if set of flags is set, false otherwise
-  bool IsSetFlags(unsigned int flags);
 
   bool IsFlv(void);
   bool IsAsf(void);
@@ -119,10 +179,37 @@ public:
   bool IsAvi(void);
   bool IsMpegTs(void);
   bool IsMpegPs(void);
-  bool IsEvo(void);
   bool IsRm(void);
   bool IsVc1SeenTimestamp(void);
   bool IsVc1Correction(void);
+
+  // tests if filter has created demuxer successfully
+  // @return : true if filter created demuxer, false otherwise
+  bool IsCreatedDemuxer(void);
+
+  // tests if create demuxer worker finished its work
+  // @return : true if create demuxer worker finished its work, false otherwise
+  bool IsCreateDemuxerWorkerFinished(void);
+
+  // tests if real demuxing is needed
+  // @return : true if real demuxing is needed, false otherwise
+  bool IsRealDemuxingNeeded(void);
+
+  // tests if has started creating demuxer
+  // @return : true if started creating demuxer, false otherwise
+  bool HasStartedCreatingDemuxer(void);
+
+  // tests if end of stream output packet is queued into output packet collection
+  // return : true if end of stream output packet is queued into output packet collection, false otherwise
+  bool IsEndOfStreamOutputPacketQueued(void);
+
+  // starts creating demuxer
+  // @return : S_OK if successful, error code otherwise
+  HRESULT StartCreatingDemuxer(void);
+
+  // starts demuxing (demuxer MUST be created successfully)
+  // @return : S_OK if successful, error code otherwise
+  HRESULT StartDemuxing(void);
 
   // selects best video stream
   // @return : the best video stream or NULL if error
@@ -137,40 +224,72 @@ public:
   // @return : S_OK if successful, false otherwise
   HRESULT Seek(REFERENCE_TIME time);
 
-protected:
+  // gets position for specified stream time (in ms)
+  // @param streamTime : the stream time (in ms) to get position in stream
+  // @return : the position in stream
+  uint64_t GetPositionForStreamTime(uint64_t streamTime);
 
-  // holds various flags
-  unsigned int flags;
+protected:
+  // configuration passed from filter
+  CParameterCollection *configuration;
 
   // holds logger for logging purposes
   // its only reference to logger instance, it is not destroyed in ~CDemuxer()
   CLogger *logger;
 
   // holds filter instance
-  IFilter *filter;
+  IDemuxerOwner *filter;
+
+  // each demuxer has its own ID
+  unsigned int demuxerId;
+
+  // holds stream input format (if specified)
+  wchar_t *streamInputFormat;
+
+  // holds special packet input format (only in case of DEMUXER_FLAG_STREAM_IN_PACKETS set flag)
+  CPacketInputFormat *packetInputFormat;
 
   // holds streams collection for each type of stream
-  CStreamCollection *streams[CDemuxer::Unknown];
+  CStreamCollection *streams[CStream::Unknown];
   // holds active stream index for each group (type of stream), default is ACTIVE_STREAM_NOT_SPECIFIED
-  int activeStream[CDemuxer::Unknown];
+  int activeStream[CStream::Unknown];
 
   AVFormatContext *formatContext;
 
-  // holds input format in human-readable form
-  wchar_t *inputFormat;
-
-  // holds parse type for each stream
-  enum AVStreamParseType *streamParseType;
+  // holds container format in human-readable form
+  wchar_t *containerFormat;
 
   /*FlvTimestamp *flvTimestamps;
   bool dontChangeTimestamps;*/
 
-  /* methods */
+  // holds if filter want to call CAMThread::CallWorker() with CMD_PAUSE, CMD_SEEK, CMD_STOP values
+  // in that case demuxer do not demux input stream
+  unsigned int pauseSeekStopRequest;
 
-  // initializes format context
-  // @param streamUrl : the stream url to open
-  // @return : S_OK if successful, error code otherwise
-  HRESULT InitFormatContext(const wchar_t *streamUrl);
+  // holds demuxing worker handle
+  HANDLE demuxingWorkerThread;
+  // specifies if demuxing worker should exit
+  volatile bool demuxingWorkerShouldExit;
+
+  // holds starting position to read data for demuxerContext (for splitter)
+  int64_t demuxerContextBufferPosition;
+  unsigned int demuxerContextRequestId;
+  // AVIOContext for demuxer (splitter)
+  AVIOContext *demuxerContext;
+
+  // collection of output (not necessary demuxed - if demuxing is not needed) packets
+  COutputPinPacketCollection *outputPacketCollection;
+  // mutex for output packets
+  HANDLE outputPacketMutex;
+
+  // holds create demuxer thread handle
+  HANDLE createDemuxerWorkerThread;
+  // specifies if demuxer worker should exit
+  volatile bool createDemuxerWorkerShouldExit;
+  // holds create demuxer error
+  HRESULT createDemuxerError;
+
+  /* methods */
 
   // cleans format context
   void CleanupFormatContext(void);
@@ -184,6 +303,52 @@ protected:
   HRESULT SeekByPosition(REFERENCE_TIME time, int flags);
   HRESULT SeekByTime(REFERENCE_TIME time, int flags);
   HRESULT SeekBySequenceReading(REFERENCE_TIME time, int flags);
+
+  /* create demuxer worker methods */
+
+  // demuxer worker thread method
+  static unsigned int WINAPI CreateDemuxerWorker(LPVOID lpParam);
+
+  // creates create demuxer worker
+  // @return : S_OK if successful
+  HRESULT CreateCreateDemuxerWorker(void);
+
+  // destroys create demuxer worker
+  // @return : S_OK if successful
+  HRESULT DestroyCreateDemuxerWorker(void);
+
+  /* demuxer (AVIOContext from ffmpeg) read and seek methods */
+
+  static int DemuxerRead(void *opaque, uint8_t *buf, int buf_size);
+  static int64_t DemuxerSeek(void *opaque, int64_t offset, int whence);
+  HRESULT DemuxerReadPosition(int64_t position, uint8_t *buffer, int length, uint64_t flags);
+
+  /* demuxing worker */
+
+  // demuxing worker thread method
+  static unsigned int WINAPI DemuxingWorker(LPVOID lpParam);
+
+  // creates demuxing worker
+  // @return : S_OK if successful
+  HRESULT CreateDemuxingWorker(void);
+
+  // destroys demuxing worker
+  // @return : S_OK if successful
+  HRESULT DestroyDemuxingWorker(void);
+
+  // gets next output pin packet
+  // @param packet : pointer to output packet
+  // @return : S_OK if successful, S_FALSE if no output pin packet available, error code otherwise
+  HRESULT GetNextPacketInternal(COutputPinPacket *packet);
+
+  // opens stream
+  // @param demuxerContext : demuxer context
+  // @return : S_OK if successful, error code otherwise
+  HRESULT OpenStream(AVIOContext *demuxerContext);
+
+  // initializes format context
+  // @return : S_OK if successful, error code otherwise
+  HRESULT InitFormatContext();
 };
 
 #endif

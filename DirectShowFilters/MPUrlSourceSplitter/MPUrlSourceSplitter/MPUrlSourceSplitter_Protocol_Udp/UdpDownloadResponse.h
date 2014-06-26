@@ -25,10 +25,15 @@
 
 #include "DownloadResponse.h"
 
+#define UDP_DOWNLOAD_RESPONSE_FLAG_NONE                               DOWNLOAD_RESPONSE_FLAG_NONE
+
+#define UDP_DOWNLOAD_RESPONSE_FLAG_LAST                               (DOWNLOAD_RESPONSE_FLAG_LAST + 1)
+
+
 class CUdpDownloadResponse : public CDownloadResponse
 {
 public:
-  CUdpDownloadResponse(void);
+  CUdpDownloadResponse(HRESULT *result);
   virtual ~CUdpDownloadResponse(void);
 
   /* get methods */
@@ -37,16 +42,18 @@ public:
 
   /* other methods */
 
-  // deeply clones current instance
-  // @result : deep clone of current instance or NULL if error
-  virtual CUdpDownloadResponse *Clone(void);
-
 protected:
 
+  /* methods */
+
+  // creates download response
+  // @return : download response or NULL if error
+  virtual CDownloadResponse *CreateDownloadResponse(void);
+
   // deeply clones current instance to cloned request
-  // @param  clonedRequest : cloned request to hold clone of current instance
+  // @param  clone : cloned request to hold clone of current instance
   // @return : true if successful, false otherwise
-  virtual bool CloneInternal(CUdpDownloadResponse *clonedRequest);
+  virtual bool CloneInternal(CDownloadResponse *clone);
 };
 
 #endif

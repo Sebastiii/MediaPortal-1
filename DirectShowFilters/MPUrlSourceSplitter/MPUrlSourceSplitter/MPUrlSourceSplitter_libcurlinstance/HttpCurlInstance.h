@@ -34,8 +34,11 @@
 #define HTTP_VERSION_DEFAULT                                                  HTTP_VERSION_NONE
 #define HTTP_IGNORE_CONTENT_LENGTH_DEFAULT                                    false
 
-class CHttpCurlInstance :
-  public CCurlInstance
+#define HTTP_CURL_INSTANCE_FLAG_NONE                                          CURL_INSTANCE_FLAG_NONE
+
+#define HTTP_CURL_INSTANCE_FLAG_LAST                                          (CURL_INSTANCE_FLAG_LAST + 0)
+
+class CHttpCurlInstance : public CCurlInstance
 {
 public:
   // initializes a new instance of CHttpCurlInstance class
@@ -43,7 +46,7 @@ public:
   // @param mutex : mutex for locking access to receive data buffer
   // @param protocolName : the protocol name instantiating
   // @param instanceName : the name of CURL instance
-  CHttpCurlInstance(CLogger *logger, HANDLE mutex, const wchar_t *protocolName, const wchar_t *instanceName);
+  CHttpCurlInstance(HRESULT *result, CLogger *logger, HANDLE mutex, const wchar_t *protocolName, const wchar_t *instanceName);
 
   ~CHttpCurlInstance(void);
 
@@ -76,8 +79,8 @@ public:
 
   // initializes CURL instance
   // @param downloadRequest : download request
-  // @return : true if successful, false otherwise
-  virtual bool Initialize(CDownloadRequest *downloadRequest);
+  // @return : S_OK if successful, error code otherwise
+  virtual HRESULT Initialize(CDownloadRequest *downloadRequest);
 
 protected:
   // holds HTTP download request
@@ -92,6 +95,8 @@ protected:
 
   // holds cookies to initialize instance
   curl_slist *cookies;
+
+  /* methods */
 
   // called when CURL debug message arives
   // @param type : CURL message type
@@ -114,7 +119,11 @@ protected:
 
   // gets new instance of download response
   // @return : new download response or NULL if error
-  virtual CDownloadResponse *GetNewDownloadResponse(void);
+  virtual CDownloadResponse *CreateDownloadResponse(void);
+
+  // destroys libcurl worker
+  // @return : S_OK if successful
+  virtual HRESULT DestroyCurlWorker(void);
 };
 
 #endif

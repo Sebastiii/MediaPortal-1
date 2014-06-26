@@ -27,14 +27,25 @@
 #include <stdio.h>
 #include <assert.h>
 
-CStaticLogger::CStaticLogger(void)
+CStaticLogger::CStaticLogger(HRESULT *result)
 {
-  this->loggerContexts = new CStaticLoggerContextCollection();
   this->loggerWorkerThread = NULL;
   this->loggerWorkerShouldExit = false;
-
-  this->mutex = CreateMutex(NULL, FALSE, NULL);
   this->referencies = 0;
+  this->loggerContexts = NULL;
+  this->mutex = NULL;
+  this->registeredModules = NULL;
+
+  if ((result != NULL) && (SUCCEEDED(*result)))
+  {
+    this->loggerContexts = new CStaticLoggerContextCollection(result);
+    this->mutex = CreateMutex(NULL, FALSE, NULL);
+    this->registeredModules = new CParameterCollection(result);
+
+    CHECK_POINTER_HRESULT(*result, this->loggerContexts, *result, E_OUTOFMEMORY);
+    CHECK_POINTER_HRESULT(*result, this->mutex, *result, E_OUTOFMEMORY);
+    CHECK_POINTER_HRESULT(*result, this->registeredModules, *result, E_OUTOFMEMORY);
+  }
 }
 
 CStaticLogger::~CStaticLogger(void)
@@ -42,6 +53,7 @@ CStaticLogger::~CStaticLogger(void)
   this->DestroyLoggerWorker();
 
   FREE_MEM_CLASS(this->loggerContexts);
+  FREE_MEM_CLASS(this->registeredModules);
 
   if (this->mutex != NULL)
   {
@@ -139,6 +151,28 @@ void CStaticLogger::LogMessage(CStaticLoggerContext *context, unsigned int logLe
   }
 }
 
+bool CStaticLogger::RegisterModule(const wchar_t *moduleFileName)
+{
+  bool result = true;
+
+  if (!this->registeredModules->Contains(moduleFileName, false))
+  {
+    result &= this->registeredModules->Add(moduleFileName, L"");
+  }
+
+  return true;
+}
+
+void CStaticLogger::UnregisterModule(const wchar_t *moduleFileName)
+{
+  this->registeredModules->Remove(moduleFileName, false);
+}
+
+bool CStaticLogger::IsRegisteredModule(const wchar_t *moduleFileName)
+{
+  return this->registeredModules->Contains(moduleFileName, false);
+}
+
 /* protected methods */
 
 unsigned int WINAPI CStaticLogger::LoggerWorker(LPVOID lpParam)
@@ -221,7 +255,7 @@ void CStaticLogger::Add(void)
 {
   CLockMutex lock(this->mutex, INFINITE);
 
-  if (this->referencies == 0)
+  if (this->loggerWorkerThread == NULL)
   {
     this->CreateLoggerWorker();
   }
@@ -252,10 +286,12 @@ void CStaticLogger::Flush(void)
   assert(!lock.IsTimeout());
   assert(lock.IsLocked());
 
+  HRESULT result = S_OK;
   unsigned int contextCount = this->loggerContexts->Count();
-  CParameterCollection *temporaryMessages = new CParameterCollection();
+  CParameterCollection *temporaryMessages = new CParameterCollection(&result);
+  CHECK_POINTER_HRESULT(result, temporaryMessages, result, E_OUTOFMEMORY);
 
-  for (unsigned int i = 0; ((temporaryMessages != NULL) && (i < contextCount)); i++)
+  for (unsigned int i = 0; (SUCCEEDED(result) && (i < contextCount)); i++)
   {
     CStaticLoggerContext *context = this->loggerContexts->GetItem(i);
 
@@ -351,7 +387,7 @@ void CStaticLogger::Flush(void)
       {
         CLockMutex lock(context->GetMutex(), INFINITE);
 
-        context->GetMessages()->Remove(0, messagesCount);
+        context->GetMessages()->CCollection::Remove(0, messagesCount);
       }
     }
   }

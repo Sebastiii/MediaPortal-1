@@ -23,8 +23,8 @@
 #include "Origin.h"
 #include "conversions.h"
 
-COrigin::COrigin(void)
-  : CSessionTag()
+COrigin::COrigin(HRESULT *result)
+  : CSessionTag(result)
 {
   this->username = NULL;
   this->sessionId = NULL;
@@ -32,7 +32,6 @@ COrigin::COrigin(void)
   this->networkType = NULL;
   this->addressType = NULL;
   this->address = NULL;
-  this->flags = FLAG_ORIGIN_NONE;
 }
 
 COrigin::~COrigin(void)
@@ -82,22 +81,22 @@ const wchar_t *COrigin::GetAddress(void)
 
 bool COrigin::IsUserNameNotSpecified(void)
 {
-  return ((this->flags & FLAG_ORIGIN_USER_NAME_NOT_SPECIFIED) != 0);
+  return this->IsSetFlags(ORIGIN_FLAG_USER_NAME_NOT_SPECIFIED);
 }
 
 bool COrigin::IsNetworkTypeInternet(void)
 {
-  return ((this->flags & FLAG_ORIGIN_NETWORK_TYPE_INTERNET) != 0);
+  return this->IsSetFlags(ORIGIN_FLAG_NETWORK_TYPE_INTERNET);
 }
 
 bool COrigin::IsAddressTypeIPV4(void)
 {
-  return ((this->flags & FLAG_ORIGIN_ADDRESS_TYPE_IPV4) != 0);
+  return this->IsSetFlags(ORIGIN_FLAG_ADDRESS_TYPE_IPV4);
 }
 
 bool COrigin::IsAddressTypeIPV6(void)
 {
-  return ((this->flags & FLAG_ORIGIN_ADDRESS_TYPE_IPV6) != 0);
+  return this->IsSetFlags(ORIGIN_FLAG_ADDRESS_TYPE_IPV6);
 }
 
 void COrigin::Clear(void)
@@ -109,18 +108,10 @@ void COrigin::Clear(void)
   FREE_MEM(this->networkType);
   FREE_MEM(this->addressType);
   FREE_MEM(this->address);
-  this->flags = FLAG_ORIGIN_NONE;
 }
 
 unsigned int COrigin::Parse(const wchar_t *buffer, unsigned int length)
 {
-  FREE_MEM(this->username);
-  FREE_MEM(this->sessionId);
-  FREE_MEM(this->networkType);
-  FREE_MEM(this->addressType);
-  FREE_MEM(this->address);
-  this->flags = FLAG_ORIGIN_NONE;
-
   unsigned int tempResult = __super::Parse(buffer, length);
   unsigned int result = (tempResult > SESSION_TAG_SIZE) ? tempResult : 0;
 
@@ -226,22 +217,22 @@ unsigned int COrigin::Parse(const wchar_t *buffer, unsigned int length)
     {
       if (wcscmp(this->username, ORIGIN_USER_NAME_NOT_SPECIFIED) == 0)
       {
-        this->flags |= FLAG_ORIGIN_USER_NAME_NOT_SPECIFIED;
+        this->flags |= ORIGIN_FLAG_USER_NAME_NOT_SPECIFIED;
       }
 
       if (wcscmp(this->networkType, ORIGIN_NETWORK_TYPE_INTERNET) == 0)
       {
-        this->flags |= FLAG_ORIGIN_NETWORK_TYPE_INTERNET;
+        this->flags |= ORIGIN_FLAG_NETWORK_TYPE_INTERNET;
       }
 
       if (wcscmp(this->addressType, ORIGIN_ADDRESS_TYPE_IPV4) == 0)
       {
-        this->flags |= FLAG_ORIGIN_ADDRESS_TYPE_IPV4;
+        this->flags |= ORIGIN_FLAG_ADDRESS_TYPE_IPV4;
       }
 
       if (wcscmp(this->addressType, ORIGIN_ADDRESS_TYPE_IPV6) == 0)
       {
-        this->flags |= FLAG_ORIGIN_ADDRESS_TYPE_IPV6;
+        this->flags |= ORIGIN_FLAG_ADDRESS_TYPE_IPV6;
       }
     }
   }

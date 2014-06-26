@@ -24,13 +24,18 @@
 #define __DOWNLOAD_RESPONSE_DEFINED
 
 #include "LinearBuffer.h"
+#include "Flags.h"
 
 #include <curl/curl.h>
 
-class CDownloadResponse
+#define DOWNLOAD_RESPONSE_FLAG_NONE                                   FLAGS_NONE
+
+#define DOWNLOAD_RESPONSE_FLAG_LAST                                   (FLAGS_LAST + 0)
+
+class CDownloadResponse : public CFlags
 {
 public:
-  CDownloadResponse(void);
+  CDownloadResponse(HRESULT *result);
   virtual ~CDownloadResponse(void);
 
   /* get methods */
@@ -39,23 +44,15 @@ public:
   // @return : received data
   virtual CLinearBuffer *GetReceivedData(void);
 
-  // gets CURL result code
-  // @return : CURL result code
-  virtual CURLcode GetResultCode(void);
-
-  // gets response code
-  // @return : response code
-  virtual long GetResponseCode(void);
+  // gets result error
+  // @return : result error (S_OK if none)
+  virtual HRESULT GetResultError(void);
 
   /* set methods */
 
-  // sets CURL result code
-  // @param resultCode : CURL result code to set
-  virtual void SetResultCode(CURLcode resultCode);
-
-  // sets response code
-  // @param responseCode : response code to set
-  virtual void SetResponseCode(long responseCode);
+  // sets result error
+  // @param resultError : result error to set
+  virtual void SetResultError(HRESULT resultError);
 
   /* other methods */
 
@@ -64,20 +61,22 @@ public:
   virtual CDownloadResponse *Clone(void);
 
 protected:
-
   // holds received data
   CLinearBuffer *receivedData;
 
-  // holds CURL result code
-  CURLcode resultCode;
+  // holds result error
+  HRESULT resultError;
 
-  // holds response code
-  long responseCode;
+  /* methods */
+
+  // creates download response
+  // @return : download response or NULL if error
+  virtual CDownloadResponse *CreateDownloadResponse(void);
 
   // deeply clones current instance to cloned response
-  // @param  clonedResponse : cloned response to hold clone of current instance
+  // @param  clone : cloned response to hold clone of current instance
   // @return : true if successful, false otherwise
-  virtual bool CloneInternal(CDownloadResponse *clonedResponse);
+  virtual bool CloneInternal(CDownloadResponse *clone);
 };
 
 #endif

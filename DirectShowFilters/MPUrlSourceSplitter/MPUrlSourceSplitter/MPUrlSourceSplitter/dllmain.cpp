@@ -41,7 +41,14 @@
 #include <Shlwapi.h>
 #include <Psapi.h>
 
+#include "ErrorCodes.h"
+
 #pragma warning(pop)
+
+#define AVCODED_MODULE_FILE_NAME                                      L"avcodec-mpurlsourcesplitter-54.dll"
+#define AVFORMAT_MODULE_FILE_NAME                                     L"avformat-mpurlsourcesplitter-54.dll"
+#define AVUTIL_MODULE_FILE_NAME                                       L"avutil-mpurlsourcesplitter-51.dll"
+#define LIBCULR_MODULE_FILE_NAME                                      L"MPUrlSourceSplitter_libcurl.dll"
 
 extern "C++" CLogger *ffmpegLoggerInstance;
 extern "C++" CStaticLogger *staticLogger = NULL;
@@ -157,18 +164,52 @@ BOOL APIENTRY DllMain(HMODULE hModule,
   LPVOID lpReserved
   )
 {
+  HRESULT result = S_OK;
+
   switch (ul_reason_for_call)
   {
   case DLL_PROCESS_ATTACH:
     {
+#ifndef _DEBUG
       if (exceptionHandler == NULL)
       {
         // register exception handler
         exceptionHandler = AddVectoredExceptionHandler(1, ExceptionHandler);
       }
-
-      staticLogger = new CStaticLogger();
+#endif
+      staticLogger = new CStaticLogger(&result);
       curl_global_init(CURL_GLOBAL_ALL);
+
+      CHECK_CONDITION_HRESULT(result, staticLogger, result, E_OUTOFMEMORY);
+      CHECK_CONDITION_EXECUTE(FAILED(result), FREE_MEM_CLASS(staticLogger));
+
+      if (SUCCEEDED(result))
+      {
+        ALLOC_MEM_DEFINE_SET(moduleFileName, wchar_t, MAX_PATH, 0);
+        CHECK_POINTER_HRESULT(result, moduleFileName, result, E_OUTOFMEMORY);
+
+        CHECK_CONDITION_HRESULT(result, GetModuleFileName(GetModuleHandle(MODULE_FILE_NAME), moduleFileName, MAX_PATH) != 0, result, E_CANNOT_GET_MODULE_FILE_NAME);
+        CHECK_CONDITION_HRESULT(result, staticLogger->RegisterModule(moduleFileName), result, E_OUTOFMEMORY);
+        memset(moduleFileName, 0, MAX_PATH * sizeof(wchar_t));
+
+        CHECK_CONDITION_HRESULT(result, GetModuleFileName(GetModuleHandle(AVCODED_MODULE_FILE_NAME), moduleFileName, MAX_PATH) != 0, result, E_CANNOT_GET_MODULE_FILE_NAME);
+        CHECK_CONDITION_HRESULT(result, staticLogger->RegisterModule(moduleFileName), result, E_OUTOFMEMORY);
+        memset(moduleFileName, 0, MAX_PATH * sizeof(wchar_t));
+
+        CHECK_CONDITION_HRESULT(result, GetModuleFileName(GetModuleHandle(AVFORMAT_MODULE_FILE_NAME), moduleFileName, MAX_PATH) != 0, result, E_CANNOT_GET_MODULE_FILE_NAME);
+        CHECK_CONDITION_HRESULT(result, staticLogger->RegisterModule(moduleFileName), result, E_OUTOFMEMORY);
+        memset(moduleFileName, 0, MAX_PATH * sizeof(wchar_t));
+
+        CHECK_CONDITION_HRESULT(result, GetModuleFileName(GetModuleHandle(AVUTIL_MODULE_FILE_NAME), moduleFileName, MAX_PATH) != 0, result, E_CANNOT_GET_MODULE_FILE_NAME);
+        CHECK_CONDITION_HRESULT(result, staticLogger->RegisterModule(moduleFileName), result, E_OUTOFMEMORY);
+        memset(moduleFileName, 0, MAX_PATH * sizeof(wchar_t));
+
+        CHECK_CONDITION_HRESULT(result, GetModuleFileName(GetModuleHandle(LIBCULR_MODULE_FILE_NAME), moduleFileName, MAX_PATH) != 0, result, E_CANNOT_GET_MODULE_FILE_NAME);
+        CHECK_CONDITION_HRESULT(result, staticLogger->RegisterModule(moduleFileName), result, E_OUTOFMEMORY);
+        memset(moduleFileName, 0, MAX_PATH * sizeof(wchar_t));
+
+        FREE_MEM(moduleFileName);
+    }
     }
     break;
   case DLL_THREAD_ATTACH:
@@ -177,12 +218,13 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     break;
   case DLL_PROCESS_DETACH:
     {
+#ifndef _DEBUG
       if (exceptionHandler != NULL)
       {
         RemoveVectoredExceptionHandler(exceptionHandler);
         exceptionHandler = NULL;
       }
-
+#endif
       // free FFmpeg logger instance
       FREE_MEM_CLASS(ffmpegLoggerInstance);
       FREE_MEM_CLASS(staticLogger);
@@ -191,7 +233,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     break;
   }
 
-  return DllEntryPoint((HINSTANCE)(hModule), ul_reason_for_call, lpReserved);
+  return FAILED(result) ? FALSE : DllEntryPoint((HINSTANCE)(hModule), ul_reason_for_call, lpReserved);
 }
 
 HMODULE GetModuleHandleByAddress(LPVOID lpAddress)
@@ -219,7 +261,7 @@ HMODULE GetModuleHandleByAddress(LPVOID lpAddress)
 
   HMODULE result = NULL;
   unsigned int count = moduleArraySize / sizeof(HMODULE);
-  for (unsigned int i = 0; i < count; i++)
+  for (unsigned int i = 0; i < count ; i++)
   {
     MODULEINFO modinfo;
 
@@ -282,77 +324,95 @@ LONG WINAPI ExceptionHandler(struct _EXCEPTION_POINTERS *exceptionInfo)
   //
   // we care only about errors
   if (((exceptionInfo->ExceptionRecord->ExceptionCode & 0xF0000000) == 0xC0000000) &&
-       (exceptionHandler != NULL))
+       (exceptionHandler != NULL) && (staticLogger != NULL))
   {
     HMODULE exceptionModule = GetModuleHandleByAddress(exceptionInfo->ExceptionRecord->ExceptionAddress);
+
     if (exceptionModule != NULL)
     {
-      // remove exception handler
-      RemoveVectoredExceptionHandler(exceptionHandler);
-      exceptionHandler = NULL;
+      ALLOC_MEM_DEFINE_SET(exceptionModuleFileName, wchar_t, MAX_PATH, 0);
 
-      if (staticLogger != NULL)
+      if (exceptionModuleFileName != NULL)
       {
-        SYSTEMTIME currentLocalTime;
-        MINIDUMP_EXCEPTION_INFORMATION minidumpException;
-        GetLocalTime(&currentLocalTime);
-
-        for (unsigned int i = 0; i < staticLogger->GetLoggerContexts()->Count(); i++)
+        if (GetModuleFileName(exceptionModule, exceptionModuleFileName, MAX_PATH) != 0)
         {
-          CStaticLoggerContext *context = staticLogger->GetLoggerContexts()->GetItem(i);
-
-          wchar_t *contextLogFile = Duplicate(context->GetLogFile());
-          PathRemoveFileSpec(contextLogFile);
-
-          // files with 'dmp' extension are known for Visual Studio
-
-          wchar_t *dumpFileName = FormatString(L"%s\\MPUrlSourceSplitter-%04.4d-%02.2d-%02.2d-%02.2d-%02.2d-%02.2d-%03.3d.dmp", contextLogFile,
-            currentLocalTime.wYear, currentLocalTime.wMonth, currentLocalTime.wDay,
-            currentLocalTime.wHour, currentLocalTime.wMinute, currentLocalTime.wSecond, currentLocalTime.wMilliseconds);
-
-          HANDLE dumpFile = CreateFile(dumpFileName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
-
-          if (dumpFile != INVALID_HANDLE_VALUE)
+          // we have exception module file name
+          if (staticLogger->IsRegisteredModule(exceptionModuleFileName))
           {
-            minidumpException.ThreadId = GetCurrentThreadId();
-            minidumpException.ExceptionPointers = exceptionInfo;
-            minidumpException.ClientPointers = TRUE;
+            // exception occured in one of our registered modules
+            // dump crash file
 
-            MINIDUMP_TYPE miniDumpType = (MINIDUMP_TYPE)
-              (MiniDumpWithFullMemory | MiniDumpWithDataSegs | MiniDumpIgnoreInaccessibleMemory);
+            // remove exception handler
+            RemoveVectoredExceptionHandler(exceptionHandler);
+            exceptionHandler = NULL;
 
-            if (MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), dumpFile, miniDumpType, &minidumpException, NULL, NULL) == TRUE)
+            if (staticLogger != NULL)
             {
-              wchar_t *guid = ConvertGuidToString(GUID_NULL);
+              SYSTEMTIME currentLocalTime;
+              MINIDUMP_EXCEPTION_INFORMATION minidumpException;
+              GetLocalTime(&currentLocalTime);
 
-              wchar_t *message = FormatString(L"%02.2d-%02.2d-%04.4d %02.2d:%02.2d:%02.2d.%03.3d [%4x] [%s] %s %s\r\n",
-                currentLocalTime.wDay, currentLocalTime.wMonth, currentLocalTime.wYear,
-                currentLocalTime.wHour, currentLocalTime.wMinute, currentLocalTime.wSecond,
-                currentLocalTime.wMilliseconds,
-                GetCurrentThreadId(),
-                guid,
-                L"[Error]  ",
-                dumpFileName);
+              for (unsigned int i = 0; i < staticLogger->GetLoggerContexts()->Count(); i++)
+              {
+                CStaticLoggerContext *context = staticLogger->GetLoggerContexts()->GetItem(i);
 
-              staticLogger->LogMessage(context, LOGGER_ERROR, message);
+                wchar_t *contextLogFile = Duplicate(context->GetLogFile());
+                PathRemoveFileSpec(contextLogFile);
 
-              FREE_MEM(guid);
-              FREE_MEM(message);
+                // files with 'dmp' extension are known for Visual Studio
+
+                wchar_t *dumpFileName = FormatString(L"%s\\MPUrlSourceSplitter-%04.4d-%02.2d-%02.2d-%02.2d-%02.2d-%02.2d-%03.3d.dmp", contextLogFile,
+                  currentLocalTime.wYear, currentLocalTime.wMonth, currentLocalTime.wDay,
+                  currentLocalTime.wHour, currentLocalTime.wMinute, currentLocalTime.wSecond, currentLocalTime.wMilliseconds);
+
+                HANDLE dumpFile = CreateFile(dumpFileName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
+
+                if (dumpFile != INVALID_HANDLE_VALUE)
+                {
+                  minidumpException.ThreadId = GetCurrentThreadId();
+                  minidumpException.ExceptionPointers = exceptionInfo;
+                  minidumpException.ClientPointers = TRUE;
+
+                  MINIDUMP_TYPE miniDumpType = (MINIDUMP_TYPE)
+                    (MiniDumpWithFullMemory | MiniDumpWithDataSegs | MiniDumpIgnoreInaccessibleMemory); 
+
+                  if (MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), dumpFile, miniDumpType, &minidumpException, NULL, NULL) == TRUE)
+                  {
+                    wchar_t *guid = ConvertGuidToString(GUID_NULL);
+
+                    wchar_t *message = FormatString(L"%02.2d-%02.2d-%04.4d %02.2d:%02.2d:%02.2d.%03.3d [%4x] [%s] %s %s\r\n",
+                      currentLocalTime.wDay, currentLocalTime.wMonth, currentLocalTime.wYear,
+                      currentLocalTime.wHour, currentLocalTime.wMinute, currentLocalTime.wSecond,
+                      currentLocalTime.wMilliseconds,
+                      GetCurrentThreadId(),
+                      guid,
+                      L"[Error]  ",
+                      dumpFileName);
+
+                    staticLogger->LogMessage(context, LOGGER_ERROR, message);
+
+                    FREE_MEM(guid);
+                    FREE_MEM(message);
+                  }
+
+                  CloseHandle(dumpFile);
+                }
+
+                FREE_MEM(dumpFileName);
+                FREE_MEM(contextLogFile);
+              }
             }
-
-            CloseHandle(dumpFile);
           }
-
-          FREE_MEM(dumpFileName);
-          FREE_MEM(contextLogFile);
         }
       }
 
-      if (staticLogger != NULL)
-      {
-        staticLogger->Flush();
-      }
+      FREE_MEM(exceptionModuleFileName);
     }
+  }
+
+  if (staticLogger != NULL)
+  {
+    staticLogger->Flush();
   }
 
   return EXCEPTION_CONTINUE_SEARCH;

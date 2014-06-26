@@ -22,7 +22,8 @@
 
 #include "PayloadType.h"
 
-CPayloadType::CPayloadType(void)
+CPayloadType::CPayloadType(HRESULT *result)
+  : CFlags()
 {
   this->channels = PAYLOAD_TYPE_CHANNELS_VARIABLE;
   this->clockRate = PAYLOAD_TYPE_CLOCK_RATE_VARIABLE;
@@ -94,19 +95,41 @@ void CPayloadType::SetChannels(unsigned int channels)
 
 CPayloadType *CPayloadType::Clone(void)
 {
-  bool res = true;
-  CPayloadType *result = new CPayloadType();
+  HRESULT result = S_OK;
+  CPayloadType *clone = this->CreatePayloadType();
+  CHECK_POINTER_HRESULT(result, clone, result, E_OUTOFMEMORY);
 
-  if (result != NULL)
+  CHECK_CONDITION_HRESULT(result, this->CloneInternal(clone), result, E_OUTOFMEMORY);
+
+  CHECK_CONDITION_EXECUTE(FAILED(result), FREE_MEM_CLASS(clone));
+  return clone;
+}
+
+/* protected methods */
+
+CPayloadType *CPayloadType::CreatePayloadType(void)
+{
+  HRESULT result = S_OK;
+  CPayloadType *payloadType = new CPayloadType(&result);
+  CHECK_POINTER_HRESULT(result, payloadType, result, E_OUTOFMEMORY);
+
+  CHECK_CONDITION_EXECUTE(FAILED(result), FREE_MEM_CLASS(payloadType));
+  return payloadType;
+}
+
+bool CPayloadType::CloneInternal(CPayloadType *payloadType)
+{
+  bool result = (payloadType != NULL);
+
+  if (result)
   {
-    
-    result->id = this->id;
-    result->channels = this->channels;
-    result->clockRate = this->clockRate;
-    SET_STRING_AND_RESULT_WITH_NULL(result->encodingName, this->encodingName, res);
-    result->mediaType = this->mediaType;
+    payloadType->flags = this->flags;
+    payloadType->id = this->id;
+    payloadType->channels = this->channels;
+    payloadType->clockRate = this->clockRate;
+    SET_STRING_AND_RESULT_WITH_NULL(payloadType->encodingName, this->encodingName, result);
+    payloadType->mediaType = this->mediaType;
   }
 
-  CHECK_CONDITION_EXECUTE(!res, FREE_MEM_CLASS(result));
   return result;
 }

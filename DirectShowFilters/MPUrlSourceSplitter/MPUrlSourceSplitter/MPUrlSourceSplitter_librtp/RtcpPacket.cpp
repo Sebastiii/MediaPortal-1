@@ -25,8 +25,8 @@
 
 #include <stdint.h>
 
-CRtcpPacket::CRtcpPacket(void)
-  : CBaseRtpPacket()
+CRtcpPacket::CRtcpPacket(HRESULT *result)
+  : CBaseRtpPacket(result)
 {
   this->packetType = 0;
   this->packetValue = 0;
@@ -108,7 +108,7 @@ bool CRtcpPacket::Parse(const unsigned char *buffer, unsigned int length)
 
     if (result)
     {
-      if ((this->flags & FLAG_RTCP_PACKET_PADDING) != 0)
+      if ((this->flags & RTCP_PACKET_FLAG_PADDING) != 0)
       {
         this->paddingSize = RBE8(buffer, size - 1) & 0xFF;
         result &= (size >= (position + this->paddingSize));

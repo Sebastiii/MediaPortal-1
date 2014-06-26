@@ -22,8 +22,8 @@
 
 #include "UdpDownloadRequest.h"
 
-CUdpDownloadRequest::CUdpDownloadRequest(void)
-  : CDownloadRequest()
+CUdpDownloadRequest::CUdpDownloadRequest(HRESULT *result)
+  : CDownloadRequest(result)
 {
 }
 
@@ -37,22 +37,21 @@ CUdpDownloadRequest::~CUdpDownloadRequest(void)
 
 /* other methods */
 
-CUdpDownloadRequest *CUdpDownloadRequest::Clone(void)
+/* protected methods */
+
+CDownloadRequest *CUdpDownloadRequest::CreateDownloadRequest(void)
 {
-  CUdpDownloadRequest *result = new CUdpDownloadRequest();
-  if (result != NULL)
-  {
-    if (!this->CloneInternal(result))
-    {
-      FREE_MEM_CLASS(result);
-    }
-  }
-  return result;
+  HRESULT result = S_OK;
+  CUdpDownloadRequest *request = new CUdpDownloadRequest(&result);
+  CHECK_POINTER_HRESULT(result, request, result, E_OUTOFMEMORY);
+
+  CHECK_CONDITION_EXECUTE(FAILED(result), FREE_MEM_CLASS(request));
+  return request;
 }
 
-bool CUdpDownloadRequest::CloneInternal(CUdpDownloadRequest *clonedRequest)
+bool CUdpDownloadRequest::CloneInternal(CDownloadRequest *clone)
 {
-  bool result = __super::CloneInternal(clonedRequest);
+  bool result = __super::CloneInternal(clone);
 
   if (result)
   {

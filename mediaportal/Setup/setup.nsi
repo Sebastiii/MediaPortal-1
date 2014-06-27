@@ -550,6 +550,11 @@ Section "MediaPortal core files (required)" SecCore
   
   ; protocol implementations for MPUrlSourceSplitter.ax
   File "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter*"
+  File "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter_Parser_Default*"
+  File "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter_Protocol_Http*"
+  File "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter_Protocol_Rtsp*"
+  File "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter_Protocol_Udp*"
+  File "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter_libcurl*"
   File "${git_DirectShowFilters}\bin_Win32\avcodec-mpurlsourcesplitter-54.dll"
   File "${git_DirectShowFilters}\bin_Win32\avformat-mpurlsourcesplitter-54.dll"
   File "${git_DirectShowFilters}\bin_Win32\avutil-mpurlsourcesplitter-51.dll" 
@@ -658,6 +663,11 @@ SectionEnd
   RMDir "$MPdir.Config\scripts"
 
   ; protocol implementations for MPUrlSourceSplitter.ax
+  Delete "$MPdir.Base\MPUrlSourceSplitter_Parser_Default*"
+  Delete "$MPdir.Base\MPUrlSourceSplitter_Protocol_Http*"
+  Delete "$MPdir.Base\MPUrlSourceSplitter_Protocol_Rtsp*"
+  Delete "$MPdir.Base\MPUrlSourceSplitter_Protocol_Udp*"
+  Delete "$MPdir.Base\MPUrlSourceSplitter_libcurl*"
   Delete "$MPdir.Base\MPUrlSourceSplitter*"
   Delete "$MPdir.Base\avcodec-mpurlsourcesplitter-54.dll"
   Delete "$MPdir.Base\avformat-mpurlsourcesplitter-54.dll"

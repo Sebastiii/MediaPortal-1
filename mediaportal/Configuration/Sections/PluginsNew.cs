@@ -199,7 +199,7 @@ namespace MediaPortal.Configuration.Sections
       if (!Plugins.IsLoaded || (Plugins.WasLastLoadAdvanced != SettingsForm.AdvancedMode))
       {
         Plugins.ClearLoadedPlugins();
-        //Plugins.IsLoaded = true;
+        Plugins.IsLoaded = true;
         Plugins.EnumeratePlugins();
         Plugins.LoadPlugins();
         pluginsLoadedOnPage = false;

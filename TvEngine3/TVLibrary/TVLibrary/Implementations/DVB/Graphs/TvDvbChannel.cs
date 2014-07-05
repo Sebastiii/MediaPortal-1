@@ -1235,7 +1235,13 @@ namespace TvLibrary.Implementations.DVB
             int pmtProgramNumber = (_pmtData[3] << 8) + _pmtData[4];
             Log.Log.Info("subch:{0} SendPmt:{1:X} {2:X} {3:X} {4:X}", _subChannelId, pmtProgramNumber, channel.ServiceId,
                          _pmtVersion, version);
-            if (pmtProgramNumber == channel.ServiceId)
+            if (pmtProgramNumber != channel.ServiceId)
+            {
+              Log.Log.Info("Service ID mismatch {0} != {1} try with detected Service ID", channel.ServiceId,
+                pmtProgramNumber);
+              channel.ServiceId = pmtProgramNumber;
+            }
+            else if (pmtProgramNumber == channel.ServiceId)
             {
               if (_pmtVersion == version) //already received this pmt
                 return true;
@@ -1252,7 +1258,7 @@ namespace TvLibrary.Implementations.DVB
               {
                 channel.FreeToAir = !_channelInfo.scrambled;
                 Log.Log.Info("subch:{0} SendPMT: Channel FTA information changed to {1} according to CAIDs in PMT.",
-                             _subChannelId, channel.FreeToAir);
+                  _subChannelId, channel.FreeToAir);
               }
               if ((_mdplugs != null) && (foundCA))
               {
@@ -1285,7 +1291,7 @@ namespace TvLibrary.Implementations.DVB
                 return true;
               }
               Log.Log.WriteFile("subch:{0} SendPMT version:{1} len:{2} {3}", _subChannelId, version, _pmtLength,
-                                _channelInfo.caPMT.ProgramNumber);
+                _channelInfo.caPMT.ProgramNumber);
 
               int audioPid = -1;
               if (_currentAudioStream != null)
@@ -1294,7 +1300,7 @@ namespace TvLibrary.Implementations.DVB
               }
 
               if (_conditionalAccess.SendPMT(_subChannelId, channel, _pmtData, _pmtLength,
-                                             audioPid))
+                audioPid))
               {
                 Log.Log.WriteFile("subch:{0} cam flags:{1}", _subChannelId, _conditionalAccess.IsCamReady());
                 return true;
@@ -1303,7 +1309,7 @@ namespace TvLibrary.Implementations.DVB
               {
                 //cam is not ready yet
                 Log.Log.WriteFile("subch:{0} SendPmt failed cam flags:{1}", _subChannelId,
-                                  _conditionalAccess.IsCamReady());
+                  _conditionalAccess.IsCamReady());
                 _pmtVersion = -1;
                 waitInterval = 3000;
                 return false;

@@ -118,11 +118,17 @@ void CPmtGrabber::OnNewSection(CSection& section)
     if (m_iPmtVersion<0)
 		  LogDebug("pmtgrabber: got pmt %x sid:%x",GetPid(), serviceId);
 
-		if (serviceId != m_iServiceId) 
-		{	
-			LogDebug("pmtgrabber: serviceid mismatch %x != %x",serviceId,m_iServiceId);
-			return;
-		}
+    if (serviceId != m_iServiceId)
+    {
+      LogDebug("pmtgrabber: serviceid mismatch %x != %x", serviceId, m_iServiceId);
+      LogDebug("pmtgrabber: trying to use new detected serviceid %x", serviceId);
+      SetPmtPid(GetPid(), serviceId);
+      SetPid(GetPid());
+      if (GetPid() == 0) // PID 0 is the PAT, so look for matching PMT
+      {
+        return;
+      }
+    }
 
 		// The + 3 is because the PMT data includes the table ID, section
 		// syntax indicator, and section length bytes on the front - we're

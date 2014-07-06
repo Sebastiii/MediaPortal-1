@@ -80,17 +80,17 @@ namespace TvLibrary.Implementations.DVB
           mpeg2ProgramStream.formatSize = 0;
           mpeg2ProgramStream.formatPtr = IntPtr.Zero;
           DateTime dtNow = DateTime.Now;
-          int filterStreamSource = ((IFileSourceFilter) _filterStreamSource).Load(url, mpeg2ProgramStream);
-          if (filterStreamSource != 0)
+          int hr = ((IFileSourceFilter) _filterStreamSource).Load(url, mpeg2ProgramStream);
+          if (hr != 0)
           {
-            Log.Log.Error("dvb:Add source returns:0x{0:X}", filterStreamSource);
+            Log.Log.Error("dvb:Add source returns:0x{0:X}", hr);
             RemoveStreamSourceFilter();
             throw new TvException("Unable to add source filter");
           }
           TimeSpan ts = DateTime.Now - dtNow;
           //connect the [stream source] -> [inf tee]
           Log.Log.WriteFile("dvb:  Render [source]->[inftee]");
-          int hr = _capBuilder.RenderStream(null, null, _filterStreamSource, null, _infTeeMain);
+          hr = _capBuilder.RenderStream(null, null, _filterStreamSource, null, _infTeeMain);
           if (hr != 0 || ts.TotalSeconds > 3)
           {
             Log.Log.Error("dvb:Add source returns:0x{0:X}", hr);

@@ -644,6 +644,7 @@ STDMETHODIMP CMPUrlSourceSplitter::Load(LPCOLESTR pszFileName, const AM_MEDIA_TY
         result = this->configuration->Add(PARAMETER_NAME_LIVE_STREAM, L"1") ? result : E_OUTOFMEMORY;
 
         //this->configuration->Add(PARAMETER_NAME_DUMP_INPUT_RAW_DATA, L"1");
+        //this->configuration->Add(PARAMETER_NAME_SLEEP_BEFORE_LOAD, L"200");
       }
 
       if (SUCCEEDED(result))
@@ -655,7 +656,7 @@ STDMETHODIMP CMPUrlSourceSplitter::Load(LPCOLESTR pszFileName, const AM_MEDIA_TY
 
       FREE_MEM(url);
     }
-
+    
     // if in output pin collection isn't any pin, then add new output pin with MPEG2 TS media type
     // in another case filter assume that there is only one output pin with MPEG2 TS media type
     if (SUCCEEDED(result) && (this->outputPins->Count() == 0))
@@ -717,7 +718,7 @@ STDMETHODIMP CMPUrlSourceSplitter::Load(LPCOLESTR pszFileName, const AM_MEDIA_TY
         {
           result = this->configuration->Add(PARAMETER_NAME_URL, url) ? result : E_OUTOFMEMORY;
         }
-
+        
         FREE_MEM_CLASS(suppliedParameters);
       }
       else
@@ -728,6 +729,10 @@ STDMETHODIMP CMPUrlSourceSplitter::Load(LPCOLESTR pszFileName, const AM_MEDIA_TY
       }
 
       //this->configuration->Add(PARAMETER_NAME_DUMP_INPUT_RAW_DATA, L"1");
+      //this->configuration->Clear();
+      //this->configuration->Add(PARAMETER_NAME_URL, L"udp://@233.62.90.1:2314");
+      //this->configuration->Add(PARAMETER_NAME_LIVE_STREAM, L"1");
+      //this->configuration->Add(PARAMETER_NAME_SLEEP_BEFORE_LOAD, L"200");
     }
 
     if (SUCCEEDED(result))
@@ -1513,7 +1518,7 @@ DWORD CMPUrlSourceSplitter::ThreadProc()
   this->lastCommand = -1;
 
   COutputPinPacket *packet = NULL;
-  bool seekFailed = false;
+  HRESULT seekResult = S_OK;
 
   for (DWORD cmd = (DWORD)-1; ; cmd = GetRequest())
   {
@@ -1561,11 +1566,11 @@ DWORD CMPUrlSourceSplitter::ThreadProc()
         // in live stream we can't receive seek request from graph to skip forward or backward
         // we can only seek in case of starting playback (created thread, not CMD_PLAY request) or in case of changing stream (probably audio or subtitle stream)
 
-        for (unsigned int i = 0; i < this->demuxers->Count(); i++)
+        for (unsigned int i = 0; (SUCCEEDED(seekResult) && (i < this->demuxers->Count())); i++)
         {
           CDemuxer *demuxer = this->demuxers->GetItem(i);
 
-          seekFailed |= FAILED(demuxer->Seek(max(this->demuxStart, 0)));
+          seekResult = demuxer->Seek(max(this->demuxStart, 0));
         }
       }
 
@@ -1644,7 +1649,7 @@ DWORD CMPUrlSourceSplitter::ThreadProc()
           packet = new COutputPinPacket(&result);
           CHECK_POINTER_HRESULT(result, packet, result, E_OUTOFMEMORY);
 
-          if (!seekFailed)
+          if (SUCCEEDED(seekResult))
           {
             result = this->GetNextPacket(packet, lastDemuxerId);
           }
@@ -1660,7 +1665,7 @@ DWORD CMPUrlSourceSplitter::ThreadProc()
 
                 packet->SetDemuxerId(outputPin->GetDemuxerId());
                 packet->SetStreamPid(outputPin->GetStreamPid());
-                packet->SetEndOfStream(true);
+                packet->SetEndOfStream(true, seekResult);
 
                 result = S_OK;
                 break;
@@ -1815,7 +1820,7 @@ DWORD CMPUrlSourceSplitter::ThreadProc()
 
       for (unsigned int i = 0; i < this->outputPins->Count(); i++)
       {
-        this->outputPins->GetItem(i)->QueueEndOfStream();
+        this->outputPins->GetItem(i)->QueueEndOfStream(S_OK);
       }
     }
   }
@@ -2618,33 +2623,3 @@ void CMPUrlSourceSplitter::ClearSession(void)
 
   this->logger->Log(LOGGER_INFO, METHOD_END_FORMAT, MODULE_NAME, METHOD_CLEAR_SESSION_NAME);
 }
-
-// IParserOutputStream
-
-//bool CMPUrlSourceSplitter::IsDownloading(void)
-//{
-//  return this->IsDownloadingFile();
-//}
-//
-//void CMPUrlSourceSplitter::FinishDownload(HRESULT result)
-//{
-//  // we accept only first call
-//  if (this->m_State == State_Running)
-//  {
-//    this->SetPauseSeekStopRequest(true);
-//    CAMThread::CallWorker(CMD_EXIT);
-//    CAMThread::Close();
-//
-//    // change our state to stopped
-//    this->m_State = State_Stopped;
-//
-//    // disconnect all output pins
-//    for (unsigned int i = 0; i < this->outputPins->Count(); i++)
-//    {
-//      this->outputPins->GetItem(i)->Disconnect();
-//    }
-//
-//    // call callback method
-//    this->OnDownloadCallback(result);
-//  }
-//}

@@ -198,6 +198,18 @@ namespace MediaPortal.GUI.Music
             }
           }
           break;
+
+        case GUIMessage.MessageType.GUI_MSG_ONRESUME:
+          using (Settings xmlreader = new MPSettings())
+          {
+            if (!xmlreader.GetValueAsBool("general", "showlastactivemodule", false))
+            {
+              currentFolder = string.Empty;
+      }
+    }
+
+          Log.Debug("{0}:{1}", SerializeName, message.Message);
+          break;
       }
     }
 
@@ -329,7 +341,6 @@ namespace MediaPortal.GUI.Music
         MusicState.StartWindow = xmlreader.GetValueAsInt("music", "startWindow", GetID);
         MusicState.View = xmlreader.GetValueAsString("music", "startview", string.Empty);
       }
-
       GUIWindowManager.OnNewAction += new OnActionHandler(GUIWindowManager_OnNewAction);
       GUIWindowManager.Receivers += new SendMessageHandler(GUIWindowManager_OnNewMessage);
       LoadSettings();
@@ -519,7 +530,7 @@ namespace MediaPortal.GUI.Music
                                            GUIMusicBaseWindow.SetTrackLabels(ref item, CurrentSortMethod);
                                          }
 
-                                         MusicTag tag = (MusicTag) item.MusicTag;
+                                         MusicTag tag = (MusicTag)item.MusicTag;
                                          if (tag != null)
                                          {
                                            if (tag.Duration > 0)
@@ -563,7 +574,7 @@ namespace MediaPortal.GUI.Music
                                        if (totalPlayingTime.TotalSeconds > 0)
                                        {
                                          GUIPropertyManager.SetProperty("#totalduration",
-                                           Util.Utils.SecondsToHMSString((int) totalPlayingTime.TotalSeconds));
+                                         Util.Utils.SecondsToHMSString((int)totalPlayingTime.TotalSeconds));
                                        }
                                        else
                                        {
@@ -1666,7 +1677,7 @@ namespace MediaPortal.GUI.Music
               }
               if (m_database.GetSongByFileName(pItem.Path, ref song))
               {
-                //not a CD track so attempt to pick up tag info
+                // not a CD track so attempt to pick up tag info
                 tag = song.ToMusicTag();
                 pItem.MusicTag = tag;
                 if (tag != null)

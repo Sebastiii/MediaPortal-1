@@ -69,7 +69,7 @@ namespace MediaPortal.Common.Utils.Logger
       tw.WriteLine("    <appender name=\"DefaultLogAppender\" type=\"log4net.Appender.RollingFileAppender\">");
       tw.WriteLine("      <file value=\"[Name].log\" />");
       tw.WriteLine("      <encoding type=\"System.Text.UTF8Encoding\" />");
-      tw.WriteLine("      <appendToFile value=\"true\" />");
+      tw.WriteLine("      <appendToFile value=\"false\" />");
       tw.WriteLine("      <lockingModel type=\"log4net.Appender.FileAppender+MinimalLock\" />");
       tw.WriteLine("      <rollingStyle value=\"Size\" />");
       tw.WriteLine("      <maxSizeRollBackups value=\"5\" />");
@@ -84,7 +84,7 @@ namespace MediaPortal.Common.Utils.Logger
       tw.WriteLine("    <appender name=\"ErrorLogAppender\" type=\"log4net.Appender.RollingFileAppender\">");
       tw.WriteLine("      <file value=\"[Name]-Error.log\" />");
       tw.WriteLine("      <encoding type=\"System.Text.UTF8Encoding\" />");
-      tw.WriteLine("      <appendToFile value=\"true\" />");
+      tw.WriteLine("      <appendToFile value=\"false\" />");
       tw.WriteLine("      <lockingModel type=\"log4net.Appender.FileAppender+MinimalLock\" />");
       tw.WriteLine("      <rollingStyle value=\"Size\" />");
       tw.WriteLine("      <maxSizeRollBackups value=\"5\" />");

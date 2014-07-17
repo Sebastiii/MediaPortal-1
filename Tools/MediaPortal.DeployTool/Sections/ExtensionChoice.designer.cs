@@ -28,23 +28,24 @@
     /// </summary>
     private void InitializeComponent()
     {
-      this.chkTitan = new System.Windows.Forms.CheckBox();
-      this.gtpTitan = new System.Windows.Forms.GroupBox();
-      this.linkTitan = new System.Windows.Forms.LinkLabel();
-      this.lblTitan = new System.Windows.Forms.Label();
+      //this.chkTitan = new System.Windows.Forms.CheckBox();
+      //this.gtpTitan = new System.Windows.Forms.GroupBox();
+      //this.linkTitan = new System.Windows.Forms.LinkLabel();
+      //this.lblTitan = new System.Windows.Forms.Label();
       this.grpLAV = new System.Windows.Forms.GroupBox();
       this.linkLAV = new System.Windows.Forms.LinkLabel();
       this.lblLAV = new System.Windows.Forms.Label();
       this.chkLAV = new System.Windows.Forms.CheckBox();
       this.linkExtensions = new System.Windows.Forms.LinkLabel();
       this.lblRecommended = new System.Windows.Forms.Label();
-      this.gtpTitan.SuspendLayout();
+      //this.gtpTitan.SuspendLayout();
       this.grpLAV.SuspendLayout();
       this.SuspendLayout();
       // 
       // chkTitan
       // 
-      this.chkTitan.AutoSize = true;
+      /*this.chkTitan.AutoSize = true;
+      this.chkTitan.Checked = this.gtpTitan.Visible;
       this.chkTitan.CheckState = System.Windows.Forms.CheckState.Checked;
       this.chkTitan.ForeColor = System.Drawing.Color.White;
       this.chkTitan.Location = new System.Drawing.Point(15, 19);
@@ -53,6 +54,7 @@
       this.chkTitan.TabIndex = 9;
       this.chkTitan.Text = "Titan Extended";
       this.chkTitan.UseVisualStyleBackColor = true;
+      this.chkTitan.CheckedChanged += new System.EventHandler(this.chkTitan_CheckedChanged);
       // 
       // gtpTitan
       // 
@@ -64,9 +66,6 @@
       this.gtpTitan.Size = new System.Drawing.Size(513, 70);
       this.gtpTitan.TabIndex = 11;
       this.gtpTitan.TabStop = false;
-      // Enable or Disable Titan Extended related by displaying or not the groupbox.
-      this.gtpTitan.Visible = true;
-      this.chkTitan.Checked = this.gtpTitan.Visible;
       // 
       // linkTitan
       // 
@@ -89,6 +88,7 @@
       this.lblTitan.Size = new System.Drawing.Size(305, 13);
       this.lblTitan.TabIndex = 10;
       this.lblTitan.Text = "Install extension that adds support for popular third party plugins";
+      this.lblTitan.Click += new System.EventHandler(this.lblTitan_Click);*/
       // 
       // grpLAV
       // 
@@ -165,15 +165,15 @@
       this.Controls.Add(this.lblRecommended);
       this.Controls.Add(this.linkExtensions);
       this.Controls.Add(this.grpLAV);
-      this.Controls.Add(this.gtpTitan);
+      //this.Controls.Add(this.gtpTitan);
       this.Name = "ExtensionChoice";
       this.Controls.SetChildIndex(this.labelSectionHeader, 0);
-      this.Controls.SetChildIndex(this.gtpTitan, 0);
+      //this.Controls.SetChildIndex(this.gtpTitan, 0);
       this.Controls.SetChildIndex(this.grpLAV, 0);
       this.Controls.SetChildIndex(this.linkExtensions, 0);
       this.Controls.SetChildIndex(this.lblRecommended, 0);
-      this.gtpTitan.ResumeLayout(false);
-      this.gtpTitan.PerformLayout();
+      //this.gtpTitan.ResumeLayout(false);
+      //this.gtpTitan.PerformLayout();
       this.grpLAV.ResumeLayout(false);
       this.grpLAV.PerformLayout();
       this.ResumeLayout(false);
@@ -183,13 +183,13 @@
 
     #endregion
 
-    private System.Windows.Forms.CheckBox chkTitan;
-    private System.Windows.Forms.GroupBox gtpTitan;
+    //private System.Windows.Forms.CheckBox chkTitan;
+    //private System.Windows.Forms.GroupBox gtpTitan;
     private System.Windows.Forms.GroupBox grpLAV;
     private System.Windows.Forms.CheckBox chkLAV;
-    private System.Windows.Forms.Label lblTitan;
+    //private System.Windows.Forms.Label lblTitan;
     private System.Windows.Forms.Label lblLAV;
-    private System.Windows.Forms.LinkLabel linkTitan;
+    //private System.Windows.Forms.LinkLabel linkTitan;
     private System.Windows.Forms.LinkLabel linkLAV;
     private System.Windows.Forms.LinkLabel linkExtensions;
     private System.Windows.Forms.Label lblRecommended;

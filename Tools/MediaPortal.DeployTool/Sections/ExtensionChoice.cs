@@ -57,12 +57,6 @@ namespace MediaPortal.DeployTool.Sections
       {
         this.chkLAV.Checked = false;
       }
-      package = new TitanExtensionInstall();
-      result = package.CheckStatus();
-      if (result.state == CheckState.INSTALLED)
-      {
-        this.chkTitan.Checked = false;
-      }
     }
 
     public override DeployDialog GetNextDialog()

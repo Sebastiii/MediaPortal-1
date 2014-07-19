@@ -112,7 +112,7 @@ unsigned int CRtspStreamTrack::GetFirstRtpPacketTicks(void)
   return this->firstRtpPacketTicks;
 }
 
-int64_t CRtspStreamTrack::GetRtpPacketTimestamp(unsigned int currentRtpPacketTimestamp, bool storeLastRtpPacketTimestamp)
+int64_t CRtspStreamTrack::GetRtpPacketTimestamp(unsigned int currentRtpPacketTimestamp)
 {
   int64_t difference = ((currentRtpPacketTimestamp < this->lastRtpPacketTimestamp) ? 0x0000000100000000 : 0);
   difference += currentRtpPacketTimestamp;
@@ -133,11 +133,8 @@ int64_t CRtspStreamTrack::GetRtpPacketTimestamp(unsigned int currentRtpPacketTim
 
   int64_t result = this->lastCumulatedRtpTimestamp + difference;
 
-  if (storeLastRtpPacketTimestamp)
-  {
-    this->lastCumulatedRtpTimestamp += difference;
-    this->lastRtpPacketTimestamp = currentRtpPacketTimestamp;
-  }
+  this->lastCumulatedRtpTimestamp += difference;
+  this->lastRtpPacketTimestamp = currentRtpPacketTimestamp;
 
   return result;
 }
@@ -201,12 +198,6 @@ void CRtspStreamTrack::SetEndOfStreamFlag(bool endOfStreamFlag)
   this->flags |= endOfStreamFlag ? RTSP_STREAM_TRACK_FLAG_END_OF_STREAM : RTSP_STREAM_TRACK_FLAG_NONE;
 }
 
-void CRtspStreamTrack::SetSupressDataFlag(bool supressDataFlag)
-{
-  this->flags &= ~RTSP_STREAM_TRACK_FLAG_SUPRESS_DATA;
-  this->flags |= supressDataFlag ? RTSP_STREAM_TRACK_FLAG_SUPRESS_DATA : RTSP_STREAM_TRACK_FLAG_NONE;
-}
-
 void CRtspStreamTrack::SetReceivedAllDataFlag(bool receivedAllDataFlag)
 {
   this->flags &= ~RTSP_STREAM_TRACK_FLAG_RECEIVED_ALL_DATA;
@@ -263,11 +254,6 @@ bool CRtspStreamTrack::IsSetStreamLength(void)
 bool CRtspStreamTrack::IsSetEndOfStream(void)
 {
   return this->IsSetFlags(RTSP_STREAM_TRACK_FLAG_END_OF_STREAM);
-}
-
-bool CRtspStreamTrack::IsSetSupressData(void)
-{
-  return this->IsSetFlags(RTSP_STREAM_TRACK_FLAG_SUPRESS_DATA);
 }
 
 bool CRtspStreamTrack::IsReceivedAllData(void)

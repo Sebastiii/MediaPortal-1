@@ -110,9 +110,17 @@
 #define E_RTSP_NOT_SET_SENDER_SYNCHRONIZATION_SOURCE_IDENTIFIER                 -135
 #define E_RTSP_NO_ENDPOINT_FOUND                                                -136
 #define E_RTSP_SENT_DATA_LENGTH_NOT_SAME_AS_RTCP_PACKET_LENGTH                  -137
+#define E_RTSP_NO_DATA_RECEIVED_BETWEEN_RECEIVER_REPORTS                        -138
 
 // UDP/RTP protocol error codes
 
 #define E_UDP_NO_DATA_RECEIVED                                                  -140
+
+// RTMP protocol error codes
+
+#define E_RTMP_BAD_URL_FORMAT                                                   -150
+#define E_RTMP_CONNECT_FAILED                                                   -151
+#define E_RTMP_CONNECT_STREAM_FAILED                                            -152
+#define E_RTMP_GENERAL_READ_ERROR                                               -153
 
 #endif

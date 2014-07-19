@@ -37,11 +37,10 @@
 #define RTSP_STREAM_TRACK_FLAG_SET_FIRST_RTP_PACKET_TIMESTAMP         (1 << (FLAGS_LAST + 0))
 #define RTSP_STREAM_TRACK_FLAG_SET_STREAM_LENGTH                      (1 << (FLAGS_LAST + 1))
 #define RTSP_STREAM_TRACK_FLAG_END_OF_STREAM                          (1 << (FLAGS_LAST + 2))
-#define RTSP_STREAM_TRACK_FLAG_SUPRESS_DATA                           (1 << (FLAGS_LAST + 3))
-#define RTSP_STREAM_TRACK_FLAG_RECEIVED_ALL_DATA                      (1 << (FLAGS_LAST + 4))
-#define RTSP_STREAM_TRACK_FLAG_SET_FIRST_RTP_PACKET_TICKS             (1 << (FLAGS_LAST + 5))
+#define RTSP_STREAM_TRACK_FLAG_RECEIVED_ALL_DATA                      (1 << (FLAGS_LAST + 3))
+#define RTSP_STREAM_TRACK_FLAG_SET_FIRST_RTP_PACKET_TICKS             (1 << (FLAGS_LAST + 4))
 
-#define RTSP_STREAM_TRACK_FLAG_LAST                                   (FLAGS_LAST + 6)
+#define RTSP_STREAM_TRACK_FLAG_LAST                                   (FLAGS_LAST + 5)
 
 class CRtspStreamTrack : public CFlags
 {
@@ -88,9 +87,8 @@ public:
 
   // gets RTP packet timestamp based on current RTP packet timestamp
   // @param currentRtpPacketTimestamp : current RTP packet timestamp to get RTP packet timestamp
-  // @param storeLastRtpPacketTimestamp : true if current RTP packet timestamp have to be stored as last RTP packet timestamp, false otherwise
   // @return : RTP packet timestamp
-  int64_t GetRtpPacketTimestamp(unsigned int currentRtpPacketTimestamp, bool storeLastRtpPacketTimestamp);
+  int64_t GetRtpPacketTimestamp(unsigned int currentRtpPacketTimestamp);
 
   // gets RTP packet timestamp in DSHOW_TIME_BASE units
   // @param rtpPacketTimestamp : the RTP packet timestamp to get in DSHOW_TIME_BASE units
@@ -140,10 +138,6 @@ public:
   // @param endOfStreamFlag : end of stream flag to set
   void SetEndOfStreamFlag(bool endOfStreamFlag);
 
-  // sets supress data flag
-  // @param supressDataFlag : supress data flag to set
-  void SetSupressDataFlag(bool supressDataFlag);
-
   // sets received all data flag
   // @param receivedAllDataFlag : received all data flag to set
   void SetReceivedAllDataFlag(bool receivedAllDataFlag);
@@ -180,10 +174,6 @@ public:
   // tests if end of stream is set
   // @return : true if end of stream is set, false otherwise
   bool IsSetEndOfStream(void);
-
-  // tests if supress data is set
-  // @return : true if supress data is set, false otherwise
-  bool IsSetSupressData(void);
 
   // tests if all data are received
   // @return : true if all data received flag is set, false otherwise

@@ -3339,7 +3339,9 @@ namespace MediaPortal.GUI.Video
     // main thread. It adds all file to database and refresh the ListLayout on the screen.
     private void GetMediaInfoThread(object i)
     {
-      List<GUIListItem> itemlist = (List<GUIListItem>) i;
+      List<GUIListItem> itemlist = (List<GUIListItem>)i;
+      ISelectDVDHandler selectDvdHandler = GetSelectDvdHandler();
+
       Log.Debug("GetMediaInfoThread: current folder: {0}, itemlist count: {1}", _currentFolder, itemlist.Count);
 
       foreach (GUIListItem item in itemlist)
@@ -3353,7 +3355,7 @@ namespace MediaPortal.GUI.Video
         {
           Log.Debug("GetMediaInfoThread: Work on {0}", item.Path);
           AddFileToDatabase(item.Path);
-             
+
           int newMovieId = VideoDatabase.GetMovieId(item.Path);
           item.Duration = VideoDatabase.GetMovieDuration(newMovieId);
           if (item.Duration > 0)
@@ -3364,6 +3366,7 @@ namespace MediaPortal.GUI.Video
               {
                 SetLabel(item);
                 facadeLayout.ListLayout.ListItems[n].Label2 = item.Label2;
+                IMDBMovie.SetMovieData(item);
                 break;
               }
             }
@@ -3373,10 +3376,10 @@ namespace MediaPortal.GUI.Video
         {
           Log.Debug("GetMediaInfoThread: ThreadAbortException");
         }
+        SetImdbThumbs(itemlist, selectDvdHandler);
         Thread.Sleep(100);
       }
       Log.Debug("GetMediaInfoThread: Finished.");
-      return;
     }
 
     private void LoadFolderSettings(string folderName)

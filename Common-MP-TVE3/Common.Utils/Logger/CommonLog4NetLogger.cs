@@ -72,7 +72,7 @@ namespace MediaPortal.Common.Utils.Logger
       tw.WriteLine("      <appendToFile value=\"false\" />");
       tw.WriteLine("      <lockingModel type=\"log4net.Appender.FileAppender+MinimalLock\" />");
       tw.WriteLine("      <rollingStyle value=\"Size\" />");
-      tw.WriteLine("      <maxSizeRollBackups value=\"5\" />");
+      tw.WriteLine("      <maxSizeRollBackups value=\"10\" />");
       tw.WriteLine("      <maximumFileSize value=\"5MB\" />");
       tw.WriteLine("      <staticLogFileName value=\"true\" />");
       tw.WriteLine("      <PreserveLogFileNameExtension value=\"true\" />");
@@ -87,7 +87,7 @@ namespace MediaPortal.Common.Utils.Logger
       tw.WriteLine("      <appendToFile value=\"false\" />");
       tw.WriteLine("      <lockingModel type=\"log4net.Appender.FileAppender+MinimalLock\" />");
       tw.WriteLine("      <rollingStyle value=\"Size\" />");
-      tw.WriteLine("      <maxSizeRollBackups value=\"5\" />");
+      tw.WriteLine("      <maxSizeRollBackups value=\"10\" />");
       tw.WriteLine("      <maximumFileSize value=\"5MB\" />");
       tw.WriteLine("      <staticLogFileName value=\"true\" />");
       tw.WriteLine("      <PreserveLogFileNameExtension value=\"true\" />");

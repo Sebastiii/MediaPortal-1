@@ -3340,12 +3340,16 @@ namespace MediaPortal.GUI.Video
     private void GetMediaInfoThread(object i)
     {
       List<GUIListItem> itemlist = (List<GUIListItem>)i;
+      List<GUIListItem> itemlist2 = new List<GUIListItem>();
       ISelectDVDHandler selectDvdHandler = GetSelectDvdHandler();
 
       Log.Debug("GetMediaInfoThread: current folder: {0}, itemlist count: {1}", _currentFolder, itemlist.Count);
 
       foreach (GUIListItem item in itemlist)
       {
+        itemlist2.Clear(); 
+        itemlist2.Add(item);
+
         if (_getMediaInfoThreadAbort)
         {
           Log.Debug("GetMediaInfoThread: finished with _getMediaInfoThreadAbort signal.");
@@ -3376,7 +3380,8 @@ namespace MediaPortal.GUI.Video
         {
           Log.Debug("GetMediaInfoThread: ThreadAbortException");
         }
-        SetImdbThumbs(itemlist, selectDvdHandler);
+
+        SetImdbThumbs(itemlist2, selectDvdHandler);
         Thread.Sleep(100);
       }
       Log.Debug("GetMediaInfoThread: Finished.");

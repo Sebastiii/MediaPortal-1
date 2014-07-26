@@ -4,7 +4,7 @@ using MediaPortal.Common.Utils.Logger;
 
 namespace MediaPortal.ServiceImplementations
 {
-  public class Log4NetWrapper : ILog
+  public class Log4NetWrapper : MediaPortal.Services.ILog
   {
     #region Variables
     private bool _configuration;
@@ -15,8 +15,6 @@ namespace MediaPortal.ServiceImplementations
     {
       var logLevel = (Level)MediaPortal.Profile.MPSettings.Instance.GetValueAsInt("general", "loglevel", 3);
       SetLogLevel(logLevel);
-      logLevel = (Level)MediaPortal.Profile.MPSettings.Instance.GetValueAsInt("general", "loglevelpowerscheduler", 3);
-      SetLogLevel(LogType.PS, logLevel);
     }
     #endregion
 
@@ -94,7 +92,6 @@ namespace MediaPortal.ServiceImplementations
         case LogType.VMR9: return CommonLogType.VMR9;
         case LogType.MusicShareWatcher: return CommonLogType.MusicShareWatcher;
         case LogType.WebEPG: return CommonLogType.WebEPG;
-        case LogType.PS: return CommonLogType.PS;
         default: return CommonLogType.Log;
       }
     }
@@ -109,11 +106,6 @@ namespace MediaPortal.ServiceImplementations
         case Level.Warning: return CommonLogLevel.Warning;
         default: return CommonLogLevel.All;
       }
-    }
-
-    private void SetLogLevel(LogType type, Level logLevel)
-    {
-      CommonLogger.Instance.SetLogLevel(ConvertToCommonLogType(type), ConvertToCommonLogLevel(logLevel));
     }
 
     #endregion

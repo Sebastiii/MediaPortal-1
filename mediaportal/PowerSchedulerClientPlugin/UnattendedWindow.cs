@@ -19,7 +19,6 @@
 #endregion
 
 using MediaPortal.GUI.Library;
-using MediaPortal.Services;
 
 namespace MediaPortal.Plugins.Process
 {
@@ -32,7 +31,7 @@ namespace MediaPortal.Plugins.Process
 
     public override bool Init()
     {
-      Log.Info(LogType.PS, "PSClientPlugin.UnattendedWindow.Init");
+      Log.Info("PSClientPlugin.UnattendedWindow.Init");
 
       return Load(GUIGraphicsContext.GetThemedSkinFile(@"\psclientplugin_unattended.xml"));
     }

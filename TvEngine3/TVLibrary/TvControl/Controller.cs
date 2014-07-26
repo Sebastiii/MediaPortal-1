@@ -406,11 +406,6 @@ namespace TvControl
     /// <returns></returns>
     List<string> GetRadioChannelGroupNames();
 
-    /// <summary>
-    /// Set the log levels as defined in the settings
-    /// </summary>
-    void SetLogLevels();
-
     #endregion
 
     #region streaming

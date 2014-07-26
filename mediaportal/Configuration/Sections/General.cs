@@ -55,8 +55,6 @@ namespace MediaPortal.Configuration.Sections
       {
         loglevel = xmlreader.GetValueAsString("general", "loglevel", "2"); // set loglevel to 2:info 3:debug
         cbDebug.SelectedIndex = Convert.ToInt16(loglevel);
-        loglevel = xmlreader.GetValueAsString("general", "loglevelpowerscheduler", loglevel);
-        cbDebugPowerScheduler.SelectedIndex = Convert.ToInt16(loglevel);
 
         string prio = xmlreader.GetValueAsString("general", "ThreadPriority", "Normal");
         // Set the selected index, otherwise the SelectedItem in SaveSettings will be null, if the box isn't checked
@@ -73,8 +71,6 @@ namespace MediaPortal.Configuration.Sections
       using (Settings xmlwriter = new MPSettings())
       {
         xmlwriter.SetValue("general", "loglevel", cbDebug.SelectedIndex);
-        xmlwriter.SetValue("general", "loglevelpowerscheduler", cbDebugPowerScheduler.SelectedIndex);
-
         xmlwriter.SetValue("general", "ThreadPriority", mpThreadPriority.SelectedItem.ToString());
 
         xmlwriter.SetValueAsBool("general", "watchdogEnabled", checkBoxEnableWatchdog.Checked);

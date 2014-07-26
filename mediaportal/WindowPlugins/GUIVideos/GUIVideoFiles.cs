@@ -1642,38 +1642,7 @@ namespace MediaPortal.GUI.Video
           CreateFolderThumb(item, true);
           break;
         case 1264: // Get media info (refresh mediainfo and duration)
-          if (item != null)
-          {
-            string file = item.Path;
-            SelectDVDHandler sdh = new SelectDVDHandler();
-            SelectBDHandler bdh = new SelectBDHandler();
 
-            if (sdh.IsDvdDirectory(item.Path))
-            {
-              if (File.Exists(item.Path + @"\VIDEO_TS\VIDEO_TS.IFO"))
-              {
-                file = file + @"\VIDEO_TS\VIDEO_TS.IFO";
-              }
-            }
-
-            if (bdh.IsBDDirectory(item.Path))
-            {
-              if (File.Exists(item.Path + @"\BDMV\INDEX.BDMV"))
-              {
-                file = file + @"\BDMV\INDEX.BDMV";
-              }
-            }
-
-            ArrayList files = new ArrayList();
-            files = AddFileToDatabase(file);
-            MovieDuration(files, true);
-            int movieId = VideoDatabase.GetMovieId(file);
-            IMDBMovie mInfo = new IMDBMovie();
-            mInfo.SetMediaInfoProperties(file, true);
-            mInfo.SetDurationProperty(movieId);
-            IMDBMovie.SetMovieData(item);
-            SelectCurrentItem();
-          }
           break;
       }
     }
@@ -2851,6 +2820,42 @@ namespace MediaPortal.GUI.Video
 
     #region Private methods
 
+    private void RefreshMediaInfo(GUIListItem item)
+    {
+      if (item != null)
+      {
+        string file = item.Path;
+        SelectDVDHandler sdh = new SelectDVDHandler();
+        SelectBDHandler bdh = new SelectBDHandler();
+
+        if (sdh.IsDvdDirectory(item.Path))
+        {
+          if (File.Exists(item.Path + @"\VIDEO_TS\VIDEO_TS.IFO"))
+          {
+            file = file + @"\VIDEO_TS\VIDEO_TS.IFO";
+          }
+        }
+
+        if (bdh.IsBDDirectory(item.Path))
+        {
+          if (File.Exists(item.Path + @"\BDMV\INDEX.BDMV"))
+          {
+            file = file + @"\BDMV\INDEX.BDMV";
+          }
+        }
+
+        ArrayList files = new ArrayList();
+        files = AddFileToDatabase(file);
+        MovieDuration(files, true);
+        int movieId = VideoDatabase.GetMovieId(file);
+        IMDBMovie mInfo = new IMDBMovie();
+        mInfo.SetMediaInfoProperties(file, true);
+        mInfo.SetDurationProperty(movieId);
+        IMDBMovie.SetMovieData(item);
+        SelectCurrentItem();
+      }
+    }
+
     private static bool WakeUpSrv(string newFolderName)
     {
       if (!Util.Utils.IsUNCNetwork(newFolderName))
@@ -3340,16 +3345,11 @@ namespace MediaPortal.GUI.Video
     private void GetMediaInfoThread(object i)
     {
       List<GUIListItem> itemlist = (List<GUIListItem>)i;
-      List<GUIListItem> itemlist2 = new List<GUIListItem>();
-      ISelectDVDHandler selectDvdHandler = GetSelectDvdHandler();
 
       Log.Debug("GetMediaInfoThread: current folder: {0}, itemlist count: {1}", _currentFolder, itemlist.Count);
 
       foreach (GUIListItem item in itemlist)
       {
-        itemlist2.Clear(); 
-        itemlist2.Add(item);
-
         if (_getMediaInfoThreadAbort)
         {
           Log.Debug("GetMediaInfoThread: finished with _getMediaInfoThreadAbort signal.");
@@ -3358,7 +3358,8 @@ namespace MediaPortal.GUI.Video
         try
         {
           Log.Debug("GetMediaInfoThread: Work on {0}", item.Path);
-          AddFileToDatabase(item.Path);
+
+          RefreshMediaInfo(item);
 
           int newMovieId = VideoDatabase.GetMovieId(item.Path);
           item.Duration = VideoDatabase.GetMovieDuration(newMovieId);
@@ -3370,7 +3371,6 @@ namespace MediaPortal.GUI.Video
               {
                 SetLabel(item);
                 facadeLayout.ListLayout.ListItems[n].Label2 = item.Label2;
-                IMDBMovie.SetMovieData(item);
                 break;
               }
             }
@@ -3380,8 +3380,6 @@ namespace MediaPortal.GUI.Video
         {
           Log.Debug("GetMediaInfoThread: ThreadAbortException");
         }
-
-        SetImdbThumbs(itemlist2, selectDvdHandler);
         Thread.Sleep(100);
       }
       Log.Debug("GetMediaInfoThread: Finished.");

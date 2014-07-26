@@ -31,6 +31,7 @@ using System.Security;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
+using MediaPortal.Configuration;
 using MediaPortal.ExtensionMethods;
 using MediaPortal.GUI.Library;
 using MediaPortal.MusicPlayer.BASS;
@@ -144,6 +145,8 @@ namespace MediaPortal.Visualization
     private bool SeekingRew = false;
     private bool NewPlay = false;
     private bool PlayBackTypeChanged = false;
+
+    private bool IsSoundSpectrumViz = false;
     private bool IsCursorMovedBottomRight = false;
 
     #region Overlay Image Variables
@@ -1800,6 +1803,16 @@ namespace MediaPortal.Visualization
       }
       Application.DoEvents();
 
+      // Soundspectrum Viz need special handling on Render
+      if (Viz.IsEngineInstalled())
+      {
+        IsSoundSpectrumViz = true;
+      }
+      else
+      {
+        IsSoundSpectrumViz = false;
+      }
+
       // The first Render call can take quite a long time to return so we use a seperate worker thread 
       // for the first call.  Once the call returns we let the main render thread handle the rendering
       if (!Viz.PreRenderRequired)
@@ -1941,11 +1954,15 @@ namespace MediaPortal.Visualization
                     continue;
                   }
 
-                  if (Viz.IsWmpVis())
+                  // Is it a Soundspectrum Viz, then we use, what their render returned in sleepMS
+                  if (IsSoundSpectrumViz)
                   {
-                    continue;
+                    Thread.Sleep(0);
                   }
-                  Thread.Sleep(VisualizationRenderInterval);
+                  else
+                  {
+                    Thread.Sleep(VisualizationRenderInterval);
+                  }
                 }
               }
             }
@@ -1999,6 +2016,9 @@ namespace MediaPortal.Visualization
         {
           RenderVisualization(e.Graphics);
         }
+
+        //                else
+        //                    base.OnPaint(e);
       }
 
       else
@@ -2014,7 +2034,7 @@ namespace MediaPortal.Visualization
 
       try
       {
-        if ((_EnableStatusOverlays || !FullScreen) && !Viz.IsWmpVis() && Viz != null && !Viz.IsWinampVis() && !Viz.IsSoniqueVis() && !Viz.IsBassboxVis())
+        if ((_EnableStatusOverlays || !FullScreen) && !IsWmpVis() && Viz != null && !Viz.IsWinampVis() && !Viz.IsSoniqueVis())
         {
           if (DialogWindowIsActive)
           {

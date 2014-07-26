@@ -27,6 +27,7 @@ namespace MediaPortal.Visualization
   {
     List<VisualizationInfo> GetVisualizationPluginsInfo();
     bool CreateVisualization(VisualizationInfo vizPluginInfo);
+    bool CreatePreviewVisualization(VisualizationInfo vizPluginInfo);
     // Used to preview visualizations when in the configuration app
     bool ResizeVisualizationWindow(Size newSize);
     bool Start();
@@ -38,6 +39,9 @@ namespace MediaPortal.Visualization
     VisualizationInfo.PluginType CurrentVisualizationType { get; }
     VisualizationInfo.PluginType OldVisualizationType { get; }
     void ConfigWinampViz();
+    void InitWinampVis();
+    void InitSoniqueVis();
+    void InitBassboxVis();
     void GetNextVis();
     void GetPrevVis();
   }

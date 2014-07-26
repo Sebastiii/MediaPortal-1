@@ -27,6 +27,7 @@ namespace MediaPortal.Visualization
     BassVis_Api.BASSVIS_PARAM VizParam { get; }
     bool Initialized { get; }
     bool PreRenderRequired { get; }
+    bool IsEngineInstalled();
     bool IsWinampVis();
     bool IsSoniqueVis();
     bool IsBassboxVis();

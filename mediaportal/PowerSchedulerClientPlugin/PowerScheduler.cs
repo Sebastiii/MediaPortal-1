@@ -530,7 +530,7 @@ namespace MediaPortal.Plugins.Process
             (Current24hHour >= _settings.AllowedSleepStopTimeOnWeekend))
             )) && (((int)DateTime.Now.DayOfWeek == 0) || (int)DateTime.Now.DayOfWeek == 6)))
           {
-            Log.Debug(LogType.PS, "PS: Standby is not allowed at this hour: StandbyPrevented");
+            Log.Debug("PS: Standby is not allowed at this hour: StandbyPrevented");
             _currentStandbyHandler = "NOT-ALLOWED-TIME";
             _currentStandbyMode = StandbyMode.StandbyPrevented;
             return StandbyMode.StandbyPrevented;
@@ -1116,22 +1116,22 @@ namespace MediaPortal.Plugins.Process
             // Check allowed start time
             intSetting = reader.GetValueAsInt("psclientplugin", "StandbyHoursFrom", 0);
             _settings.AllowedSleepStartTime = intSetting;
-            Log.Debug(LogType.PS, "PS: Standby allowed from {0} o' clock", _settings.AllowedSleepStartTime);
+            Log.Debug("PS: Standby allowed from {0} o' clock", _settings.AllowedSleepStartTime);
 
             // Check allowed stop time
             intSetting = reader.GetValueAsInt("psclientplugin", "StandbyHoursTo", 24);
             _settings.AllowedSleepStopTime = intSetting;
-            Log.Debug(LogType.PS, "PS: Standby allowed until {0} o' clock", _settings.AllowedSleepStopTime);
+            Log.Debug("PS: Standby allowed until {0} o' clock", _settings.AllowedSleepStopTime);
 
             // Check allowed start time on weekend
             intSetting = reader.GetValueAsInt("psclientplugin", "StandbyHoursOnWeekendFrom", 0);
             _settings.AllowedSleepStartTimeOnWeekend = intSetting;
-            Log.Debug(LogType.PS, "PS: Standby allowed from {0} o' clock on weekend", _settings.AllowedSleepStartTimeOnWeekend);
+            Log.Debug("PS: Standby allowed from {0} o' clock on weekend", _settings.AllowedSleepStartTimeOnWeekend);
 
             // Check allowed stop time on weekend
             intSetting = reader.GetValueAsInt("psclientplugin", "StandbyHoursOnWeekendTo", 24);
             _settings.AllowedSleepStopTimeOnWeekend = intSetting;
-            Log.Debug(LogType.PS, "PS: Standby allowed until {0} o' clock on weekend", _settings.AllowedSleepStopTimeOnWeekend);
+            Log.Debug("PS: Standby allowed until {0} o' clock on weekend", _settings.AllowedSleepStopTimeOnWeekend);
 
             // Check if PowerScheduler should wakeup the system automatically
             intSetting = reader.GetValueAsInt("psclientplugin", "Profile", 0);

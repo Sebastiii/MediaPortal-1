@@ -1208,7 +1208,7 @@ namespace TvEngine.PowerScheduler
       if (_settings.AllowedSleepStartTimeOnWeekend != intSetting)
       {
         _settings.AllowedSleepStartTimeOnWeekend = intSetting;
-        Log.Debug(LogType.PS, "PS: Standby allowed from {0} o' clock on weekend", _settings.AllowedSleepStartTimeOnWeekend);
+        Log.Debug("PS: Standby allowed from {0} o' clock on weekend", _settings.AllowedSleepStartTimeOnWeekend);
         changed = true;
       }
 
@@ -1217,7 +1217,7 @@ namespace TvEngine.PowerScheduler
       if (_settings.AllowedSleepStopTimeOnWeekend != intSetting)
       {
         _settings.AllowedSleepStopTimeOnWeekend = intSetting;
-        Log.Debug(LogType.PS, "PS: Standby allowed until {0} o' clock on weekend", _settings.AllowedSleepStopTimeOnWeekend);
+        Log.Debug("PS: Standby allowed until {0} o' clock on weekend", _settings.AllowedSleepStopTimeOnWeekend);
         changed = true;
       }
 

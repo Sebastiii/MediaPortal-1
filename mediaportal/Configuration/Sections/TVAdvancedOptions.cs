@@ -19,11 +19,12 @@
 #endregion
 
 using System.ComponentModel;
+using System.Collections.Generic;
 using System.Diagnostics;
 using MediaPortal.Profile;
 using MediaPortal.UserInterface.Controls;
 using MediaPortal.Util;
-
+using MediaPortal.GUI.Library;
 
 #pragma warning disable 108
 
@@ -37,7 +38,7 @@ namespace MediaPortal.Configuration.Sections
     private MPLabel mpWarningLabel;
     private MPCheckBox mpDoNotAllowSlowMotionDuringZappingCheckBox;
     private MPToolTip mpMainToolTip;
-    private bool singleSeat;
+    private static bool singleSeat;
     private MPGroupBox mpRtspPathsGroupBox;
     private MPLabel mpLabel1;
     private MPLabel mpLabelRecording;
@@ -49,8 +50,9 @@ namespace MediaPortal.Configuration.Sections
     private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog;
     private MPLabel mpLabelWarning;
     private MPLabel mpLabelNote;
-    private System.Windows.Forms.LinkLabel linkLabelWiki;
     public int pluginVersion;
+    private MPLabel mpLabel2;
+    private string hostname;
 
 
     public TVAdvancedOptions()
@@ -65,6 +67,7 @@ namespace MediaPortal.Configuration.Sections
 
     public override void OnSectionActivated()
     {
+      CheckAndResetSettings();
       base.OnSectionActivated();
     }
 
@@ -78,7 +81,7 @@ namespace MediaPortal.Configuration.Sections
     {
       System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(TVAdvancedOptions));
       this.groupBoxSettings = new MediaPortal.UserInterface.Controls.MPGroupBox();
-      this.linkLabelWiki = new System.Windows.Forms.LinkLabel();
+      this.mpLabel2 = new MediaPortal.UserInterface.Controls.MPLabel();
       this.mpDoNotAllowSlowMotionDuringZappingCheckBox = new MediaPortal.UserInterface.Controls.MPCheckBox();
       this.mpUseRtspCheckBox = new MediaPortal.UserInterface.Controls.MPCheckBox();
       this.mpWarningLabel = new MediaPortal.UserInterface.Controls.MPLabel();
@@ -103,7 +106,7 @@ namespace MediaPortal.Configuration.Sections
       // 
       this.groupBoxSettings.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-      this.groupBoxSettings.Controls.Add(this.linkLabelWiki);
+      this.groupBoxSettings.Controls.Add(this.mpLabel2);
       this.groupBoxSettings.Controls.Add(this.mpDoNotAllowSlowMotionDuringZappingCheckBox);
       this.groupBoxSettings.Controls.Add(this.mpUseRtspCheckBox);
       this.groupBoxSettings.Controls.Add(this.mpWarningLabel);
@@ -115,16 +118,15 @@ namespace MediaPortal.Configuration.Sections
       this.groupBoxSettings.TabStop = false;
       this.groupBoxSettings.Text = "Settings";
       // 
-      // linkLabelWiki
+      // mpLabel2
       // 
-      this.linkLabelWiki.AutoSize = true;
-      this.linkLabelWiki.Location = new System.Drawing.Point(6, 52);
-      this.linkLabelWiki.Name = "linkLabelWiki";
-      this.linkLabelWiki.Size = new System.Drawing.Size(215, 13);
-      this.linkLabelWiki.TabIndex = 5;
-      this.linkLabelWiki.TabStop = true;
-      this.linkLabelWiki.Text = "Please refer to the Wiki for more information.";
-      this.linkLabelWiki.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabelWiki_LinkClicked);
+      this.mpLabel2.AutoSize = true;
+      this.mpLabel2.ForeColor = System.Drawing.Color.Red;
+      this.mpLabel2.Location = new System.Drawing.Point(9, 52);
+      this.mpLabel2.Name = "mpLabel2";
+      this.mpLabel2.Size = new System.Drawing.Size(232, 13);
+      this.mpLabel2.TabIndex = 5;
+      this.mpLabel2.Text = "Click on \'help\' (above right) for more information.";
       // 
       // mpDoNotAllowSlowMotionDuringZappingCheckBox
       // 
@@ -158,7 +160,7 @@ namespace MediaPortal.Configuration.Sections
       this.mpWarningLabel.ForeColor = System.Drawing.Color.Red;
       this.mpWarningLabel.Location = new System.Drawing.Point(6, 18);
       this.mpWarningLabel.Name = "mpWarningLabel";
-      this.mpWarningLabel.Size = new System.Drawing.Size(460, 34);
+      this.mpWarningLabel.Size = new System.Drawing.Size(460, 37);
       this.mpWarningLabel.TabIndex = 0;
       this.mpWarningLabel.Text = "This section provides special advanced option settings. Some of these settings ar" +
     "e experimental. Do not alter any of the settings below unless you know what you " +
@@ -298,10 +300,37 @@ namespace MediaPortal.Configuration.Sections
 
     #endregion
 
+    public void CheckAndResetSettings()
+    {
+      if (hostname != TVRadio.TextBoxHostname)
+      {
+        Log.Debug("TVAdvancedOptions: TV Server hostname is changed from \"{0}\" to \"{1}\".", hostname, TVRadio.TextBoxHostname);
+        Network.Reset();
+        singleSeat = Network.IsSingleSeat(TVRadio.TextBoxHostname);
+        mpUseRtspCheckBox.Checked = false;
+        mpUseRtspCheckBox.Text = singleSeat ? "Single seat setup: force RTSP usage." : "Multi seat setup: use UNC paths.";
+        hostname = TVRadio.TextBoxHostname;
+      }
+    }
+
     public override void LoadSettings()
     {
-      singleSeat = Network.IsSingleSeat();
+      string serverName;
+      using (Settings reader = new MPSettings())
+      {
+        serverName = reader.GetValueAsString("tvservice", "hostname", string.Empty);
+      }
+      if (serverName != string.Empty)
+      {
+        singleSeat = Network.IsSingleSeat();
+      }
+      else
+      {
+        singleSeat = true;
+      }
       
+      hostname = serverName;
+
       bool rtsp;
       using (Settings xmlreader = new MPSettings())
       {
@@ -318,6 +347,7 @@ namespace MediaPortal.Configuration.Sections
 
     public override void SaveSettings()
     {
+      CheckAndResetSettings();
       bool rtsp = singleSeat ? mpUseRtspCheckBox.Checked : !mpUseRtspCheckBox.Checked;
 
       using (Settings xmlwriter = new MPSettings())
@@ -327,7 +357,6 @@ namespace MediaPortal.Configuration.Sections
         xmlwriter.SetValue("tvservice", "timeshiftingpath", textBoxTimeshifting.Text);
         xmlwriter.SetValueAsBool("tvservice", "AdvancedOptions", true);
       }
-
       DebugSettings.DoNotAllowSlowMotionDuringZapping = mpDoNotAllowSlowMotionDuringZappingCheckBox.Checked;
     }
 
@@ -346,12 +375,6 @@ namespace MediaPortal.Configuration.Sections
     {
       folderBrowserDialog.ShowDialog();
       textBoxTimeshifting.Text = folderBrowserDialog.SelectedPath;
-    }
-
-    private void linkLabelWiki_LinkClicked(object sender, System.Windows.Forms.LinkLabelLinkClickedEventArgs e)
-    {
-      ProcessStartInfo sInfo = new ProcessStartInfo("http://wiki.team-mediaportal.com/1_MEDIAPORTAL_1/141_Configuration/TV-Server_Configuration");
-      Process.Start(sInfo);
     }
   }
 }

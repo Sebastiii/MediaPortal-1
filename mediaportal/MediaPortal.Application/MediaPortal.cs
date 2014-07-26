@@ -943,7 +943,9 @@ public class MediaPortalApp : D3D, IRender
               Log.Error("MediaPortal stopped due to an exception {0} {1} {2}", ex.Message, ex.Source, ex.StackTrace);
               _mpCrashed = true;
             }
+            app.OnExit();
           }
+
         }
         catch (Exception ex)
         {
@@ -2918,6 +2920,8 @@ public class MediaPortalApp : D3D, IRender
     {
       _redeyedevice.Close();
     }
+
+    GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.STOPPING;
 
     g_Player.Stop();
     InputDevices.Stop();

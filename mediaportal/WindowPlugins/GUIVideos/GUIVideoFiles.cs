@@ -1642,7 +1642,7 @@ namespace MediaPortal.GUI.Video
           CreateFolderThumb(item, true);
           break;
         case 1264: // Get media info (refresh mediainfo and duration)
-
+          RefreshMediaInfo(item);
           break;
       }
     }

@@ -1391,83 +1391,84 @@ public class MediaPortalApp : D3D, IRender
     return a;
   }
 
-  private void DispatchThreadMessages()
-  {
-    if (_listThreadMessages.Count > 0)
-    {
-      List<Message> list;
-      lock (_listThreadMessagesLock) // need lock when switching queues
-      {
-        list = _listThreadMessages;
-        _listThreadMessages = new List<Message>();
-      }
-      for (int i = 0; i < list.Count; ++i)
-      {
-        Message message = list[i];
-        WndProcProcess(ref message);
-      }
-    }
-    _WndProcMessage = false;
-  }
+  //private void DispatchThreadMessages()
+  //{
+  //  if (_listThreadMessages.Count > 0)
+  //  {
+  //    List<Message> list;
+  //    lock (_listThreadMessagesLock) // need lock when switching queues
+  //    {
+  //      list = _listThreadMessages;
+  //      _listThreadMessages = new List<Message>();
+  //    }
+  //    for (int i = 0; i < list.Count; ++i)
+  //    {
+  //      Message message = list[i];
+  //      WndProcProcess(ref message);
+  //    }
+  //  }
+  //  _WndProcMessage = false;
+  //}
 
-  /// <summary>
-  /// send thread message. Same as sendmessage() however message is placed on a queue
-  /// which is processed later.
-  /// </summary>
-  /// <param name="message">new message to send</param>
-  private static void SendThreadMessage(ref Message message)
-  {
-    if (OnThreadMessageHandler != null)
-    {
-      OnThreadMessageHandler(null, message);
-    }
-    if (message != null)
-    {
-      lock (_listThreadMessagesLock)
-      {
-        _listThreadMessages.Add(message);
-      }
-    }
-  }
+  ///// <summary>
+  ///// send thread message. Same as sendmessage() however message is placed on a queue
+  ///// which is processed later.
+  ///// </summary>
+  ///// <param name="message">new message to send</param>
+  //private static void SendThreadMessage(ref Message message)
+  //{
+  //  if (OnThreadMessageHandler != null)
+  //  {
+  //    OnThreadMessageHandler(null, message);
+  //  }
+  //  if (message != null)
+  //  {
+  //    lock (_listThreadMessagesLock)
+  //    {
+  //      _listThreadMessages.Add(message);
+  //    }
+  //  }
+  //}
 
-  /// <summary>
-  /// Message Pump
-  /// </summary>
-  /// <param name="msg"></param>
+  ///// <summary>
+  ///// Message Pump
+  ///// </summary>
+  ///// <param name="msg"></param>
+  //protected override void WndProc(ref Message msg)
+  //{
+  //  try
+  //  {
+  //    if (_listThreadMessages.Count == 1)
+  //    {
+  //      DispatchThreadMessages();
+  //    }
+  //    if (!_WndProcMessage)
+  //    {
+  //      _WndProcMessage = true;
+  //      {
+  //        WndProcProcess(ref msg);
+  //      }
+  //    }
+  //    else if (_WndProcMessage)
+  //    {
+  //      SendThreadMessage(ref msg);
+  //    }
+  //  }
+  //  catch (Exception ex)
+  //  {
+  //    Log.Error(ex);
+  //  }
+  //}
+
+  //protected void WndProcProcess(ref Message msg)
   protected override void WndProc(ref Message msg)
-  {
-    try
-    {
-      if (_listThreadMessages.Count == 1)
-      {
-        DispatchThreadMessages();
-      }
-      if (!_WndProcMessage)
-      {
-        _WndProcMessage = true;
-        {
-          WndProcProcess(ref msg);
-        }
-      }
-      else if (_WndProcMessage)
-      {
-        SendThreadMessage(ref msg);
-      }
-    }
-    catch (Exception ex)
-    {
-      Log.Error(ex);
-    }
-  }
-
-  protected void WndProcProcess(ref Message msg)
   {
     try
     {
       switch (msg.Msg)
       {
-        case (int)ShellNotifications.WmShnotify:
-          NotifyInfos info = new NotifyInfos((ShellNotifications.SHCNE)(int)msg.LParam);
+        case (int) ShellNotifications.WmShnotify:
+          NotifyInfos info = new NotifyInfos((ShellNotifications.SHCNE) (int) msg.LParam);
 
           if (Notifications.NotificationReceipt(msg.WParam, msg.LParam, ref info))
           {
@@ -1659,14 +1660,14 @@ public class MediaPortalApp : D3D, IRender
     {
       Log.Error(ex);
     }
-    finally
-    {
-      _WndProcMessage = false;
-      if (_listThreadMessages.Count == 1)
-      {
-        DispatchThreadMessages();
-      }
-    }
+    //finally
+    //{
+    //  _WndProcMessage = false;
+    //  if (_listThreadMessages.Count == 1)
+    //  {
+    //    DispatchThreadMessages();
+    //  }
+    //}
   }
 
 
@@ -1732,108 +1733,151 @@ public class MediaPortalApp : D3D, IRender
 
     while (true)
     {
-    try
-    {
-      Log.Debug("Main: WM_POWERBROADCAST ({0})", Enum.GetName(typeof(PBT_EVENT), msg.WParam.ToInt32()));
-      switch (msg.WParam.ToInt32())
+      try
       {
-        case PBT_APMSUSPEND:
-          Log.Info("Main: Suspending operation");
-          PrepareSuspend();
-          PluginManager.WndProc(ref msg);
-          OnSuspend();
-          break;
+        // get next msg from queue, blocks if there is no msg
+        Log.Debug("PowerBroadcastThread: get next message from queue");
+        if (_powerBroadcastQueue.Count == 0)
+        {
+          Log.Debug("PowerBroadcastThread: no message in queue - waiting");
+          _queueHandle.Reset();
+          _queueHandle.WaitOne();
+        }
+        msg = (Message) _powerBroadcastQueue.Dequeue();
+        msgType = msg.WParam.ToInt32();
+        Log.Debug("PowerBroadcastThread: got WM_POWERBROADCAST ({0}) message from queue",
+          Enum.GetName(typeof (PBT_EVENT), msgType));
 
-        // When resuming from hibernation, the OS always assume that a user is present. This is by design of Windows.
-        case PBT_APMRESUMEAUTOMATIC:
-          Log.Info("Main: Resuming operation");
-          {
+        switch (msgType)
+        {
+          case PBT_APMSUSPEND:
+            Log.Info("PowerBroadcastThread: Suspending operation");
+            resuming = false;
+            PrepareSuspend();
+            PluginManager.WndProc(ref msg);
+            OnSuspend();
+            break;
+
+          case PBT_APMRESUMEAUTOMATIC:
+            Log.Info("PowerBroadcastThread: Resuming operation");
+            if (!resuming)
+            {
+              if (DelayResume())
+                break; // delay was cancelled
+            }
+            resuming = !resuming;
             OnResumeAutomatic();
-          }
-          PluginManager.WndProc(ref msg);
-          break;
+            PluginManager.WndProc(ref msg);
+            break;
 
-        // only for Windows XP
-        case PBT_APMRESUMECRITICAL:
-          Log.Info("Main: Resuming operation after a forced suspend");
-          {
+          case PBT_APMRESUMECRITICAL:
+            Log.Info("PowerBroadcastThread: Resuming operation after a forced suspend");
+            if (DelayResume())
+              break; // delay was cancelled
+            OnResumeAutomatic();
             OnResumeSuspend();
-          }
-          PluginManager.WndProc(ref msg);
-          break;
+            PluginManager.WndProc(ref msg);
+            break;
 
-        case PBT_APMRESUMESUSPEND:
-          Log.Info("Main: Resuming operation on user action");
-          {
+          case PBT_APMRESUMESUSPEND:
+            Log.Info("PowerBroadcastThread: Resuming operation on user action");
+            if (!resuming)
+            {
+              if (DelayResume())
+                break; // delay was cancelled
+            }
+            resuming = !resuming;
             OnResumeSuspend();
-          }
-          PluginManager.WndProc(ref msg);
-          break;
+            PluginManager.WndProc(ref msg);
+            break;
 
-        case PBT_POWERSETTINGCHANGE:
-          var ps = (POWERBROADCAST_SETTING)Marshal.PtrToStructure(msg.LParam, typeof(POWERBROADCAST_SETTING));
+          case PBT_POWERSETTINGCHANGE:
+            var ps = (POWERBROADCAST_SETTING) Marshal.PtrToStructure(msg.LParam, typeof (POWERBROADCAST_SETTING));
 
-          if (ps.PowerSetting == GUID_SYSTEM_AWAYMODE && ps.DataLength == Marshal.SizeOf(typeof(Int32)))
-          {
-            switch (ps.Data)
+            if (ps.PowerSetting == GUID_SYSTEM_AWAYMODE && ps.DataLength == Marshal.SizeOf(typeof (Int32)))
             {
-              case 0:
-                Log.Info("Main: The computer is exiting away mode");
-                IsInAwayMode = false;
-                break;
-              case 1:
-                Log.Info("Main: The computer is entering away mode");
-                IsInAwayMode = true;
-                break;
+              switch (ps.Data)
+              {
+                case 0:
+                  Log.Info("PowerBroadcastThread: The computer is exiting away mode");
+                  IsInAwayMode = false;
+                  break;
+                case 1:
+                  Log.Info("PowerBroadcastThread: The computer is entering away mode");
+                  IsInAwayMode = true;
+                  break;
+              }
             }
-          }
-          // GUID_SESSION_DISPLAY_STATUS is only provided on Win8 and above
-          else if ((ps.PowerSetting == GUID_MONITOR_POWER_ON || ps.PowerSetting == GUID_SESSION_DISPLAY_STATUS) && ps.DataLength == Marshal.SizeOf(typeof(Int32)))
-          {
-            switch (ps.Data)
+              // GUID_SESSION_DISPLAY_STATUS is only provided on Win8 and above
+            else if ((ps.PowerSetting == GUID_MONITOR_POWER_ON || ps.PowerSetting == GUID_SESSION_DISPLAY_STATUS) &&
+                     ps.DataLength == Marshal.SizeOf(typeof (Int32)))
             {
-              case 0:
-                Log.Info("Main: The display is off");
-                IsDisplayTurnedOn = false;
-                break;
-              case 1:
-                Log.Info("Main: The display is on");
-                IsDisplayTurnedOn = true;
-                ShowMouseCursor(false);
-                break;
-              case 2:
-                Log.Info("Main: The display is dimmed");
-                IsDisplayTurnedOn = true;
-                break;
+              switch (ps.Data)
+              {
+                case 0:
+                  Log.Info("PowerBroadcastThread: The display is off");
+                  IsDisplayTurnedOn = false;
+                  break;
+                case 1:
+                  Log.Info("PowerBroadcastThread: The display is on");
+                  IsDisplayTurnedOn = true;
+                  ShowMouseCursor(false);
+                  break;
+                case 2:
+                  Log.Info("PowerBroadcastThread: The display is dimmed");
+                  IsDisplayTurnedOn = true;
+                  break;
+              }
             }
-          }
-          // GUIT_SESSION_USER_PRESENCE is only provide on Win8 and above
-          else if (ps.PowerSetting == GUID_SESSION_USER_PRESENCE && ps.DataLength == Marshal.SizeOf(typeof(Int32)))
-          {
-            switch (ps.Data)
+              // GUIT_SESSION_USER_PRESENCE is only provide on Win8 and above
+            else if (ps.PowerSetting == GUID_SESSION_USER_PRESENCE && ps.DataLength == Marshal.SizeOf(typeof (Int32)))
             {
-              case 0:
-                Log.Info("Main: User is providing input to the session");
-                IsUserPresent = true;
-                ShowMouseCursor(false);
-                break;
-              case 2:
+              switch (ps.Data)
+              {
+                case 0:
+                  Log.Info("PowerBroadcastThread: User is providing input to the session");
+                  IsUserPresent = true;
+                  ShowMouseCursor(false);
+                  break;
+                case 2:
                 Log.Info("Main: The user activity timeout has elapsed with no interaction from the user");
-                IsUserPresent = false;
-                break;
+                  IsUserPresent = false;
+                  break;
+              }
             }
-          }
-          PluginManager.WndProc(ref msg);
-          break;
+            PluginManager.WndProc(ref msg);
+            break;
+        }
       }
-      msg.Result = (IntPtr)1;
-    }
-    catch (System.Exception ex)
-    {
-      Log.Error("Main: Exception catch on OnPowerBroadcast : {0}", ex);
+      catch (Exception ex)
+      {
+        Log.Error("Main: Exception catch on OnPowerBroadcast : {0}", ex);
+      }
     }
   }
 
+  /// <summary>
+  /// DelayResume() waits as configured
+  /// </summary>
+  /// <returns>true if the waiting was cancelled</returns>
+  private bool DelayResume()
+  {
+    bool result = false;
+    
+    // delay resuming as configured
+    using (Settings xmlreader = new MPSettings())
+    {
+      int waitOnResume = xmlreader.GetValueAsBool("general", "delay resume", false) ? xmlreader.GetValueAsInt("general", "delay", 0) : 0;
+      if (waitOnResume > 0)
+      {
+        Log.Debug("PowerBroadcastThread: Waiting on resume {0} secs", waitOnResume);
+        _delayResumeHandle.Reset();
+        result = _delayResumeHandle.WaitOne(waitOnResume * 1000);
+        Log.Debug("PowerBroadcastThread: Waiting on resume terminated by {0}", result ? "cancel" : "time elapsed");
+      }
+    }
+    return result;
+  }
 
   /// <summary>
   /// 
@@ -1882,7 +1926,7 @@ public class MediaPortalApp : D3D, IRender
       var hdr = (DEV_BROADCAST_HDR)Marshal.PtrToStructure(msg.LParam, typeof(DEV_BROADCAST_HDR));
       if (hdr.dbcc_devicetype != DBT_DEVTYP_DEVICEINTERFACE)
       {
-        Log.Debug("Main: Device type is {0}", Enum.GetName(typeof(DBT_DEV_TYPE), hdr.dbcc_devicetype));
+        Log.Debug("Main: Device type is {0}", Enum.GetName(typeof(DBT_DEV_TYPE), hdr.dbcc_devicetype));        
       }
       else
       {
@@ -2250,7 +2294,7 @@ public class MediaPortalApp : D3D, IRender
     {
       case SIZE_RESTORED:
         Log.Debug("Main: WM_SIZE (SIZE_RESTORED: {0}x{1})", x, y);
-
+  
         // do not continue if form is not created yet
         if (!Created)
         {
@@ -2269,7 +2313,7 @@ public class MediaPortalApp : D3D, IRender
           Size maxClientSize = CalcMaxClientArea();
           if (x > maxClientSize.Width || y > maxClientSize.Height)
           {
-            Log.Debug("Main: Requested client size {0}x{1} is larger than the maximum aspect ratio safe client size of {2}x{3} - overriding",
+            Log.Debug("Main: Requested client size {0}x{1} is larger than the maximum aspect ratio safe client size of {2}x{3} - overriding", 
               x, y, maxClientSize.Width, maxClientSize.Height);
             ClientSize = maxClientSize;
             break;
@@ -2279,7 +2323,7 @@ public class MediaPortalApp : D3D, IRender
           var height = (int)((double)x * GUIGraphicsContext.SkinSize.Height / GUIGraphicsContext.SkinSize.Width);
           if (height != y && Windowed)
           {
-            Log.Info("Main: Overriding size from {0}x{1} to {2}x{3} (Skin resized to {4}x{5})",
+            Log.Info("Main: Overriding size from {0}x{1} to {2}x{3} (Skin resized to {4}x{5})", 
               x + border.Width, y + border.Height, x + border.Width, height + border.Height, x, height);
             ClientSize = new Size(x, height);
           }
@@ -2305,7 +2349,7 @@ public class MediaPortalApp : D3D, IRender
       case SIZE_MINIMIZED:
         Log.Debug("Main: WM_SIZE (SIZE_MINIMIZED: {0}x{1})", x, y);
         break;
-
+      
       case SIZE_MAXIMIZED:
         Log.Debug("Main: WM_SIZE (SIZE_MAXIMIZED: {0}x{1})", x, y);
         if (VisualizationBase.VisualizationWindow != null)
@@ -2314,11 +2358,11 @@ public class MediaPortalApp : D3D, IRender
           VisualizationBase.VisualizationWindow.Width = ClientRectangle.Height;
         }
         break;
-
+      
       case SIZE_MAXSHOW:
         Log.Debug("Main: WM_SIZE (SIZE_MAXSHOW: {0}x{1})", x, y);
         break;
-
+      
       case SIZE_MAXHIDE:
         Log.Debug("Main: WM_SIZE (SIZE_MAXHIDE: {0}x{1})", x, y);
         break;
@@ -2326,7 +2370,7 @@ public class MediaPortalApp : D3D, IRender
     msg.Result = (IntPtr)0;
   }
 
-
+  
   /// <summary>
   /// 
   /// </summary>
@@ -2486,11 +2530,12 @@ public class MediaPortalApp : D3D, IRender
       Log.Debug("Main: OnSuspend - dispose DB connection");
       DisposeDBs();
 
+      _suspended = true;
       Log.Info("Main: OnSuspend - Done");
     }
     finally
     {
-      _suspended = true;
+      _resumed = false;
     }
   }
 
@@ -2499,46 +2544,25 @@ public class MediaPortalApp : D3D, IRender
   /// </summary>
   private void OnResumeAutomatic()
   {
-    if (_suspended)
-    {
-      _suspended = false;
-      DelayResume();
+    Log.Debug("Main: OnResumeAutomatic - reopen Database");
+    ReOpenDBs();
 
-      Log.Debug("Main: OnResumeAutomatic - reopen Database");
-      ReOpenDBs();
-    }
     Log.Info("Main: OnResumeAutomatic - Done");
   }
 
   /// <summary>
-  /// delay resuming as configured
-  /// </summary>
-  private void DelayResume()
-  {
-    using (Settings xmlreader = new MPSettings())
-    {
-      int waitOnResume = xmlreader.GetValueAsBool("general", "delay resume", false) ? xmlreader.GetValueAsInt("general", "delay", 0) : 0;
-      if (waitOnResume > 0)
-      {
-        Log.Info("Main: OnResumeAutomatic - waiting on resume {0} secs", waitOnResume);
-        Thread.Sleep(waitOnResume * 1000);
-      }
-    }
-  }
-
-  /// <summary>
-  /// This event is sent together with the PBT_APMRESUMEAUTOMATIC event if the system has resumed operation due to user activity.
+  /// This event is sent after the  PBT_APMRESUMEAUTOMATIC event if the system has resumed operation due to user activity.
   /// </summary>
   private void OnResumeSuspend()
   {
-    if (_suspended)
+    if (_resumed)
     {
-      _suspended = false;
-      DelayResume();
-
-      Log.Debug("Main: OnResumeSuspend - reopen Database");
-      ReOpenDBs();
+      Log.Info("Main: OnResumeSuspend Resuming is already in progress");
+      return;
     }
+
+    // Reopen DB and activation Startup delay if user use it.
+    OnResumeAutomatic();
 
     // avoid screen saver after standby
     GUIGraphicsContext.ResetLastActivity();
@@ -2595,6 +2619,7 @@ public class MediaPortalApp : D3D, IRender
       Log.Warn("Main: OnResumeSuspend - Could not initialize volume handler: ", exception.Message);
     }
 
+    _suspended = false;
     _resumed = true;
     _lastOnresume = DateTime.Now;
     Log.Info("Main: OnResumeSuspend - Done");
@@ -2763,7 +2788,7 @@ public class MediaPortalApp : D3D, IRender
       {
         Log.Warn("Main: Could not register for power settings notification GUID_SESSION_USER_PRESENCE");
       }
-    }
+    } 
     else if (OSInfo.OSInfo.VistaOrLater())
     {
       _displayStatusHandle = RegisterPowerSettingNotification(Handle, ref GUID_MONITOR_POWER_ON, DEVICE_NOTIFY_WINDOW_HANDLE);
@@ -2884,7 +2909,7 @@ public class MediaPortalApp : D3D, IRender
         {
           currentmoduleid = Convert.ToString(GUIWindowManager.GetPreviousActiveWindow());
         }
-
+        
         if (!currentmodulefullscreen && currentmodulefullscreenstate == "True")
         {
           currentmodulefullscreen = true;
@@ -3036,7 +3061,7 @@ public class MediaPortalApp : D3D, IRender
     GUIWindowManager.Clear();
     GUIWaitCursor.Dispose();
     GUITextureManager.Dispose();
-
+ 
     // Loading keymap.xml
     Log.Info("Startup: Load keymap.xml");
     UpdateSplashScreenMessage(GUILocalizeStrings.Get(65));
@@ -3094,7 +3119,7 @@ public class MediaPortalApp : D3D, IRender
     }
     PluginManager.LoadWindowPlugins();
     PluginManager.CheckExternalPlayersCompatibility();
-
+    
     // Initialize window manager
     UpdateSplashScreenMessage(GUILocalizeStrings.Get(71));
     Log.Info("Startup: Initialize Window Manager...");
@@ -3121,7 +3146,7 @@ public class MediaPortalApp : D3D, IRender
     {
       GUIWindowManager.ActivateWindow(GUIWindowManager.ActiveWindow);
     }
-
+   
     // setting D3D9 helper variables
     if (GUIGraphicsContext.DX9Device != null)
     {
@@ -3498,7 +3523,7 @@ public class MediaPortalApp : D3D, IRender
   #endregion
 
   #region FrameMove()
-
+  
   /// <summary>
   /// 
   /// </summary>
@@ -3509,11 +3534,11 @@ public class MediaPortalApp : D3D, IRender
     {
       return;
     }
-
-#if !DEBUG
+    
+    #if !DEBUG
     try
     {
-#endif
+    #endif
       if (GUIGraphicsContext.CurrentState == GUIGraphicsContext.State.STOPPING)
       {
         Log.Info("Main: Stopping FrameMove");
@@ -3576,7 +3601,7 @@ public class MediaPortalApp : D3D, IRender
               // As long as we're e.g. listening to music on "Playing Now" screen
               // we might not want to slow things down here.
               // This feature is mainly intended to save energy on idle 24/7 rigs.
-              if (GUIWindowManager.ActiveWindow != (int)GUIWindow.Window.WINDOW_MUSIC_PLAYING_NOW)
+              if (GUIWindowManager.ActiveWindow != (int) GUIWindow.Window.WINDOW_MUSIC_PLAYING_NOW)
               {
                 if (!GUIGraphicsContext.SaveRenderCycles)
                 {
@@ -3589,13 +3614,13 @@ public class MediaPortalApp : D3D, IRender
         }
       }
 
-#if !DEBUG
+    #if !DEBUG
     }
     catch (Exception ex)
     {
       Log.Error(ex);
     }
-#endif
+    #endif
   }
 
   #endregion
@@ -3623,7 +3648,7 @@ public class MediaPortalApp : D3D, IRender
           _lastContextMenuAction = DateTime.Now;
           return;
         }
-
+        
         if (_lastContextMenuAction != DateTime.MaxValue)
         {
           TimeSpan ts = _lastContextMenuAction - DateTime.Now;
@@ -3826,7 +3851,7 @@ public class MediaPortalApp : D3D, IRender
                 }
                 else
                 {
-                  Log.Info("Main: SUSPEND ignored since suspend graceperiod of {0} sec. is violated.", _suspendGracePeriodSec);
+                  Log.Info("Main: SUSPEND ignored since suspend graceperiod of {0} sec. is violated.", _suspendGracePeriodSec); 
                 }
                 break;
 
@@ -4151,7 +4176,7 @@ public class MediaPortalApp : D3D, IRender
               }
             }
             break;
-
+ 
           // fast rewind...
           case Action.ActionType.ACTION_REWIND:
             {
@@ -4196,9 +4221,9 @@ public class MediaPortalApp : D3D, IRender
     {
       Log.Error(ex);
       Log.Error("Exception: {0} {1} {2}", ex.Message, ex.Source, ex.StackTrace);
-#if !DEBUG
+      #if !DEBUG
       throw new Exception("exception occurred", ex);
-#endif
+      #endif
     }
   }
 
@@ -4266,7 +4291,7 @@ public class MediaPortalApp : D3D, IRender
   }
 
   #region keypress handlers
-
+  
   /// <summary>
   /// 
   /// </summary>
@@ -4358,6 +4383,7 @@ public class MediaPortalApp : D3D, IRender
   #endregion
 
   #region mouse event handlers
+  
 
   /// <summary>
   /// 
@@ -4387,8 +4413,8 @@ public class MediaPortalApp : D3D, IRender
     {
       base.MouseMoveEvent(e);
       Point p = ScaleCursorPosition(e.Location);
-      var action = new Action(Action.ActionType.ACTION_MOVE_UP, p.X, p.Y) { MouseButton = e.Button };
-      GUIGraphicsContext.ResetLastActivity();
+      var action = new Action(Action.ActionType.ACTION_MOVE_UP, p.X, p.Y) {MouseButton = e.Button};
+      GUIGraphicsContext.ResetLastActivity(); 
       GUIGraphicsContext.OnAction(action);
       base.MouseMoveEvent(e);
     }
@@ -4396,7 +4422,7 @@ public class MediaPortalApp : D3D, IRender
     {
       base.MouseMoveEvent(e);
       Point p = ScaleCursorPosition(e.Location);
-      var action = new Action(Action.ActionType.ACTION_MOVE_DOWN, p.X, p.Y) { MouseButton = e.Button };
+      var action = new Action(Action.ActionType.ACTION_MOVE_DOWN, p.X, p.Y) {MouseButton = e.Button};
       GUIGraphicsContext.ResetLastActivity();
       GUIGraphicsContext.OnAction(action);
       base.MouseMoveEvent(e);
@@ -4435,7 +4461,7 @@ public class MediaPortalApp : D3D, IRender
         if (GUIWindowManager.GetWindow(GUIWindowManager.ActiveWindow) != null)
         {
           Point p = ScaleCursorPosition(e.Location);
-          var action = new Action(Action.ActionType.ACTION_MOUSE_MOVE, p.X, p.Y) { MouseButton = e.Button };
+          var action = new Action(Action.ActionType.ACTION_MOUSE_MOVE, p.X, p.Y) {MouseButton = e.Button};
           GUIGraphicsContext.OnAction(action);
           if (MouseCursor && current != null)
           {
@@ -4474,7 +4500,7 @@ public class MediaPortalApp : D3D, IRender
       var actionMove = new Action(Action.ActionType.ACTION_MOUSE_MOVE, p.X, p.Y);
       GUIGraphicsContext.OnAction(actionMove);
 
-      var action = new Action(Action.ActionType.ACTION_MOUSE_DOUBLECLICK, p.X, p.Y) { MouseButton = e.Button, SoundFileName = "click.wav" };
+      var action = new Action(Action.ActionType.ACTION_MOUSE_DOUBLECLICK, p.X, p.Y) {MouseButton = e.Button, SoundFileName = "click.wav"};
       if (action.SoundFileName.Length > 0 && !g_Player.Playing)
       {
         Utils.PlaySound(action.SoundFileName, false, true);
@@ -4535,7 +4561,7 @@ public class MediaPortalApp : D3D, IRender
         }
         else
         {
-          action = new Action(Action.ActionType.ACTION_MOUSE_CLICK, p.X, p.Y) { MouseButton = e.Button, SoundFileName = "click.wav" };
+          action = new Action(Action.ActionType.ACTION_MOUSE_CLICK, p.X, p.Y) {MouseButton = e.Button, SoundFileName = "click.wav"};
           if (action.SoundFileName.Length > 0 && !g_Player.Playing)
           {
             Utils.PlaySound(action.SoundFileName, false, true);
@@ -4553,7 +4579,7 @@ public class MediaPortalApp : D3D, IRender
             (GUIWindowManager.ActiveWindow == (int) GUIWindow.Window.WINDOW_SLIDESHOW))
         {
           // Get context menu
-          action = new Action(Action.ActionType.ACTION_CONTEXT_MENU, p.X, p.Y) { MouseButton = e.Button, SoundFileName = "click.wav" };
+          action = new Action(Action.ActionType.ACTION_CONTEXT_MENU, p.X, p.Y) {MouseButton = e.Button, SoundFileName = "click.wav"};
           if (action.SoundFileName.Length > 0 && !g_Player.Playing)
           {
             Utils.PlaySound(action.SoundFileName, false, true);
@@ -4593,7 +4619,7 @@ public class MediaPortalApp : D3D, IRender
     }
   }
 
-
+  
   /// <summary>
   /// 
   /// </summary>
@@ -4615,7 +4641,7 @@ public class MediaPortalApp : D3D, IRender
     {
       _mouseClickFired = false;
       Point p = ScaleCursorPosition(e.Location);
-      var action = new Action(Action.ActionType.ACTION_MOUSE_CLICK, p.X, p.Y) { MouseButton = _lastMouseClickEvent.Button, SoundFileName = "click.wav" };
+      var action = new Action(Action.ActionType.ACTION_MOUSE_CLICK, p.X, p.Y) {MouseButton = _lastMouseClickEvent.Button, SoundFileName = "click.wav"};
       if (action.SoundFileName.Length > 0 && !g_Player.Playing)
       {
         Utils.PlaySound(action.SoundFileName, false, true);
@@ -4851,7 +4877,7 @@ public class MediaPortalApp : D3D, IRender
   #endregion
 
   #region External process start / stop handling
-
+  
   /// <summary>
   /// 
   /// </summary>
@@ -4884,7 +4910,7 @@ public class MediaPortalApp : D3D, IRender
   }
 
   #endregion
-
+  
   #region helper funcs
 
   /// <summary>
@@ -5037,8 +5063,8 @@ public class MediaPortalApp : D3D, IRender
   /// <returns>A string containing the current time.</returns>
   protected string GetTime()
   {
-    return DateTime.Now.ToString(_useLongDateFormat
-      ? Thread.CurrentThread.CurrentCulture.DateTimeFormat.LongTimePattern
+    return DateTime.Now.ToString(_useLongDateFormat 
+      ? Thread.CurrentThread.CurrentCulture.DateTimeFormat.LongTimePattern 
       : Thread.CurrentThread.CurrentCulture.DateTimeFormat.ShortTimePattern);
   }
 

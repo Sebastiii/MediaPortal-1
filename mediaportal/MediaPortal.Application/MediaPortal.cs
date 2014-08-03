@@ -199,11 +199,6 @@ public class MediaPortalApp : D3D, IRender
   // Framegrabber instance
   private FrameGrabber grabber = FrameGrabber.GetInstance();
 
-  private static List<Message> _listThreadMessages = new List<Message>();
-  private static readonly object _listThreadMessagesLock = new object();
-  private static event ThreadMessageHandler OnThreadMessageHandler;
-  private delegate void ThreadMessageHandler(object sender, Message message);
-
   #endregion
 
   #region enumns

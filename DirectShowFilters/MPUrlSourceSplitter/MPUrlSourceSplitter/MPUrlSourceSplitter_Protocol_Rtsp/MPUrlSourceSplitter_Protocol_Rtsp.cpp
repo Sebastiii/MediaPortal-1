@@ -604,6 +604,10 @@ HRESULT CMPUrlSourceSplitter_Protocol_Rtsp::ReceiveData(CStreamPackage *streamPa
                 track->SetStreamFragmentToDownload(UINT_MAX);
               }
             }
+            else
+            {
+              this->connectionState = OpeningFailed;
+            }
           }
           else
           {
@@ -1542,7 +1546,6 @@ HRESULT CMPUrlSourceSplitter_Protocol_Rtsp::Initialize(CPluginConfiguration *con
 
   if (SUCCEEDED(result))
   {
-    this->logger->SetParameters(protocolConfiguration->GetConfiguration());
     this->configuration->Clear();
 
     CHECK_CONDITION_HRESULT(result, this->configuration->Append(protocolConfiguration->GetConfiguration()), result, E_OUTOFMEMORY);

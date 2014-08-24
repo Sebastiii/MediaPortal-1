@@ -36,7 +36,7 @@ CParserPlugin::CParserPlugin(HRESULT *result, CLogger *logger, CParameterCollect
   this->logger = NULL;
   this->configuration = NULL;
   this->protocolHoster = NULL;
-  this->parserResult = Pending;
+  this->parserResult = PARSER_RESULT_PENDING;
   this->connectionParameters = NULL;
 
   if ((result != NULL) && (SUCCEEDED(*result)))
@@ -71,7 +71,6 @@ HRESULT CParserPlugin::Initialize(CPluginConfiguration *configuration)
   if (SUCCEEDED(result))
   {
     this->protocolHoster = parserConfiguration->GetProtocolHoster();
-    this->logger->SetParameters(parserConfiguration->GetConfiguration());
     this->configuration->Clear();
 
     CHECK_CONDITION_HRESULT(result, this->configuration->Append(parserConfiguration->GetConfiguration()), result, E_OUTOFMEMORY);
@@ -99,7 +98,7 @@ HRESULT CParserPlugin::GetConnectionParameters(CParameterCollection *parameters)
 HRESULT CParserPlugin::ClearSession(void)
 {
   this->flags = PARSER_PLUGIN_FLAG_NONE;
-  this->parserResult = Pending;
+  this->parserResult = PARSER_RESULT_PENDING;
   this->connectionParameters->Clear();
 
   return S_OK;
@@ -109,7 +108,7 @@ HRESULT CParserPlugin::ClearSession(void)
 
 /* get methods */
 
-CParserPlugin::ParserResult CParserPlugin::GetParserResult(void)
+HRESULT CParserPlugin::GetParserResult(void)
 {
   return this->parserResult;
 }

@@ -18,26 +18,26 @@
     along with MediaPortal 2.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "StdAfx.h"
 
-#ifndef __STATIC_LOGGER_CONTEXT_COLLECTION_DEFINED
-#define __STATIC_LOGGER_CONTEXT_COLLECTION_DEFINED
+#include "AfhsDecryptionPluginConfiguration.h"
 
-#include "Collection.h"
-#include "StaticLoggerContext.h"
-
-class CStaticLoggerContextCollection : public CCollection<CStaticLoggerContext>
+CAfhsDecryptionPluginConfiguration::CAfhsDecryptionPluginConfiguration(HRESULT *result, CParameterCollection *configuration)
+  : CPluginConfiguration(result, configuration)
 {
-public:
-  CStaticLoggerContextCollection(HRESULT *result);
-  ~CStaticLoggerContextCollection(void);
+  /*if ((result != NULL) && (SUCCEEDED(*result)))
+  {
+  }*/
+}
 
-protected:
+CAfhsDecryptionPluginConfiguration::~CAfhsDecryptionPluginConfiguration(void)
+{
+}
 
-  // clones specified item
-  // @param item : the item to clone
-  // @return : deep clone of item or NULL if not implemented
-  CStaticLoggerContext *Clone(CStaticLoggerContext *item);
-};
+/* get methods */
 
-#endif
+/* set methods */
+
+/* other methods */
+
+/* protected methods */

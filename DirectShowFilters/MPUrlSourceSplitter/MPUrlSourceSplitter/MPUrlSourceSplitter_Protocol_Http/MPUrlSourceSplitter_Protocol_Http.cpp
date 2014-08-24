@@ -378,6 +378,10 @@ HRESULT CMPUrlSourceSplitter_Protocol_Http::ReceiveData(CStreamPackage *streamPa
             {
               this->connectionState = Opening;
             }
+            else
+            {
+              this->connectionState = OpeningFailed;
+            }
           }
           else
           {
@@ -1048,7 +1052,6 @@ HRESULT CMPUrlSourceSplitter_Protocol_Http::Initialize(CPluginConfiguration *con
 
   if (SUCCEEDED(result))
   {
-    this->logger->SetParameters(protocolConfiguration->GetConfiguration());
     this->configuration->Clear();
 
     CHECK_CONDITION_HRESULT(result, this->configuration->Append(protocolConfiguration->GetConfiguration()), result, E_OUTOFMEMORY);

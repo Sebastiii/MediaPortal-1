@@ -18,20 +18,26 @@
     along with MediaPortal 2.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "StdAfx.h"
+#pragma once
 
-#include "StaticLoggerContextCollection.h"
+#ifndef __LOGGER_CONTEXT_COLLECTION_DEFINED
+#define __LOGGER_CONTEXT_COLLECTION_DEFINED
 
-CStaticLoggerContextCollection::CStaticLoggerContextCollection(HRESULT *result)
-  : CCollection(result)
+#include "Collection.h"
+#include "LoggerContext.h"
+
+class CLoggerContextCollection : public CCollection<CLoggerContext>
 {
-}
+public:
+  CLoggerContextCollection(HRESULT *result);
+  ~CLoggerContextCollection(void);
 
-CStaticLoggerContextCollection::~CStaticLoggerContextCollection(void)
-{
-}
+protected:
 
-CStaticLoggerContext *CStaticLoggerContextCollection::Clone(CStaticLoggerContext *item)
-{
-  return NULL;
-}
+  // clones specified item
+  // @param item : the item to clone
+  // @return : deep clone of item or NULL if not implemented
+  CLoggerContext *Clone(CLoggerContext *item);
+};
+
+#endif

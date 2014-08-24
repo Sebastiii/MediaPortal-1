@@ -173,14 +173,15 @@
     <None Include="source\MpAudioRenderer.def" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="SoundTouch\source\InterpolateCubic.h" />
+    <ClInclude Include="SoundTouch\source\InterpolateLinear.h" />
+    <ClInclude Include="SoundTouch\source\InterpolateShannon.h" />
+    <ClInclude Include="source\IMPAudioSettings.h" />
     <ClInclude Include="libresample\src\samplerate.h" />
     <ClInclude Include="AE_mixer\AEAudioFormat.h" />
     <ClInclude Include="AE_mixer\AEChannelInfo.h" />
     <ClInclude Include="AE_mixer\AERemap.h" />
     <ClInclude Include="AE_mixer\StdString.h" />
-    <ClInclude Include="SoundTouch\source\InterpolateCubic.h" />
-    <ClInclude Include="SoundTouch\source\InterpolateLinear.h" />
-    <ClInclude Include="SoundTouch\source\InterpolateShannon.h" />
     <ClInclude Include="source\AC3EncoderFilter.h" />
     <ClInclude Include="source\BaseAudioSink.h" />
     <ClInclude Include="source\BitDepthAdapter.h" />
@@ -190,7 +191,6 @@
     <ClInclude Include="source\Globals.h" />
     <ClInclude Include="source\IAudioSink.h" />
     <ClInclude Include="source\IAVSyncClock.h" />
-    <ClInclude Include="source\IMPAudioSettings.h" />
     <ClInclude Include="source\IRenderFilter.h" />
     <ClInclude Include="source\ITimeStretch.h" />
     <ClInclude Include="source\MpAudioRenderer.h" />

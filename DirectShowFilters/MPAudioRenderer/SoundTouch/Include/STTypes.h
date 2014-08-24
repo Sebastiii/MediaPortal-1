@@ -8,10 +8,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2014-01-07 19:24:28 +0100 (mar., 07 janv. 2014) $
+// Last changed  : $Date: 2014-04-06 18:57:21 +0300 (su, 06 huhti 2014) $
 // File revision : $Revision: 3 $
 //
-// $Id: STTypes.h 183 2014-01-07 18:24:28Z oparviai $
+// $Id: STTypes.h 195 2014-04-06 15:57:21Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -60,26 +60,12 @@ typedef unsigned long   ulong;
     #include "soundtouch_config.h"
 #endif
 
-#ifndef _WINDEF_
-    // if these aren't defined already by Windows headers, define now
-
-#if defined(__APPLE__)
-   typedef signed char BOOL;
-#else
-   typedef int BOOL;
-#endif 
-
-    #define FALSE   0
-    #define TRUE    1
-
-#endif  // _WINDEF_
-
 
 namespace soundtouch
 {
     /// Activate these undef's to overrule the possible sampletype 
     /// setting inherited from some other header file:
-    //#undef SOUNDTOUCH_INTEGER_SAMPLES
+    #undef SOUNDTOUCH_INTEGER_SAMPLES
     //#undef SOUNDTOUCH_FLOAT_SAMPLES
 
     /// If following flag is defined, always uses multichannel processing 
@@ -193,6 +179,6 @@ namespace soundtouch
 // parameter setting crosses from value <1 to >=1 or vice versa during processing. 
 // Default is off as such crossover is untypical case and involves a slight sound 
 // quality compromise.
-//#define SOUNDTOUCH_PREVENT_CLICK_AT_RATE_CROSSOVER   1
+#define PREVENT_CLICK_AT_RATE_CROSSOVER   1
 
 #endif

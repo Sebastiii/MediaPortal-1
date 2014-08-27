@@ -25,6 +25,7 @@
 
 #include "CacheFileItemCollection.h"
 #include "AfhsSegmentFragment.h"
+#include "IndexedAfhsSegmentFragmentCollection.h"
 
 #define SEGMENT_FRAGMENT_INDEX_NOT_SET                                UINT_MAX
 
@@ -40,11 +41,6 @@ public:
   // @param index : the index of item to find
   // @return : the reference to item or NULL if not find
   virtual CAfhsSegmentFragment *GetItem(unsigned int index);
-
-  // gets first not downloaded segment fragment
-  // @param requested : start index for searching
-  // @return : index of first not downloaded segment fragment or UINT_MAX if not exists
-  unsigned int GetFirstNotDownloadedSegmentFragment(unsigned int start);
 
   // gets index of stream segment where position is between start position and end position
   // @param position : the position between start position and end position
@@ -83,6 +79,16 @@ public:
   // @return : extra parameters for all segments and fragments or NULL if error
   const wchar_t *GetSegmentFragmentUrlExtraParameters(void);
 
+  // gets collection of indexed segment fragments which are encrypted
+  // @param collection : the collection to fill in indexed segment fragment
+  // @return : S_OK if successful, error code otherwise
+  virtual HRESULT GetEncryptedStreamFragments(CIndexedAfhsSegmentFragmentCollection *collection);
+
+  // gets collection of indexed segment fragments which are decrypted
+  // @param collection : the collection to fill in indexed segment fragment
+  // @return : S_OK if successful, error code otherwise
+  virtual HRESULT GetDecryptedStreamFragments(CIndexedAfhsSegmentFragmentCollection *collection);
+
   /* set methods */
 
   // sets start index of segment fragment to start searching for specific position
@@ -111,46 +117,41 @@ public:
   // @result : true if successful, false otherwise
   virtual bool Insert(unsigned int position, CCacheFileItem *item);
 
-  /* old implementation */
+  // tests if in collection are some ecnrypted segment fragments
+  // @return : true if in collection are some encrypted segment fragments, false otherwise
+  bool HasEncryptedSegmentFragments(void);
 
-  //// get the segment and fragment from collection with specified url
-  //// @param name : the URL of segment and fragment to find
-  //// @param invariant : specifies if segment and fragment URL shoud be find with invariant casing
-  //// @return : the reference to segment and fragment or NULL if not find
-  //CSegmentFragment *GetSegmentFragment(const wchar_t *url, bool invariant);
+  // tests if in collection are some decrypted segment fragments
+  // @return : true if in collection are some decrypted segment fragments, false otherwise
+  bool HasDecryptedSegmentFragments(void);
 
-  //// gets first not downloaded segment and fragment
-  //// @param requested : start index for searching
-  //// @return : index of first not downloaded segment and fragment or UINT_MAX if not exists
-  //unsigned int GetFirstNotDownloadedSegmentFragment(unsigned int start);
+  /* index methods */
 
-  //// gets first not processed segment and fragment
-  //// @param requested : start index for searching
-  //// @return : index of first not processed segment and fragment or UINT_MAX if not exists
-  //unsigned int GetFirstNotProcessedSegmentFragment(unsigned int start);
+  // insert item with specified item index to indexes
+  // @param itemIndex : the item index in collection to insert into indexes
+  // @return : true if successful, false otherwise
+  virtual bool InsertIndexes(unsigned int itemIndex);
 
-  //// gets default url for segment and fragment
-  //// @param segmentFragment : the segment and fragment to get default url
-  //// @return : default url for segment and fragment or NULL if error
-  //wchar_t *GetSegmentFragmentUrl(CSegmentFragment *segmentFragment);
+  // removes items from indexes
+  // @param startIndex : the start index of items to remove from indexes
+  // @param count : the count of items to remove from indexes
+  virtual void RemoveIndexes(unsigned int startIndex, unsigned int count);
 
-  //// gets default base url for all segments and fragment
-  //// @return : default base url for all segments and fragments or NULL if error
-  //const wchar_t *GetBaseUrl(void);
+  // updates indexes by using specified item
+  // @param itemIndex : index of item to update indexes
+  // @param count : the count of items to updates indexes
+  // @retur : true if successful, false otherwise
+  virtual bool UpdateIndexes(unsigned int itemIndex, unsigned int count);
 
-  //// sets default base url for all segments and fragments
-  //// @param baseUrl : default base url to set
-  //// @return : true if successful, false otherwise
-  //bool SetBaseUrl(const wchar_t *baseUrl);
+  // ensures that in internal buffer of indexes is enough space
+  // each index must check against its count of items and add addingCount
+  // if in internal buffer of indexes is not enough space, method tries to allocate enough space in index
+  // @param addingCount : the count of added index items
+  // @return : true if in internal buffer of indexes is enough space, false otherwise
+  virtual bool EnsureEnoughSpaceIndexes(unsigned int addingCount);
 
-  //// gets extra parameters for all segments and fragment
-  //// @return : extra parameters for all segments and fragments or NULL if error
-  //const wchar_t *GetSegmentFragmentUrlExtraParameters(void);
-
-  //// sets extra parameters for all segments and fragments
-  //// @param segmentFragmentUrlExtraParameters : segment and fragment URL extra parameters to set
-  //// @return : true if successful, false otherwise
-  //bool SetSegmentFragmentUrlExtraParameters(const wchar_t *segmentFragmentUrlExtraParameters);
+  // clears all indexes to default state
+  virtual void ClearIndexes(void);
 
 protected:
   // holds start index of segment fragment to start searching for specific position
@@ -162,30 +163,12 @@ protected:
   // holds extra parameters which are added to all segments and fragments
   wchar_t *segmentFragmentUrlExtraParameters;
 
-  /* old implementation */
+  // we need to maintain several indexes
+  // first index : item->IsEncrypted()
+  // second index : item->IsDecrypted()
 
-  //// holds default base url for all segments and fragments
-  //wchar_t *defaultBaseUrl;
-
-  //// holds extra parameters which are added to all segments and fragments
-  //wchar_t *segmentFragmentUrlExtraParameters;
-
-  //// compare two item keys
-  //// @param firstKey : the first item key to compare
-  //// @param secondKey : the second item key to compare
-  //// @param context : the reference to user defined context
-  //// @return : 0 if keys are equal, lower than zero if firstKey is lower than secondKey, greater than zero if firstKey is greater than secondKey
-  //int CompareItemKeys(const wchar_t *firstKey, const wchar_t *secondKey, void *context);
-
-  //// gets key for item
-  //// @param item : the item to get key
-  //// @return : the key of item
-  //const wchar_t *GetKey(CSegmentFragment *item);
-
-  //// clones specified item
-  //// @param item : the item to clone
-  //// @return : deep clone of item or NULL if not implemented
-  //CSegmentFragment *Clone(CSegmentFragment *item);
+  CIndexCollection *indexEncrypted;
+  CIndexCollection *indexDecrypted;
 };
 
 #endif

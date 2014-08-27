@@ -29,12 +29,11 @@
 
 #define AFHS_SEGMENT_FRAGMENT_FLAG_NONE                               CACHE_FILE_ITEM_FLAG_NONE
 
-#define AFHS_SEGMENT_FRAGMENT_FLAG_DOWNLOADED                         (1 << (CACHE_FILE_ITEM_FLAG_LAST + 0))
+#define AFHS_SEGMENT_FRAGMENT_FLAG_ENCRYPTED                          (1 << (CACHE_FILE_ITEM_FLAG_LAST + 0))
 #define AFHS_SEGMENT_FRAGMENT_FLAG_DECRYPTED                          (1 << (CACHE_FILE_ITEM_FLAG_LAST + 1))
-#define AFHS_SEGMENT_FRAGMENT_FLAG_DISCONTINUITY                      (1 << (CACHE_FILE_ITEM_FLAG_LAST + 2))
-#define AFHS_SEGMENT_FRAGMENT_FLAG_CONTAINS_HEADER_OR_META_PACKET     (1 << (CACHE_FILE_ITEM_FLAG_LAST + 3))
+#define AFHS_SEGMENT_FRAGMENT_FLAG_CONTAINS_HEADER_OR_META_PACKET     (1 << (CACHE_FILE_ITEM_FLAG_LAST + 2))
 
-#define AFHS_SEGMENT_FRAGMENT_FLAG_LAST                               (CACHE_FILE_ITEM_FLAG_LAST + 4)
+#define AFHS_SEGMENT_FRAGMENT_FLAG_LAST                               (CACHE_FILE_ITEM_FLAG_LAST + 3)
 
 #define AFHS_SEGMENT_FRAGMENT_START_POSITION_NOT_SET                  -1
 
@@ -68,21 +67,19 @@ public:
 
   /* set methods */
 
-  // sets if segment and fragment is downloaded
-  // @param downloaded : true if segment and fragment is downloaded
-  void SetDownloaded(bool downloaded);
-
   // sets if segment and fragment is decrypted
   // @param decrypted : true if segment and fragment is decrypted, false otherwise
-  void SetDecrypted(bool decrypted);
+  // @param segmentFragmentItemIndex : the index of segment fragment (used for updating indexes), UINT_MAX for ignoring update (but indexes MUST be updated later)
+  void SetDecrypted(bool decrypted, unsigned int segmentFragmentItemIndex);
+
+  // sets if segment and fragment is encrypted
+  // @param encrypted : true if segment and fragment is encrypted, false otherwise
+  // @param segmentFragmentItemIndex : the index of segment fragment (used for updating indexes), UINT_MAX for ignoring update (but indexes MUST be updated later)
+  void SetEncrypted(bool encrypted, unsigned int segmentFragmentItemIndex);
 
   // sets fragment start position
   // @param fragmentStartPosition : fragment start position to set
   void SetFragmentStartPosition(int64_t fragmentStartPosition);
-
-  // sets discontinuity
-  // @param discontinuity : true if discontinuity after data, false otherwise
-  void SetDiscontinuity(bool discontinuity);
 
   // sets if fragment contains header or meta packet
   // @param containsHeaderOrMetaPacket : true if fragment contains header or meta packet, false otherwise
@@ -90,17 +87,13 @@ public:
 
   /* other methods */
 
-  // tests if discontinuity is set
-  // @return : true if discontinuity is set, false otherwise
-  bool IsDiscontinuity(void);
-
-  // tests if fragment is downloaded
-  // @return : true if downloaded, false otherwise
-  bool IsDownloaded(void);
-
   // tests if fragment is decrypted
   // @return : true if decrypted, false otherwise
   bool IsDecrypted(void);
+
+  // tests if fragment is encrypted
+  // @return : true if encrypted, false otherwise
+  bool IsEncrypted(void);
 
   // tests if fragment has set start position
   // @return : true if fragment has set start position, false otherwise
@@ -111,7 +104,6 @@ public:
   bool ContainsHeaderOrMetaPacket(void);
 
 private:
-
   // stores segment ID
   unsigned int segment;
   // stores fragment ID
@@ -123,14 +115,14 @@ private:
 
   /* methods */
 
-  // gets new instance of AFHS stream fragment
-  // @return : new AFHS stream fragment instance or NULL if error
-  virtual CCacheFileItem *CreateItem(void);
+  // gets new instance of cache file item
+  // @return : new cache file item instance or NULL if error
+  virtual CFastSearchItem *CreateItem(void);
 
   // deeply clones current instance
   // @param item : the cache file item instance to clone
   // @return : true if successful, false otherwise
-  virtual bool InternalClone(CCacheFileItem *item);
+  virtual bool InternalClone(CFastSearchItem *item);
 };
 
 #endif

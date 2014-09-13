@@ -74,6 +74,8 @@ CMPUrlSourceSplitter_Protocol_Udp::CMPUrlSourceSplitter_Protocol_Udp(HRESULT *re
   this->lastStoreTime = 0;
   this->flags |= PROTOCOL_PLUGIN_FLAG_STREAM_LENGTH_ESTIMATED;
   this->lastReceiveDataTime = 0;
+  this->lastProcessedSize = 0;
+  this->currentProcessedSize = 0;
 
   if ((result != NULL) && (SUCCEEDED(*result)))
   {
@@ -248,13 +250,16 @@ HRESULT CMPUrlSourceSplitter_Protocol_Udp::ReceiveData(CStreamPackage *streamPac
 
           if (SUCCEEDED(result))
           {
+            currentDownloadingFragment->GetBuffer()->AddToBufferWithResize(this->mainCurlInstance->GetUdpDownloadResponse()->GetReceivedData(), 0, bytesRead);
+            this->currentStreamPosition += bytesRead;
+
             currentDownloadingFragment->SetLoadedToMemoryTime(this->lastReceiveDataTime, UINT_MAX);
             currentDownloadingFragment->SetDownloaded(true, UINT_MAX);
+            currentDownloadingFragment->SetProcessed(true, UINT_MAX);
 
             this->streamFragments->UpdateIndexes(this->streamFragments->Count() - 1, 1);
 
-            currentDownloadingFragment->GetBuffer()->AddToBufferWithResize(this->mainCurlInstance->GetUdpDownloadResponse()->GetReceivedData(), 0, bytesRead);
-            this->currentStreamPosition += bytesRead;
+            this->streamFragments->RecalculateProcessedStreamFragmentStartPosition(this->streamFragments->Count() - 1);
 
             this->mainCurlInstance->GetUdpDownloadResponse()->GetReceivedData()->RemoveFromBufferAndMove(bytesRead);
 
@@ -262,9 +267,10 @@ HRESULT CMPUrlSourceSplitter_Protocol_Udp::ReceiveData(CStreamPackage *streamPac
             CUdpStreamFragment *fragment = new CUdpStreamFragment(&result);
             CHECK_POINTER_HRESULT(result, fragment, result, E_OUTOFMEMORY);
 
-            CHECK_CONDITION_EXECUTE(SUCCEEDED(result), fragment->SetStart(this->currentStreamPosition));
+            CHECK_CONDITION_EXECUTE(SUCCEEDED(result), fragment->SetFragmentStartPosition(this->currentStreamPosition));
 
             CHECK_CONDITION_HRESULT(result, this->streamFragments->Add(fragment), result, E_OUTOFMEMORY);
+            CHECK_CONDITION_EXECUTE(SUCCEEDED(result), this->streamFragments->SetSearchCount(this->streamFragments->Count() - 1));
             CHECK_CONDITION_EXECUTE(FAILED(result), FREE_MEM_CLASS(fragment));
           }
         }
@@ -276,10 +282,10 @@ HRESULT CMPUrlSourceSplitter_Protocol_Udp::ReceiveData(CStreamPackage *streamPac
       this->connectionState = Initializing;
 
       // clear all not downloaded stream fragments
-      CIndexedCacheFileItemCollection *notDownloadedIndexedItems = new CIndexedCacheFileItemCollection(&result);
+      CIndexedStreamFragmentCollection *notDownloadedIndexedItems = new CIndexedStreamFragmentCollection(&result);
       CHECK_CONDITION_HRESULT(result, notDownloadedIndexedItems, result, E_OUTOFMEMORY);
 
-      CHECK_CONDITION_EXECUTE(SUCCEEDED(result), result = this->streamFragments->GetNotDownloadedItems(notDownloadedIndexedItems));
+      CHECK_CONDITION_EXECUTE(SUCCEEDED(result), result = this->streamFragments->GetNotDownloadedStreamFragments(notDownloadedIndexedItems));
 
       for (unsigned int i = 0; (SUCCEEDED(result) && (i < notDownloadedIndexedItems->Count())); i++)
       {
@@ -342,8 +348,9 @@ HRESULT CMPUrlSourceSplitter_Protocol_Udp::ReceiveData(CStreamPackage *streamPac
                 CUdpStreamFragment *fragment = new CUdpStreamFragment(&result);
                 CHECK_POINTER_HRESULT(result, fragment, result, E_OUTOFMEMORY);
 
-                fragment->SetStart(0);
-                CHECK_CONDITION_HRESULT(result, this->streamFragments->Insert(0, fragment), result, E_OUTOFMEMORY);
+                CHECK_CONDITION_EXECUTE(SUCCEEDED(result), fragment->SetFragmentStartPosition(0));
+
+                CHECK_CONDITION_HRESULT(result, this->streamFragments->Add(fragment), result, E_OUTOFMEMORY);
                 CHECK_CONDITION_EXECUTE(FAILED(result), FREE_MEM_CLASS(fragment));
               }
             }
@@ -388,7 +395,7 @@ HRESULT CMPUrlSourceSplitter_Protocol_Udp::ReceiveData(CStreamPackage *streamPac
             CUdpStreamFragment *lastFragment = this->streamFragments->GetItem(this->streamFragments->Count() - 1);
 
             lastFragment->SetDiscontinuity(true, this->streamFragments->Count() - 1);
-            this->logger->Log(LOGGER_VERBOSE, L"%s: %s: discontinuity, start '%lld', size '%u', current stream position: '%lld'", PROTOCOL_IMPLEMENTATION_NAME, METHOD_RECEIVE_DATA_NAME, lastFragment->GetStart(), lastFragment->GetLength(), this->currentStreamPosition);
+            this->logger->Log(LOGGER_VERBOSE, L"%s: %s: discontinuity, start '%lld', size '%u', current stream position: '%lld'", PROTOCOL_IMPLEMENTATION_NAME, METHOD_RECEIVE_DATA_NAME, lastFragment->GetFragmentStartPosition(), lastFragment->GetLength(), this->currentStreamPosition);
           }
         }
       }
@@ -419,7 +426,7 @@ HRESULT CMPUrlSourceSplitter_Protocol_Udp::ReceiveData(CStreamPackage *streamPac
       // get last stream fragment to get total length
       CUdpStreamFragment *fragment = (this->streamFragments->Count() != 0) ? this->streamFragments->GetItem(this->streamFragments->Count() - 1) : NULL;
 
-      this->streamLength = (fragment != NULL) ? (fragment->GetStart() + (int64_t)fragment->GetLength()) : 0;
+      this->streamLength = (fragment != NULL) ? (fragment->GetFragmentStartPosition() + (int64_t)fragment->GetLength()) : 0;
       this->logger->Log(LOGGER_VERBOSE, L"%s: %s: setting total length: %u", PROTOCOL_IMPLEMENTATION_NAME, METHOD_RECEIVE_DATA_NAME, this->streamLength);
 
       this->flags |= PROTOCOL_PLUGIN_FLAG_SET_STREAM_LENGTH;
@@ -483,11 +490,11 @@ HRESULT CMPUrlSourceSplitter_Protocol_Udp::ReceiveData(CStreamPackage *streamPac
         CUdpStreamFragment *fragment = this->streamFragments->GetItem(packetIndex);
 
         // set copy data start and copy data length
-        unsigned int copyDataStart = (startPosition > fragment->GetStart()) ? (unsigned int)(startPosition - fragment->GetStart()) : 0;
+        unsigned int copyDataStart = (startPosition > fragment->GetFragmentStartPosition()) ? (unsigned int)(startPosition - fragment->GetFragmentStartPosition()) : 0;
         unsigned int copyDataLength = min(fragment->GetLength() - copyDataStart, request->GetLength() - foundDataLength);
 
         // copy data from stream fragment to response buffer
-        if (this->cacheFile->LoadItems(this->streamFragments, packetIndex, true))
+        if (this->cacheFile->LoadItems(this->streamFragments, packetIndex, true, UINT_MAX, (this->lastProcessedSize == 0) ? CACHE_FILE_RELOAD_SIZE : this->lastProcessedSize))
         {
           // memory is allocated while switching from Created to Waiting state, we can't have problem on next line
           response->GetBuffer()->AddToBufferWithResize(fragment->GetBuffer(), copyDataStart, copyDataLength);
@@ -500,6 +507,7 @@ HRESULT CMPUrlSourceSplitter_Protocol_Udp::ReceiveData(CStreamPackage *streamPac
 
         // update length of data
         foundDataLength += copyDataLength;
+        this->currentProcessedSize += copyDataLength;
 
         if (fragment->IsDiscontinuity())
         {
@@ -589,6 +597,9 @@ HRESULT CMPUrlSourceSplitter_Protocol_Udp::ReceiveData(CStreamPackage *streamPac
     {
       this->lastStoreTime = GetTickCount();
 
+      this->lastProcessedSize = this->currentProcessedSize;
+      this->currentProcessedSize = 0;
+
       if (this->cacheFile->GetCacheFile() == NULL)
       {
         wchar_t *storeFilePath = this->GetStoreFile(L"temp");
@@ -596,36 +607,37 @@ HRESULT CMPUrlSourceSplitter_Protocol_Udp::ReceiveData(CStreamPackage *streamPac
         FREE_MEM(storeFilePath);
       }
 
-      // in case of live stream remove all downloaded and processed stream fragments
+      // in case of live stream remove all downloaded and processed stream fragments before reported stream time, they will not be needed (after created demuxer and started playing)
       // processed stream fragments means that all data from stream fragment were requested
-      if (this->IsLiveStream() && (this->reportedStreamTime > 0) && (this->reportedStreamPosition > 0) && (this->pauseSeekStopMode == PAUSE_SEEK_STOP_MODE_NONE))
+      if ((this->IsLiveStream()) && (this->reportedStreamTime > 0) && (this->reportedStreamPosition > 0))
       {
-        // remove used stream fragments
-        // in case of live stream they will not be needed (after created demuxer and started playing)
-        // in case of seeking based on position there can be serious problem, because position in data is not related to play time - switching audio stream will not work
+        unsigned int fragmentRemoveStart = (this->streamFragments->GetStartSearchingIndex() == 0) ? 1 : 0;
+        unsigned int fragmentRemoveCount = 0;
 
-        if (this->streamFragments->Count() > 0)
+        while ((fragmentRemoveStart + fragmentRemoveCount) < this->streamFragments->Count())
         {
-          unsigned int fragmentRemoveCount = 0;
+          CUdpStreamFragment *fragment = this->streamFragments->GetItem(fragmentRemoveStart + fragmentRemoveCount);
 
-          while (fragmentRemoveCount < this->streamFragments->Count())
+          if (((fragmentRemoveStart + fragmentRemoveCount) != this->streamFragments->GetStartSearchingIndex()) && fragment->IsProcessed() && ((fragment->GetFragmentStartPosition() + (int64_t)fragment->GetLength()) < (int64_t)this->reportedStreamPosition))
           {
-            CUdpStreamFragment *fragment = this->streamFragments->GetItem(fragmentRemoveCount);
-
-            if (fragment->IsDownloaded() && ((fragment->GetStart() + (int64_t)fragment->GetLength()) < (int64_t)this->reportedStreamPosition))
-            {
-              fragmentRemoveCount++;
-            }
-            else
-            {
-              break;
-            }
+            // fragment will be removed
+            fragmentRemoveCount++;
           }
-
-          if ((fragmentRemoveCount > 0) && (this->cacheFile->RemoveItems(this->streamFragments, 0, fragmentRemoveCount)))
+          else
           {
-            this->streamFragments->Remove(0, fragmentRemoveCount);
+            break;
           }
+        }
+
+        if ((fragmentRemoveCount > 0) && (this->cacheFile->RemoveItems(this->streamFragments, fragmentRemoveStart, fragmentRemoveCount)))
+        {
+          unsigned int startSearchIndex = (fragmentRemoveCount > this->streamFragments->GetStartSearchingIndex()) ? 0 : (this->streamFragments->GetStartSearchingIndex() - fragmentRemoveCount);
+          unsigned int searchCountDecrease = (fragmentRemoveCount > this->streamFragments->GetStartSearchingIndex()) ? (fragmentRemoveCount - this->streamFragments->GetStartSearchingIndex()) : 0;
+
+          this->streamFragments->SetStartSearchingIndex(startSearchIndex);
+          this->streamFragments->SetSearchCount(this->streamFragments->GetSearchCount() - searchCountDecrease);
+
+          this->streamFragments->Remove(fragmentRemoveStart, fragmentRemoveCount);
         }
       }
 
@@ -739,6 +751,8 @@ void CMPUrlSourceSplitter_Protocol_Udp::ClearSession(void)
   this->lastStoreTime = 0;
   this->flags |= PROTOCOL_PLUGIN_FLAG_STREAM_LENGTH_ESTIMATED;
   this->lastReceiveDataTime = 0;
+  this->lastProcessedSize = 0;
+  this->currentProcessedSize = 0;
 
   this->logger->Log(LOGGER_INFO, METHOD_END_FORMAT, PROTOCOL_IMPLEMENTATION_NAME, METHOD_CLEAR_SESSION_NAME);
 }

@@ -199,6 +199,10 @@ protected:
   // holds header and meta packet size
   unsigned headerAndMetaPacketSize;
 
+  // holds last processed size from last store time
+  unsigned int lastProcessedSize;
+  unsigned int currentProcessedSize;
+
   /* methods */
 
   // gets store file path based on configuration
@@ -211,11 +215,6 @@ protected:
   // it is always reset on seek
   // @return : byte position in buffer
   int64_t GetBytePosition(void);
-
-  // recalculate stream fragments start positions based on previous stream fragments
-  // @param streamFragments : the collection of stream fragments to recalculate
-  // @param startIndex : the index of first stream fragment to recalculate start position
-  void RecalculateStreamFragmentStartPosition(CRtmpStreamFragmentCollection *streamFragments, unsigned int startIndex);
 
   // gets FLV packet timestamp based on current FLV packet timestamp
   // @param currentFlvPacketTimestamp : current FLV packet timestamp to get FLV packet timestamp

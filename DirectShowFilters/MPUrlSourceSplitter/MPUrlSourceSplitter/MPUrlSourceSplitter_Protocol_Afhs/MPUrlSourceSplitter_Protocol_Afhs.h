@@ -207,6 +207,10 @@ protected:
   // holds last bootstrap info update time (in live case)
   unsigned int lastBootstrapInfoUpdateTime;
 
+  // holds last processed size from last store time
+  unsigned int lastProcessedSize;
+  unsigned int currentProcessedSize;
+
   /* methods */
 
   // gets store file path based on configuration
@@ -219,11 +223,6 @@ protected:
   // it is always reset on seek
   // @return : byte position in buffer
   int64_t GetBytePosition(void);
-
-  // recalculate segment fragments start positions based on previous segment fragments
-  // @param segmentFragments : the collection of segment fragments to recalculate
-  // @param startIndex : the index of first segment fragment to recalculate start position
-  void RecalculateSegmentFragmentStartPosition(CAfhsSegmentFragmentCollection *segmentFragments, unsigned int startIndex);
 
   CAfhsSegmentFragmentCollection *GetSegmentsFragmentsFromBootstrapInfoBox(CBootstrapInfoBox *bootstrapInfoBox, bool logCollection, uint64_t lastSegmentFragmentTimestamp);
 };

@@ -34,7 +34,7 @@ CWASAPIRenderFilter::CWASAPIRenderFilter(AudioRendererSettings* pSettings, CSync
   m_hDataEvent(NULL),
   m_pAudioClock(NULL),
   m_nHWfreq(0),
-  m_dwStreamFlags(AUDCLNT_STREAMFLAGS_EVENTCALLBACK),
+  m_dwStreamFlags(AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST),
   m_state(StateStopped),
   m_bIsAudioClientStarted(false),
   m_bDeviceInitialized(false),
@@ -45,7 +45,9 @@ CWASAPIRenderFilter::CWASAPIRenderFilter(AudioRendererSettings* pSettings, CSync
   m_llPosError(0),
   m_ullPrevQpc(0),
   m_ullPrevPos(0),
-  m_hNeedMoreSamples(NULL)
+  m_hNeedMoreSamples(NULL),
+  m_rtLatency(0),
+  m_dOutputBufferSize(m_pSettings->GetOutputBuffer() * 10000)
 {
   OSVERSIONINFO osvi;
   ZeroMemory(&osvi, sizeof(OSVERSIONINFO));
@@ -109,7 +111,7 @@ HRESULT CWASAPIRenderFilter::Init()
   {
     // Using HW DMA buffer based event notification
     m_hDataEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    m_dwStreamFlags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
+    m_dwStreamFlags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST;
   }
   else
   {
@@ -257,15 +259,25 @@ HRESULT CWASAPIRenderFilter::NegotiateFormat(const WAVEFORMATEXTENSIBLE* pwfx, i
 // Buffer negotiation
 HRESULT CWASAPIRenderFilter::NegotiateBuffer(const WAVEFORMATEXTENSIBLE* pwfx, long* pBufferSize, long* pBufferCount, bool bCanModifyBufferSize)
 {
-  REFERENCE_TIME rtBufferLength = m_pSettings->GetOutputBuffer() * 10000;
+  REFERENCE_TIME rtBufferLength = m_dOutputBufferSize;
 
-  if (rtBufferLength < m_pSettings->GetPeriod() * 2)
-    rtBufferLength = m_pSettings->GetPeriod() * 2;
+  if (rtBufferLength < m_rtLatency * 2)
+    rtBufferLength = m_rtLatency * 2;
 
   if (bCanModifyBufferSize)
   {
     UINT32 nFrames = rtBufferLength / (UNITS / pwfx->Format.nSamplesPerSec);
-    *pBufferSize = nFrames / m_nOutBufferCount * pwfx->Format.nBlockAlign;
+
+    if (CanBitstream(pwfx))
+    {
+      REFERENCE_TIME rtPeriod = m_rtLatency;
+      m_nOutBufferCount =  m_pSettings->GetOutputBuffer() / 10; //IME each sample is ~10ms
+      GetBufferSize((WAVEFORMATEX*)pwfx, &rtPeriod);
+      *pBufferSize = m_nBufferSize;
+    }
+    else
+      *pBufferSize = nFrames / m_nOutBufferCount * pwfx->Format.nBlockAlign;
+
     *pBufferCount = m_nOutBufferCount;
   }
   else
@@ -288,15 +300,29 @@ HRESULT CWASAPIRenderFilter::IsFormatSupported(const WAVEFORMATEXTENSIBLE* pwfx,
 {
   WAVEFORMATEXTENSIBLE* pwfxCM = NULL;
   WAVEFORMATEX* tmpPwfx = NULL;
+  AUDCLNT_SHAREMODE shareMode = m_pSettings->GetWASAPIMode();
   
-  HRESULT hr = m_pAudioClient->IsFormatSupported(m_pSettings->GetWASAPIMode(), (WAVEFORMATEX*)pwfx, (WAVEFORMATEX**)&pwfxCM);
+  HRESULT hr = m_pAudioClient->IsFormatSupported(shareMode, (WAVEFORMATEX*)pwfx, (WAVEFORMATEX**)&pwfxCM);
   if (hr != S_OK)
   {
+    if(shareMode == AUDCLNT_SHAREMODE_EXCLUSIVE)
+    {
+      //on the off-chance that the PC is configured to disallow exclusive, test it that way
+      hr = m_pAudioClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, (WAVEFORMATEX*)pwfx, (WAVEFORMATEX**)&pwfxCM);
+      if (hr == S_OK)
+      {
+        Log("CWASAPIRenderFilter::NegotiateFormat WASAPI client will only accept shared mode sessions, check PC configuration.");
+        CopyWaveFormatEx(pwfxAccepted, pwfx);
+        m_pSettings->SetWASAPIMode(AUDCLNT_SHAREMODE_SHARED);
+        return hr;
+      }
+    }
+
     CopyWaveFormatEx((WAVEFORMATEXTENSIBLE**)&tmpPwfx, pwfx);
     tmpPwfx->cbSize = 0;
     tmpPwfx->wFormatTag = WAVE_FORMAT_PCM;
 
-    hr = m_pAudioClient->IsFormatSupported(m_pSettings->GetWASAPIMode(), (WAVEFORMATEX*)tmpPwfx, (WAVEFORMATEX**)&pwfxCM);
+    hr = m_pAudioClient->IsFormatSupported(shareMode, (WAVEFORMATEX*)tmpPwfx, (WAVEFORMATEX**)&pwfxCM);
     if (hr != S_OK)
     {
       Log("CWASAPIRenderFilter::NegotiateFormat WASAPI client refused the format: (0x%08x)", hr);
@@ -596,7 +622,13 @@ void CWASAPIRenderFilter::ResetClockData()
 
 REFERENCE_TIME CWASAPIRenderFilter::Latency()
 {
-  return m_pSettings->GetPeriod();
+  if (m_rtLatency == 0)
+  {
+    m_rtLatency = m_pSettings->GetPeriod(); // This is set in StartAudioClient, but ThreadProc will call this before StartAudioClient is called
+    Log("CWASAPIRenderFilter set latency: %I64u", m_rtLatency);
+  }
+
+  return m_rtLatency;
 }
 
 HRESULT CWASAPIRenderFilter::Run(REFERENCE_TIME rtStart)
@@ -883,12 +915,12 @@ DWORD CWASAPIRenderFilter::ThreadProc()
 
         if (SUCCEEDED(hr) && bufferSize > 0)
         {
-          liDueTime.QuadPart = (double)currentPadding / (double)bufferSize * (double)m_pSettings->GetPeriod() * -0.9;
+          liDueTime.QuadPart = (double)currentPadding / (double)bufferSize * (double)m_rtLatency * -0.9;
           // Log(" currentPadding: %d QuadPart: %lld", currentPadding, liDueTime.QuadPart);
         }
         else
         {
-          liDueTime.QuadPart = (double)m_pSettings->GetPeriod() * -0.9;
+          liDueTime.QuadPart = (double)m_rtLatency * -0.9;
           if (hr != AUDCLNT_E_NOT_INITIALIZED)
             Log("CWASAPIRenderFilter::Render thread: GetCurrentPadding failed (0x%08x)", hr);  
         }
@@ -920,6 +952,7 @@ REFERENCE_TIME CWASAPIRenderFilter::BufferredDataDuration()
   REFERENCE_TIME rtDuration = 0;
   REFERENCE_TIME rtStart = 0;
   REFERENCE_TIME rtStop = 0;
+  HRESULT hr = S_OK;
 
   CAutoLock queueLock(&m_inputQueueLock);
 
@@ -929,8 +962,10 @@ REFERENCE_TIME CWASAPIRenderFilter::BufferredDataDuration()
     // EOS marker is currently a NULL sample
     if (it->Sample)
     {
-      it->Sample->GetTime(&rtStart, &rtStop);
-      rtDuration += rtStop - rtStart;
+      if (SUCCEEDED(hr = it->Sample->GetTime(&rtStart, &rtStop)))
+        rtDuration += rtStop - rtStart;
+      else
+        Log("CWASAPIRenderFilter::BufferredDataDuration Failed to get sample times");
     }
     ++it;
   }
@@ -950,7 +985,7 @@ void CWASAPIRenderFilter::CheckBufferStatus()
   if (m_hNeedMoreSamples)
   {
     REFERENCE_TIME bufferedAmount = BufferredDataDuration();
-    if (m_hNeedMoreSamples && bufferedAmount < m_pSettings->GetOutputBuffer() * 10000)
+    if (m_hNeedMoreSamples && bufferedAmount < m_dOutputBufferSize)
     {
       //Log("CWASAPIRenderFilter::Render -      need more data - buffer: %6.3f", bufferedAmount / 10000000.0);
       SetEvent(*m_hNeedMoreSamples);
@@ -1091,7 +1126,10 @@ HRESULT CWASAPIRenderFilter::GetBufferSize(const WAVEFORMATEX* pWaveFormatEx, RE
       m_nBufferSize = 32768;
     else if (wfext->SubFormat == KSDATAFORMAT_SUBTYPE_IEC61937_DOLBY_DIGITAL_PLUS)
       m_nBufferSize = 24576;
-    else return S_OK;
+    else if (wfext->Format.wFormatTag == WAVE_FORMAT_DOLBY_AC3_SPDIF || wfext->SubFormat == KSDATAFORMAT_SUBTYPE_IEC61937_DOLBY_DIGITAL) 
+      m_nBufferSize = 6144;
+    else 
+      return S_OK;
   }
 
   *pHnsBufferPeriod = (REFERENCE_TIME)((REFERENCE_TIME)m_nBufferSize * 10000 * 8 / ((REFERENCE_TIME)pWaveFormatEx->nChannels * pWaveFormatEx->wBitsPerSample *
@@ -1274,7 +1312,8 @@ HRESULT CWASAPIRenderFilter::InitAudioClient()
     return hr;
   }
 
-  GetBufferSize((WAVEFORMATEX*)pwfxAccepted, &rtPeriod);
+  //Leave the buffer size alone. Reseting it based on media type causes issues on AMD systems, doesn't seem to impact +/- Intel, haven't tested NVIDIA
+  //GetBufferSize((WAVEFORMATEX*)pwfxAccepted, &rtPeriod);
 
   if (SUCCEEDED(hr))
     hr = m_pAudioClient->Initialize(m_pSettings->GetWASAPIMode(), m_dwStreamFlags,rtPeriod, 
@@ -1321,7 +1360,7 @@ HRESULT CWASAPIRenderFilter::InitAudioClient()
     if (SUCCEEDED(hr)) 
       hr = CreateAudioClient();
       
-    Log("WASAPIRenderFilter::InitAudioClient Trying again with periodicity of %I64u hundred-nanoseconds, or %u frames", m_pSettings->GetPeriod(), m_nFramesInBuffer);
+    Log("WASAPIRenderFilter::InitAudioClient Trying again with periodicity of %I64u hundred-nanoseconds, or %u frames", rtPeriod, m_nFramesInBuffer);
 
     if (SUCCEEDED (hr)) 
       hr = m_pAudioClient->Initialize(m_pSettings->GetWASAPIMode(), m_dwStreamFlags, rtPeriod, 
@@ -1344,7 +1383,8 @@ HRESULT CWASAPIRenderFilter::InitAudioClient()
     }
   } // if (AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED == hr) 
 
-  m_pSettings->SetPeriod(rtPeriod);
+  //m_pSettings->SetPeriod(rtPeriod);
+  m_rtLatency = rtPeriod;
 
   // get the buffer size, which is aligned
   if (SUCCEEDED(hr)) 

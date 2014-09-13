@@ -74,7 +74,8 @@ CMPAudioRenderer::CMPAudioRenderer(LPUNKNOWN punk, HRESULT* phr)
   m_pTimestretchFilter(NULL),
   m_pChannelMixer(NULL),
   m_pClock(NULL),
-  m_bInitialized(false)
+  m_bInitialized(false),
+  m_pSampleCopier(NULL)
 {
   StartLogger();
   LogRotate();
@@ -94,7 +95,7 @@ CMPAudioRenderer::CMPAudioRenderer(LPUNKNOWN punk, HRESULT* phr)
   m_pSettings->AddRef();
 
   m_hRendererStarving = CreateEvent(NULL, TRUE, FALSE, NULL);
-  m_hStopWaitingRenderer = CreateEvent(NULL, FALSE, FALSE, NULL);
+  m_hStopWaitingRenderer = CreateEvent(NULL, TRUE, FALSE, NULL);
 
   m_pClock = new CSyncClock(static_cast<IBaseFilter*>(this), phr, this, m_pSettings);
 
@@ -182,6 +183,7 @@ CMPAudioRenderer::~CMPAudioRenderer()
   delete m_pTimestretchFilter;
   delete m_pSampleRateConverter;
   delete m_pChannelMixer;
+  delete m_pSampleCopier;
 
   Log("MP Audio Renderer - destructor - instance 0x%x - end", this);
   StopLogger();
@@ -278,6 +280,16 @@ HRESULT CMPAudioRenderer::SetupFilterPipeline()
     m_pPipeline = m_pInBitDepthAdapter;
   }
 
+  if (m_pSettings->GetAllowBitStreaming())
+  {
+    m_pSampleCopier = new CSampleCopier();
+    if (!m_pSampleCopier)
+      return E_OUTOFMEMORY;
+
+    m_pSampleCopier->ConnectTo(m_pPipeline);
+    m_pPipeline = m_pSampleCopier;
+  }
+
   return S_OK;
 }
 
@@ -339,7 +351,7 @@ HRESULT	CMPAudioRenderer::CheckMediaType(const CMediaType* pmt)
     hr = ToWaveFormatExtensible(&wfe, pwfx);
     if (SUCCEEDED(hr))
     {
-      if (!m_pSettings->GetAllowBitStreaming() && CBaseAudioSink::CanBitstream((WAVEFORMATEXTENSIBLE*)pwfx))
+      if (!m_pSettings->GetAllowBitStreaming() && CBaseAudioSink::CanBitstream(wfe))
         return VFW_E_TYPE_NOT_ACCEPTED;
 
       LogWaveFormat(wfe, "CheckMediaType  ");
@@ -412,7 +424,8 @@ HRESULT CMPAudioRenderer::Receive(IMediaSample* pSample)
 
 bool CMPAudioRenderer::DeliverSample(IMediaSample* pSample)
 {
-  if (!pSample) return false;
+  if (!pSample)
+    return false;
 
   WAVEFORMATEXTENSIBLE* wfe = NULL;
   AM_MEDIA_TYPE* pmt = NULL;
@@ -420,7 +433,7 @@ bool CMPAudioRenderer::DeliverSample(IMediaSample* pSample)
   if (SUCCEEDED(pSample->GetMediaType(&pmt)) && pmt)
   {
     WAVEFORMATEX* pwfx = (WAVEFORMATEX*)pmt->pbFormat;
-  
+
     // Convert WAVEFORMATEX to WAVEFORMATEXTENSIBLE for internal use
     if (!IS_WAVEFORMATEXTENSIBLE(pwfx))
     {
@@ -438,6 +451,7 @@ bool CMPAudioRenderer::DeliverSample(IMediaSample* pSample)
   {
     if (m_pMediaType)
       DeleteMediaType(m_pMediaType);
+
     m_pMediaType = CreateMediaType(pmt);
   }
   else if (m_pMediaType)
@@ -457,6 +471,13 @@ bool CMPAudioRenderer::DeliverSample(IMediaSample* pSample)
 
     if (pSample->IsDiscontinuity() == S_OK)
       Log("Discontinuity flag set on in the incoming sample: %6.3f", rtStart / 10000000.0);
+  }
+
+  {
+    CAutoLock cInterfaceLock(&m_InterfaceLock);
+
+    if (m_State == State_Stopped) 
+      return false;
   }
 
   HANDLE handles[2];
@@ -517,7 +538,10 @@ HRESULT CMPAudioRenderer::SetMediaType(const CMediaType* pmt)
 
   if (IS_WAVEFORMATEXTENSIBLE(pwfx))
   {
-    wfe = (WAVEFORMATEXTENSIBLE*)pwfx;
+    wfe = (WAVEFORMATEXTENSIBLE*)pwfx;    
+    if (!m_pSettings->GetAllowBitStreaming() && CBaseAudioSink::CanBitstream(wfe))
+      return VFW_E_TYPE_NOT_ACCEPTED;
+
     hr = m_pPipeline->NegotiateFormat(wfe, depth, &chOrder);
   }
   else
@@ -525,6 +549,9 @@ HRESULT CMPAudioRenderer::SetMediaType(const CMediaType* pmt)
     hr = ToWaveFormatExtensible(&wfe, pwfx);
     if (SUCCEEDED(hr))
     {
+      if (!m_pSettings->GetAllowBitStreaming() && CBaseAudioSink::CanBitstream(wfe))
+        return VFW_E_TYPE_NOT_ACCEPTED;
+
       hr = m_pPipeline->NegotiateFormat(wfe, depth, &chOrder);
       freeWaveFormat = true;
     }
@@ -581,12 +608,19 @@ HRESULT CMPAudioRenderer::CompleteConnect(IPin* pReceivePin)
 STDMETHODIMP CMPAudioRenderer::Run(REFERENCE_TIME tStart)
 {
   Log("Run - %6.3f", tStart / 10000000.0);
-  CAutoLock cInterfaceLock(&m_InterfaceLock);
-  
   HRESULT	hr = S_OK;
 
-  if (m_State == State_Running) 
-    return hr;
+  { // Scope this to only protect base object's state
+    CAutoLock cInterfaceLock(&m_InterfaceLock);
+
+    if (m_State == State_Running) 
+      return hr;
+  }
+
+  CAutoLock cInterfaceLock(&m_csAudioRenderer);
+
+  if (m_hStopWaitingRenderer)
+    ResetEvent(m_hStopWaitingRenderer);
 
   if (m_pClock)
     m_pClock->Reset();
@@ -603,7 +637,7 @@ STDMETHODIMP CMPAudioRenderer::Stop()
 {
   Log("Stop");
 
-  CAutoLock cInterfaceLock(&m_InterfaceLock);
+  CAutoLock cInterfaceLock(&m_csAudioRenderer);
   
   if (m_hStopWaitingRenderer)
     SetEvent(m_hStopWaitingRenderer);
@@ -620,7 +654,7 @@ STDMETHODIMP CMPAudioRenderer::Stop()
 STDMETHODIMP CMPAudioRenderer::Pause()
 {
   Log("Pause");
-  CAutoLock cInterfaceLock(&m_InterfaceLock);
+  CAutoLock cInterfaceLock(&m_csAudioRenderer);
 
   if (m_hStopWaitingRenderer)
     SetEvent(m_hStopWaitingRenderer);
@@ -696,6 +730,9 @@ HRESULT CMPAudioRenderer::EndFlush()
   Log("EndFlush");
   CAutoLock cInterfaceLock(&m_InterfaceLock);
   
+  if (m_hStopWaitingRenderer)
+    ResetEvent(m_hStopWaitingRenderer);
+
   m_pPipeline->EndFlush();
   m_pClock->Reset(0);
 

@@ -25,7 +25,7 @@
   void CTimeStretchFilter::funcname(paramtype paramname) \
   { \
     CAutoLock streamLock(&m_csStreamLock); \
-    ASSERT(m_Streams); \
+    ASSERT(m_Streams || (m_bBitstreaming && !m_Streams)); \
     if (m_Streams) \
     { \
       for(int i=0; i<m_Streams->size(); i++) \
@@ -45,8 +45,7 @@ CTimeStretchFilter::CTimeStretchFilter(AudioRendererSettings* pSettings, CSyncCl
   m_rtLastOuputStart(0),
   m_rtLastOuputEnd(-1),
   m_rtNextIncomingSampleTime(0),
-  m_pClock(pClock),
-  m_bBitstreaming(false)
+  m_pClock(pClock)
 {
 }
 
@@ -81,6 +80,25 @@ HRESULT CTimeStretchFilter::Init()
 
 HRESULT CTimeStretchFilter::PutSample(IMediaSample* pSample)
 {
+  AM_MEDIA_TYPE* pmt = NULL;
+  bool bFormatChanged = false;
+
+  if (pSample && SUCCEEDED(pSample->GetMediaType(&pmt)) && pmt)
+  {
+    WAVEFORMATEXTENSIBLE* pwfx = (WAVEFORMATEXTENSIBLE*)pmt->pbFormat;
+    bFormatChanged = !FormatsEqual(pwfx, m_pInputFormat);
+
+    bool wasBitstreaming = m_bBitstreaming;
+
+    if (bFormatChanged && CanBitstream(pwfx))
+      m_bBitstreaming = true;
+    else
+      m_bBitstreaming = false;
+
+    if (wasBitstreaming != m_bBitstreaming)
+      Log("CTimeStretchFilter::PutSample - wasBitstreaming: %d bitstreaming: %d", wasBitstreaming, m_bBitstreaming);
+  }
+
   if (m_pSettings->GetUseTimeStretching() && !m_bBitstreaming)
     CQueuedAudioSink::PutSample(pSample);
   else if (m_pNextSink)
@@ -101,9 +119,7 @@ HRESULT CTimeStretchFilter::NegotiateFormat(const WAVEFORMATEXTENSIBLE* pwfx, in
     return S_OK;
   }
 
-  m_bBitstreaming = CanBitstream(pwfx);
-
-  if (m_bBitstreaming && m_pSettings->GetAllowBitStreaming())
+  if (m_pSettings->GetAllowBitStreaming() && CanBitstream(pwfx))
   {
     HRESULT hr = m_pNextSink->NegotiateFormat(pwfx, nApplyChangesDepth, pChOrder);
     if (SUCCEEDED(hr))
@@ -197,8 +213,11 @@ HRESULT CTimeStretchFilter::CheckSample(IMediaSample* pSample, REFERENCE_TIME* r
 
     // Apply format change
     ChannelOrder chOrder;
-    hr = NegotiateFormat((WAVEFORMATEXTENSIBLE*)pmt->pbFormat, 1, &chOrder);
+    WAVEFORMATEXTENSIBLE* pwfx = (WAVEFORMATEXTENSIBLE*)pmt->pbFormat;
+
+    hr = NegotiateFormat(pwfx, 1, &chOrder);
     pSample->SetDiscontinuity(false);
+    m_bBitstreaming = CanBitstream(pwfx);
 
     if (FAILED(hr))
     {
@@ -404,6 +423,9 @@ void CTimeStretchFilter::CheckStreamContinuity(IMediaSample* pSample, REFERENCE_
 
 REFERENCE_TIME CTimeStretchFilter::DrainBuffers(IMediaSample* pSample, REFERENCE_TIME rtNewStart)
 {
+  if (!m_pOutputFormat)
+    return 0;
+
   Log("TS - DrainBuffers - rtNewStart: %6.3f", rtNewStart / 10000000.0);
 
   uint unprocessedSamplesBefore = numUnprocessedSamples();
@@ -629,7 +651,7 @@ DEFINE_STREAM_FUNC(setSampleRate, uint, srate)
 void CTimeStretchFilter::clear() 
 { 
   CAutoLock streamLock(&m_csStreamLock);
-  ASSERT(m_Streams);
+  ASSERT(m_Streams || (m_bBitstreaming && !m_Streams));
 
   if (m_Streams)
   { 
@@ -641,7 +663,7 @@ void CTimeStretchFilter::clear()
 void CTimeStretchFilter::flush() 
 { 
   CAutoLock streamLock(&m_csStreamLock);
-  ASSERT(m_Streams);
+  ASSERT(m_Streams || (m_bBitstreaming && !m_Streams));
 
   if (m_Streams)
   { 
@@ -655,7 +677,7 @@ void CTimeStretchFilter::flush()
 uint CTimeStretchFilter::flushEx()
 { 
   CAutoLock streamLock(&m_csStreamLock);
-  ASSERT(m_Streams);
+  ASSERT(m_Streams || (m_bBitstreaming && !m_Streams));
 
   uint minZeros = 0;
   if (m_Streams) 
@@ -671,16 +693,21 @@ uint CTimeStretchFilter::flushEx()
   return minZeros;
 }
 
-void CTimeStretchFilter::setTempo(float newTempo, float newAdjustment)
+bool CTimeStretchFilter::setTempo(float newTempo, float newAdjustment)
 {
+  if (m_bBitstreaming)
+    return false;
+
   m_fNewTempo = newTempo;
   m_fNewAdjustment = newAdjustment;
+
+  return true;
 }
 
 void CTimeStretchFilter::setTempoInternal(float newTempo, float newAdjustment)
 {
   CAutoLock streamLock(&m_csStreamLock);
-  ASSERT(m_Streams);
+  ASSERT(m_Streams || (m_bBitstreaming && !m_Streams));
 
   if (m_Streams)
   { 
@@ -697,7 +724,7 @@ void CTimeStretchFilter::setTempoInternal(float newTempo, float newAdjustment)
 BOOL CTimeStretchFilter::setSetting(int settingId, int value)
 {
   CAutoLock streamLock(&m_csStreamLock);
-  ASSERT(m_Streams);
+  ASSERT(m_Streams || (m_bBitstreaming && !m_Streams));
 
   // TODO should LFE channel have separate settings since it is by nature quite
   // different when it comes to frequency response
@@ -717,16 +744,18 @@ BOOL CTimeStretchFilter::setSetting(int settingId, int value)
 uint CTimeStretchFilter::numUnprocessedSamples() const
 {
   CAutoLock streamLock(&m_csStreamLock);
-  ASSERT(m_Streams);
+  ASSERT(m_Streams || (m_bBitstreaming && !m_Streams));
 
   uint maxSamples = 0;
-  for (int i = 0; i < m_Streams->size(); i++)
+  if (m_Streams)
   {
-    uint samples = m_Streams->at(i)->numUnprocessedSamples();
-    if (maxSamples == 0 || maxSamples < samples)
-      maxSamples = samples;
+    for (int i = 0; i < m_Streams->size(); i++)
+    {
+      uint samples = m_Streams->at(i)->numUnprocessedSamples();
+      if (maxSamples == 0 || maxSamples < samples)
+        maxSamples = samples;
+    }
   }
-
   return maxSamples;
 }
 
@@ -734,16 +763,18 @@ uint CTimeStretchFilter::numUnprocessedSamples() const
 uint CTimeStretchFilter::numSamples() const
 {
   CAutoLock streamLock(&m_csStreamLock);
-  ASSERT(m_Streams);
+  ASSERT(m_Streams || (m_bBitstreaming && !m_Streams));
 
   uint minSamples = 0;
-  for (int i = 0; i < m_Streams->size(); i++)
+  if (m_Streams)
   {
-    uint samples = m_Streams->at(i)->numSamples();
-    if (i == 0 || minSamples > samples)
-      minSamples = samples;
+    for (int i = 0; i < m_Streams->size(); i++)
+    {
+      uint samples = m_Streams->at(i)->numSamples();
+      if (i == 0 || minSamples > samples)
+        minSamples = samples;
+    }
   }
-
   return minSamples;
 }
 
@@ -751,21 +782,24 @@ uint CTimeStretchFilter::numSamples() const
 int CTimeStretchFilter::isEmpty() const
 {
   CAutoLock streamLock(&m_csStreamLock);
-  ASSERT(m_Streams);
+  ASSERT(m_Streams || (m_bBitstreaming && !m_Streams));
 
-  for (int i = 0; i < m_Streams->size(); i++)
+  if (m_Streams)
   {
-    if (m_Streams->at(i)->isEmpty())
-      return true;
+    for (int i = 0; i < m_Streams->size(); i++)
+    {
+      if (m_Streams->at(i)->isEmpty())
+        return true;
+    }
   }
 
-  return false;
+  return false; // TODO: not sure if this is the right thing to return if m_Streams is NULL
 }
 
 bool CTimeStretchFilter::putSamplesInternal(const short *inBuffer, long inSamples)
 {
   CAutoLock streamLock(&m_csStreamLock);
-  ASSERT(m_Streams);
+  ASSERT(m_Streams || (m_bBitstreaming && !m_Streams));
 
   if (!m_Streams)
     return false;
@@ -782,7 +816,7 @@ bool CTimeStretchFilter::putSamplesInternal(const short *inBuffer, long inSample
 uint CTimeStretchFilter::receiveSamplesInternal(short *outBuffer, uint maxSamples)
 {
   CAutoLock streamLock(&m_csStreamLock);
-  ASSERT(m_Streams);
+  ASSERT(m_Streams || (m_bBitstreaming && !m_Streams));
 
   if (!m_Streams)
     return 0;

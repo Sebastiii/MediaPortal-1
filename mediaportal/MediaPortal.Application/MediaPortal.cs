@@ -1723,7 +1723,7 @@ public class MediaPortalApp : D3D, IRender
           // If automatic resume is not processed yet, wait for ResumeAutomatic / ResumeDelayed message
           if (!_resumedAutomatic)
           {
-            Log.Debug("Main: Wait for ResumeAutomatic / ResumeDelayed message");
+            Log.Debug("Main: OnPowerBroadcast - wait for ResumeAutomatic / ResumeDelayed message");
             return;
           }
 
@@ -1799,6 +1799,11 @@ public class MediaPortalApp : D3D, IRender
     }
   }
 
+  /// <summary>
+  /// Timer callback: Stop timer and send PBT_RESUMEDELAYED message
+  /// </summary>
+  /// <param name="sender"></param>
+  /// <param name="e"></param>
   private void SendResumeDelayedMsg(object sender, ElapsedEventArgs e)
   {
     // Stop and dispose timer
@@ -1810,7 +1815,7 @@ public class MediaPortalApp : D3D, IRender
     }
 
     // Send PBT_APMRESUMEDELAYED message
-    Log.Debug("Main: Send ResumeDelayed message");
+    Log.Debug("Main: SendResumeDelayedMsg - sending PBT_APMRESUMEDELAYED message");
     IntPtr hWnd = Form.ActiveForm.Handle;
     if (hWnd != IntPtr.Zero)
     {
@@ -2477,24 +2482,6 @@ public class MediaPortalApp : D3D, IRender
       _resumed = false;
     }
   }
-
-  /// <summary>
-  /// This event is delivered by a timer after the resume delay
-  /// </summary>
-  private void OnResumeDelayed()
-  {
-    Log.Debug("Main: OnResumeDelayed");
-
-    Log.Debug("Main: OnResumeDelayed - calling OnResumeAutoMatic");
-    OnResumeAutomatic();
-
-    if (_userActivity)
-    {
-      Log.Debug("Main: OnResumeDelayed - calling OnResumeSuspend");
-      OnResumeSuspend();
-      }
-    Log.Debug("Main: OnResumeDelayed - Done");
-    }
 
   /// <summary>
   /// This event is delivered every time the system resumes and does not indicate whether a user is present

@@ -21,10 +21,9 @@
 #include "alloctracing.h"
 
 CChannelMixer::CChannelMixer(AudioRendererSettings* pSettings) :
-  CBaseAudioSink(true),
+  CBaseAudioSink(true, pSettings),
   m_bPassThrough(false),
   m_rtInSampleTime(0),
-  m_pSettings(pSettings),
   m_rtNextIncomingSampleTime(0)
 {
   m_pRemap = new CAERemap();
@@ -58,6 +57,18 @@ HRESULT CChannelMixer::NegotiateFormat(const WAVEFORMATEXTENSIBLE* pwfx, int nAp
 
   if (!m_pNextSink)
     return VFW_E_TYPE_NOT_ACCEPTED;
+
+  if (m_pSettings->GetAllowBitStreaming() && CanBitstream(pwfx))
+  {
+    HRESULT hr = m_pNextSink->NegotiateFormat(pwfx, nApplyChangesDepth, pChOrder);
+    if (SUCCEEDED(hr))
+    {
+      m_bNextFormatPassthru = true;
+      m_bPassThrough = true;
+      m_chOrder = *pChOrder;
+      return hr;
+    }
+  }
 
   bool bApplyChanges = (nApplyChangesDepth != 0);
   if (nApplyChangesDepth != INFINITE && nApplyChangesDepth > 0)

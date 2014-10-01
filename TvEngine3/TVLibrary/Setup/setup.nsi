@@ -281,7 +281,7 @@ ShowUninstDetails show
 !macroend
 
 !macro SecMpeInstaller
-  ${LOG_TEXT} "INFO" "MediaPortal Extension Installer..."
+  ${LOG_TEXT} "INFO" "MediaPortal Extension Manager..."
 
   ; install files
   SetOutPath "$INSTDIR"
@@ -293,10 +293,10 @@ ShowUninstDetails show
 
   ; create startmenu shortcuts
   ${If} $noDesktopSC != 1
-    CreateShortCut "$DESKTOP\MediaPortal Extension Installer.lnk" "$INSTDIR\MpeInstaller.exe"  ""  "$INSTDIR\MpeInstaller.exe"  0 "" "" "MediaPortal Extension Installer"
+    CreateShortCut "$DESKTOP\MediaPortal Extension Manager.lnk" "$INSTDIR\MpeInstaller.exe"  ""  "$INSTDIR\MpeInstaller.exe"  0 "" "" "MediaPortal Extension Manager"
   ${EndIf}
   CreateDirectory "${STARTMENU_GROUP}"
-  CreateShortCut "${STARTMENU_GROUP}\MediaPortal Extension Installer.lnk" "$INSTDIR\MpeInstaller.exe"  ""  "$INSTDIR\MpeInstaller.exe"  0 "" "" "MediaPortal Extension Installer"
+  CreateShortCut "${STARTMENU_GROUP}\MediaPortal Extension Manager.lnk" "$INSTDIR\MpeInstaller.exe"  ""  "$INSTDIR\MpeInstaller.exe"  0 "" "" "MediaPortal Extension Manager"
 
   ; associate file extensions
   ${RegisterExtension} "$INSTDIR\MpeInstaller.exe" ".mpe1" "MediaPortal extension"
@@ -305,7 +305,7 @@ ShowUninstDetails show
 !macroend
 
 !macro Remove_SecMpeInstaller
-  ${LOG_TEXT} "INFO" "Uninstalling MediaPortal Extension Installer..."
+  ${LOG_TEXT} "INFO" "Uninstalling MediaPortal Extension Manager..."
 
   ; remove files
   Delete "$INSTDIR\MpeCore.dll"
@@ -315,8 +315,8 @@ ShowUninstDetails show
   Delete "$INSTDIR\Core.dll"
 
   ; remove startmenu shortcuts
-  Delete "$DESKTOP\MediaPortal Extension Installer.lnk"
-  Delete "${STARTMENU_GROUP}\MediaPortal Extension Installer.lnk"
+  Delete "$DESKTOP\MediaPortal Extension Manager.lnk"
+  Delete "${STARTMENU_GROUP}\MediaPortal Extension Manager.lnk"
   ;Delete "${STARTMENU_GROUP}\MediaPortal Extension Maker.lnk"
 
   ; unassociate file extensions

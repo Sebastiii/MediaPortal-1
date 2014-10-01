@@ -1341,6 +1341,8 @@
     <String id="2147">Not enough space on DVD</String>
     <String id="2148">Do you want to change it on all sub-folders?</String>
     <String id="2149">Question</String>
+    <String id="2160">Update Mediainfo in selected folder</String>
+    <String id="2161">Abort update Mediainfo thread</String>
     <String id="2200" prefix="My ">Explorer</String>
     <String id="2201">Select source</String>
     <String id="2202">Select destination</String>
@@ -2034,6 +2036,8 @@
     <String id="102019">TV notification</String>
     <String id="190000">Abort thumbnail creation thread</String>
     <String id="190001">Create missing thumbnails (incl. subfolders)</String>
+    <String id="190010">Your {0} database is corrupt.</String>
+    <String id="190011">Folder</String>
     <String id="200000">Please select your EPG grabber. Note if your country is</String>
     <String id="200001">not listed then you will need to supply the EPG manually</String>
     <String id="200002">You can now map the EPG channels to your TV channels</String>

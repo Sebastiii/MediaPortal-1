@@ -75,11 +75,12 @@ CMPAudioRenderer::CMPAudioRenderer(LPUNKNOWN punk, HRESULT* phr)
   m_pChannelMixer(NULL),
   m_pClock(NULL),
   m_bInitialized(false),
+  m_bFirstSample(true),
   m_pSampleCopier(NULL)
 {
   StartLogger();
   LogRotate();
-  Log("MP Audio Renderer - v1.1.6");
+  Log("MP Audio Renderer - v1.1.9");
 
   Log("CMPAudioRenderer - instance 0x%x", this);
 
@@ -297,7 +298,7 @@ STDMETHODIMP CMPAudioRenderer::GetState(DWORD dwMSecs, FILTER_STATE* State)
 {
   CheckPointer(State, E_POINTER);
 
-  if ((m_pRenderer->BufferredDataDuration() <= (m_pSettings->GetOutputBuffer() * 10000)) &&
+  if (m_State == State_Paused && (m_pRenderer->BufferredDataDuration() <= (m_pSettings->GetOutputBuffer() * 10000)) &&
     (GetCurrentTimestamp() - m_lastSampleArrivalTime < SAMPLE_RECEIVE_TIMEOUT)) 
   {
     NotifyEvent(EC_STARVATION, 0, 0);
@@ -446,23 +447,24 @@ bool CMPAudioRenderer::DeliverSample(IMediaSample* pSample)
     }
   }
 
-  if (pmt)
-  {
-    if (m_pMediaType)
-      DeleteMediaType(m_pMediaType);
+  REFERENCE_TIME rtStart = 0;
+  REFERENCE_TIME rtStop = 0;
 
-    m_pMediaType = CreateMediaType(pmt);
-  }
-  else if (m_pMediaType)
+  pSample->GetTime(&rtStart, &rtStop);
+
+  // Discard samples that have negative timestamps as render will reject those in any case
+  if (rtStart < 0)
+    return false;
+
+  // In some cases audio decoder wont put the PMT on 1st sample (depends how the format negotiation goes?)
+  if (m_bFirstSample && m_pMediaType)
+  {
     pSample->SetMediaType(m_pMediaType);
+    m_bFirstSample = false;
+  }
 
   if (m_pSettings->GetLogSampleTimes())
   {
-    REFERENCE_TIME rtStart = 0;
-    REFERENCE_TIME rtStop = 0;
-
-    pSample->GetTime(&rtStart, &rtStop);
-
     if (abs(m_rtNextSample - rtStart) > MAX_SAMPLE_TIME_ERROR)
       Log("Stream discontinuity detected in incoming samples: %6.3f", (m_rtNextSample - rtStart) / 10000000.0);
    
@@ -648,9 +650,6 @@ STDMETHODIMP CMPAudioRenderer::Stop()
     m_pPipeline->EndStop();
   }
 
-  if (m_pSettings->GetReleaseDeviceOnStop())
-    m_pRenderer->ReleaseDevice();
-
   return CBaseRenderer::Stop(); 
 };
 
@@ -750,6 +749,8 @@ HRESULT CMPAudioRenderer::EndFlush()
     m_pPipeline->EndFlush();
   if (m_pClock)
     m_pClock->Reset(0);
+
+  m_bFirstSample = true;
 
   return CBaseRenderer::EndFlush(); 
 }

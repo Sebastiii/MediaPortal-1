@@ -72,7 +72,18 @@ HRESULT CAC3EncoderFilter::NegotiateFormat(const WAVEFORMATEXTENSIBLE* pwfx, int
   if (!m_pNextSink)
     return VFW_E_TYPE_NOT_ACCEPTED;
 
-  // Try passthrough
+  if (m_pSettings->GetAllowBitStreaming() && CanBitstream(pwfx))
+  {
+    HRESULT hr = m_pNextSink->NegotiateFormat(pwfx, nApplyChangesDepth, pChOrder);
+    if (SUCCEEDED(hr))
+    {
+      m_bNextFormatPassthru = true;
+      m_bPassThrough = true;
+      m_chOrder = *pChOrder;
+      return hr;
+    }
+  }
+
   bool bApplyChanges = (nApplyChangesDepth !=0 );
   if (nApplyChangesDepth != INFINITE && nApplyChangesDepth > 0)
     nApplyChangesDepth--;
@@ -180,17 +191,24 @@ HRESULT CAC3EncoderFilter::PutSample(IMediaSample *pSample)
   if (!pSample)
     return S_OK;
 
-  AM_MEDIA_TYPE* pmt = NULL;
+  WAVEFORMATEXTENSIBLE* pwfe = NULL;
+  AM_MEDIA_TYPE *pmt = NULL;
   bool bFormatChanged = false;
   
   HRESULT hr = S_OK;
 
+  if (SUCCEEDED(pSample->GetMediaType(&pmt)) && pmt != NULL)
+  {
+    pwfe = (WAVEFORMATEXTENSIBLE*)pmt->pbFormat;
+    bFormatChanged = !FormatsEqual(pwfe, m_pInputFormat);
+  }
+
+  if (pSample->IsDiscontinuity() == S_OK)
+    m_bDiscontinuity = true;
+
   CAutoLock lock (&m_csOutputSample);
   if (m_bFlushing)
     return S_OK;
-
-  if (SUCCEEDED(pSample->GetMediaType(&pmt)) && pmt)
-    bFormatChanged = !FormatsEqual((WAVEFORMATEXTENSIBLE*)pmt->pbFormat, m_pInputFormat);
 
   if (bFormatChanged)
   {
@@ -213,6 +231,7 @@ HRESULT CAC3EncoderFilter::PutSample(IMediaSample *pSample)
       return hr;
     }
 
+    SetInputFormat(pwfe);
     m_chOrder = chOrder;
   }
 

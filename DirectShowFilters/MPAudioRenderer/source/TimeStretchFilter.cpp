@@ -480,6 +480,7 @@ DWORD CTimeStretchFilter::ThreadProc()
     {
       Log("CTimeStretchFilter::timestretch thread - closing down - thread ID: %d", m_ThreadId);
       SetEvent(m_hCurrentSampleReleased);
+      clear();
       CloseThread();
       m_csResources.Unlock();
       return 0;
@@ -494,7 +495,7 @@ DWORD CTimeStretchFilter::ThreadProc()
         if (m_pNextOutSample)
           m_pNextOutSample.Release();
 
-        flush();
+        clear();
         m_pClock->Flush();
         sample.Release();
         SetEvent(m_hCurrentSampleReleased);
@@ -575,7 +576,6 @@ DWORD CTimeStretchFilter::ThreadProc()
 
           CreateOutput(nInFrames, nOutFrames, bias, adjustment, AVMult, false);
 
-
           m_pClock->AddSample(rtStart, rtAdjustedStart, rtEnd, rtAdjustedEnd);
         }
       }
@@ -589,23 +589,27 @@ void CTimeStretchFilter::CreateOutput(UINT32 nInFrames, UINT32 nOutFrames, doubl
   UINT32 maxBufferFrames = m_nOutBufferSize / m_pOutputFormat->Format.nBlockAlign;
   UINT32 nOutFramesTotal = 0;
 
+  CAutoLock lock (&m_csOutputSample);
+
   while (nOutFrames > 0)
   {
     // try to get an output buffer if none available
     if (!m_pNextOutSample && FAILED(hr = RequestNextOutBuffer(m_rtInSampleTime)))
     {
-      Log("CTimeStretchFilter::timestretch thread - Failed to get next output sample!");
+      if (hr != VFW_E_NOT_COMMITTED)
+        Log("CTimeStretchFilter::timestretch thread - Failed to get next output sample!");
+
       break;
     }
 
     BYTE* pOutData = NULL;
     m_pNextOutSample->GetPointer(&pOutData);
-              
+
     if (pOutData)
     {
       UINT32 nOffset = m_pNextOutSample->GetActualDataLength();
       UINT32 nOffsetInFrames = nOffset / m_pOutputFormat->Format.nBlockAlign;
-                
+
       if (nOutFrames > maxBufferFrames - nOffsetInFrames)
         nOutFrames = maxBufferFrames - nOffsetInFrames;
 
@@ -618,7 +622,7 @@ void CTimeStretchFilter::CreateOutput(UINT32 nInFrames, UINT32 nOutFrames, doubl
         m_pNextOutSample->SetMediaType(m_pMediaType);
 
       OutputSample(bFlushPartialSample);
-        
+
       nOutFrames = numSamples();
     }
   }

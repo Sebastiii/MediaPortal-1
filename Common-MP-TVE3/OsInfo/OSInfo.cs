@@ -228,7 +228,7 @@ namespace OSInfo
       /// Windows 2012 Server
       ///</summary>
       Windows2012,
-	  ///<summary>
+      ///<summary>
       /// Windows 2012 R2 Server
       ///</summary>
       Windows2012R2

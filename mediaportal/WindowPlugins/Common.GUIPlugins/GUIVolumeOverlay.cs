@@ -12,6 +12,7 @@ namespace Common.GUIPlugins
     protected GUIImage _imgMute = null;
     [SkinControl(503)]
     protected GUIVolumeBar _volumeBar = null;
+    bool _supportGUIVolume = false;
 
     public GUIMixerOverlay()
     {
@@ -20,10 +21,10 @@ namespace Common.GUIPlugins
 
     public override bool Init()
     {
-      bool result = Load(GUIGraphicsContext.Skin + @"\VolumeOverlay.xml");
+      _supportGUIVolume = Load(GUIGraphicsContext.Skin + @"\VolumeOverlay.xml");
       GetID = (int)Window.WINDOW_GUI_VOLUME_OVERLAY;
       GUILayerManager.RegisterLayer(this, GUILayerManager.LayerType.Volume);
-      return result;
+      return _supportGUIVolume;
     }
 
     public override bool SupportsDelayedLoad
@@ -33,6 +34,9 @@ namespace Common.GUIPlugins
 
     public override bool DoesPostRender()
     {
+      if (!_supportGUIVolume)
+        return false;
+
       if(
          !VolumeHandler.Instance.IsMuted && (!GUIGraphicsContext.VolumeOverlay ||
          GUIGraphicsContext.DisableVolumeOverlay ||
@@ -47,6 +51,9 @@ namespace Common.GUIPlugins
 
     public override void PostRender(float timePassed, int iLayer)
     {
+      if (!_supportGUIVolume)
+        return;
+      
       if (!VolumeHandler.Instance.IsEnabledVolumeOSD)
         return;
       

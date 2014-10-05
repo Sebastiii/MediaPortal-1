@@ -24,6 +24,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Timers;
 using System.Windows.Forms;
 using Gentle.Common;
@@ -342,6 +343,14 @@ namespace TvPlugin
     {
       _needToClearScreen = true;
 
+      if (action.wID == Action.ActionType.ACTION_SHOW_VOLUME && !File.Exists(GUIGraphicsContext.Skin + @"\VolumeOverlay.xml"))
+      {
+        _volumeTimer = DateTime.Now;
+        _isVolumeVisible = true;
+        RenderVolume(_isVolumeVisible);
+        //				if(_vmr9OSD!=null)
+        //					_vmr9OSD.RenderVolumeOSD();
+      }
       //ACTION_SHOW_CURRENT_TV_INFO
       if (action.wID == Action.ActionType.ACTION_SHOW_CURRENT_TV_INFO)
       {

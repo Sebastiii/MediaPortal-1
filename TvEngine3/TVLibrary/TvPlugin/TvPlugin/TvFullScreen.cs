@@ -70,6 +70,7 @@ namespace TvPlugin
       public bool _notifyDialogVisible = false;
       public bool _bottomDialogMenuVisible = false;
       public bool wasVMRBitmapVisible = false;
+      public bool volumeVisible = false;
       public bool _dialogYesNoVisible = false;
     }
 
@@ -137,9 +138,13 @@ namespace TvPlugin
     ///VMR9OSD _vmr9OSD = null;
     private FullScreenState _screenState = new FullScreenState();
 
+    private bool _isVolumeVisible = false;
+    private DateTime _volumeTimer = DateTime.MinValue;
     private bool _isStartingTSForRecording = false;
     private bool _autoZapMode = false;
     private Timer _autoZapTimer = new Timer();
+    [SkinControl(500)] protected GUIImage imgVolumeMuteIcon;
+    [SkinControl(501)] protected GUIVolumeBar imgVolumeBar;
 
     private int lastChannelWithNoSignal = -1;
     private VideoRendererStatistics.State videoState = VideoRendererStatistics.State.VideoPresent;
@@ -1432,6 +1437,8 @@ namespace TvPlugin
             _dialogYesNoVisible = false;
             _bottomDialogMenuVisible = false;
             _statusTimeOutTimer = DateTime.Now;
+            //imgVolumeBar.Current = VolumeHandler.Instance.Step;
+            //imgVolumeBar.Maximum = VolumeHandler.Instance.StepMax;
 
             ResetAllControls(); // make sure the controls are positioned relevant to the OSD Y offset
             ScreenStateChanged();
@@ -1439,6 +1446,8 @@ namespace TvPlugin
 
             GUIGraphicsContext.IsFullScreenVideo = true;
             GUILayerManager.RegisterLayer(this, GUILayerManager.LayerType.Osd);
+
+            RenderVolume(false);
 
             //return base.OnMessage(message);
             return true;
@@ -2363,13 +2372,11 @@ namespace TvPlugin
 
       if (!g_Player.Playing && !TVHome.DoingChannelChange())
       {
-        Log.Debug("Tvfullscreen:not viewing anymore");
-        GUIWindowManager.ShowPreviousWindow();
+          Log.Debug("Tvfullscreen:not viewing anymore");
+          GUIWindowManager.ShowPreviousWindow();
       }
       else
-      {
         GUIGraphicsContext.IsFullScreenVideo = true;
-      }
     }
 
     public bool ScreenStateChanged()
@@ -2446,6 +2453,12 @@ namespace TvPlugin
       {
         _screenState.ShowInput = _channelInputVisible;
         updateGUI = true;
+      }
+      if (_isVolumeVisible != _screenState.volumeVisible)
+      {
+        _screenState.volumeVisible = _isVolumeVisible;
+        updateGUI = true;
+        _volumeTimer = DateTime.Now;
       }
       if (_dialogYesNoVisible != _screenState._dialogYesNoVisible)
       {
@@ -2560,10 +2573,21 @@ namespace TvPlugin
         ShowControl(GetID, (int)Control.MSG_BOX_LABEL3);
         ShowControl(GetID, (int)Control.MSG_BOX_LABEL4);
       }
+
+      RenderVolume(_isVolumeVisible);
     }
 
     private void CheckTimeOuts()
     {
+      if (_isVolumeVisible)
+      {
+        TimeSpan ts = DateTime.Now - _volumeTimer;
+        // mantis 0002467: Keep Mute Icon on screen if muting is ON 
+        if (ts.TotalSeconds >= 3 && !VolumeHandler.Instance.IsMuted)
+        {
+          RenderVolume(false);
+        }
+      }
       if (_groupVisible)
       {
         TimeSpan ts = (DateTime.Now - _groupTimeOutTimer);
@@ -3206,6 +3230,41 @@ namespace TvPlugin
     {
       _autoZapTimer = new Timer();
       base.OnPageLoad();
+    }
+
+    private void RenderVolume(bool show)
+    {
+      if (imgVolumeBar == null)
+      {
+        return;
+      }
+
+      if (!show)
+      {
+        _isVolumeVisible = false;
+        imgVolumeBar.Visible = false;
+        imgVolumeMuteIcon.Visible = false;
+        return;
+      }
+      else
+      {
+        if (VolumeHandler.Instance.IsMuted)
+        {
+          imgVolumeBar.Maximum = VolumeHandler.Instance.StepMax;
+          imgVolumeBar.Current = 0;
+          imgVolumeMuteIcon.Visible = true;
+          imgVolumeBar.Image1 = 1;
+        }
+        else
+        {
+          imgVolumeBar.Maximum = VolumeHandler.Instance.StepMax;
+          imgVolumeBar.Current = VolumeHandler.Instance.Step;
+          imgVolumeMuteIcon.Visible = false;
+          imgVolumeBar.Image1 = 2;
+          imgVolumeBar.Image2 = 1;
+        }
+        imgVolumeBar.Visible = true;
+      }
     }
 
     #region IRenderLayer

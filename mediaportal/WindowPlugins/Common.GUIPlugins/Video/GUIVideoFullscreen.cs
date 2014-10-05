@@ -55,6 +55,7 @@ namespace MediaPortal.GUI.Video
       public bool ShowSkipBar = false;
       public bool wasVMRBitmapVisible = false;
       public bool NotifyDialogVisible = false;
+      public bool volumeVisible = false;
       public bool forbiddenVisible = false;
     }
 
@@ -81,6 +82,8 @@ namespace MediaPortal.GUI.Video
       PANEL2 = 150
     } ;
 
+    [SkinControl(500)] protected GUIImage imgVolumeMuteIcon;
+    [SkinControl(501)] protected GUIVolumeBar imgVolumeBar;
     [SkinControl(502)] protected GUIImage imgActionForbiddenIcon;
 
     private bool _isOsdVisible = false;
@@ -102,10 +105,12 @@ namespace MediaPortal.GUI.Video
     private bool _IsDialogVisible = false;
     private bool _IsClosingDialog = false;
     private bool _needToClearScreen = false;
+    private bool _isVolumeVisible = false;
     private bool _isForbiddenVisible = false;
     private GUIDialogMenu dlg;
     private GUIVideoOSD _osdWindow = null;
     private bool NotifyDialogVisible = false;
+    private DateTime _volumeTimer = DateTime.MinValue;
     private DateTime _forbiddenTimer = DateTime.MinValue;
     private PlayListPlayer playlistPlayer;
     private const int SKIPBAR_PADDING = 10;
@@ -374,6 +379,9 @@ namespace MediaPortal.GUI.Video
         _isVolumeVisible = true;
         RenderVolume(_isVolumeVisible);
 
+        //				if(m_vmr9OSD!=null)
+        //					m_vmr9OSD.RenderVolumeOSD();
+      }
       if (_isOsdVisible)
       {
         OnOsdAction(action);
@@ -1166,8 +1174,10 @@ namespace MediaPortal.GUI.Video
             _vmr7UpdateTimer = DateTime.Now;
             _IsDialogVisible = false;
             _needToClearScreen = false;
+            _isVolumeVisible = false;
             _isForbiddenVisible = false;
             NotifyDialogVisible = false;
+            _volumeTimer = DateTime.MinValue;
             _forbiddenTimer = DateTime.MinValue;
 
             screenState = new FullScreenState();
@@ -1188,6 +1198,7 @@ namespace MediaPortal.GUI.Video
             GUIGraphicsContext.IsFullScreenVideo = true;
             GUILayerManager.RegisterLayer(this, GUILayerManager.LayerType.Osd);
 
+            RenderVolume(false);
             RenderForbidden(false);
 
             //return base.OnMessage(message);
@@ -1211,6 +1222,12 @@ namespace MediaPortal.GUI.Video
               GUIGraphicsContext.IsFullScreenVideo = false;
 
               GUILayerManager.UnRegisterLayer(this);
+
+              /*imgVolumeMuteIcon.SafeDispose();
+              imgVolumeBar.SafeDispose();
+              imgActionForbiddenIcon.SafeDispose();
+              dlg.SafeDispose();
+              _osdWindow.SafeDispose();*/
 
               base.OnMessage(message);
             }
@@ -1974,6 +1991,12 @@ namespace MediaPortal.GUI.Video
         screenState.ShowTime = _showTime;
         updateGUI = true;
       }
+      if (_isVolumeVisible != screenState.volumeVisible)
+      {
+        screenState.volumeVisible = _isVolumeVisible;
+        updateGUI = true;
+        _volumeTimer = DateTime.Now;
+      }
       if (_isForbiddenVisible != screenState.forbiddenVisible)
       {
         screenState.forbiddenVisible = _isForbiddenVisible;
@@ -2062,11 +2085,21 @@ namespace MediaPortal.GUI.Video
         ShowControl(GetID, (int)Control.LABEL_ROW1);
       }
 
+      RenderVolume(_isVolumeVisible);
       RenderForbidden(_isForbiddenVisible);
     }
 
     private void CheckTimeOuts()
     {
+      if (_isVolumeVisible)
+      {
+        TimeSpan ts = DateTime.Now - _volumeTimer;
+        // mantis 0002467: Keep Mute Icon on screen if muting is ON 
+        if (ts.TotalSeconds >= 3 && !VolumeHandler.Instance.IsMuted)
+        {
+          RenderVolume(false);
+        }
+      }
       if (_isForbiddenVisible)
       {
         TimeSpan ts = DateTime.Now - _forbiddenTimer;
@@ -2232,6 +2265,41 @@ namespace MediaPortal.GUI.Video
         {
           _osdWindow.Render(timePassed);
         }
+      }
+    }
+
+    private void RenderVolume(bool show)
+    {
+      if (imgVolumeBar == null)
+      {
+        return;
+      }
+
+      if (!show)
+      {
+        _isVolumeVisible = false;
+        imgVolumeBar.Visible = false;
+        imgVolumeMuteIcon.Visible = false;
+        return;
+      }
+      else
+      {
+        if (VolumeHandler.Instance.IsMuted)
+        {
+          imgVolumeBar.Maximum = VolumeHandler.Instance.StepMax;
+          imgVolumeBar.Current = 0;
+          imgVolumeMuteIcon.Visible = true;
+          imgVolumeBar.Image1 = 1;
+        }
+        else
+        {
+          imgVolumeBar.Maximum = VolumeHandler.Instance.StepMax;
+          imgVolumeBar.Current = VolumeHandler.Instance.Step;
+          imgVolumeMuteIcon.Visible = false;
+          imgVolumeBar.Image1 = 2;
+          imgVolumeBar.Image2 = 1;
+        }
+        imgVolumeBar.Visible = true;
       }
     }
 

@@ -198,7 +198,7 @@ HRESULT CMPAudioRenderer::InitFilter()
 
   if (!m_bInitialized)
   {
-    CAutoLock cs(&m_csAudioRenderer);
+    CAutoLock lockRenderer(&m_csAudioRenderer);
 
     m_pClock->SetAudioDelay(m_pSettings->GetAudioDelay() * 10000); // setting in registry is in ms
 
@@ -458,11 +458,26 @@ bool CMPAudioRenderer::DeliverSample(IMediaSample* pSample)
   if (rtStart < 0)
     return false;
 
-  // In some cases audio decoder wont put the PMT on 1st sample (depends how the format negotiation goes?)
-  if (m_bFirstSample && m_pMediaType)
+  if (m_pMediaType)
   {
-    pSample->SetMediaType(m_pMediaType);
-    m_bFirstSample = false;
+    if (m_bFirstSample)
+    {
+      // In some cases audio decoder wont put the PMT on 1st sample (depends how the format negotiation goes?)
+      pSample->SetMediaType(m_pMediaType);
+      m_bFirstSample = false;
+    }
+
+    WAVEFORMATEXTENSIBLE* pwf = (WAVEFORMATEXTENSIBLE*)m_pMediaType->pbFormat;
+
+    UINT32 nSampleLength = pSample->GetActualDataLength();
+    UINT nFrames = nSampleLength / pwf->Format.nBlockAlign;
+    UINT32 nExpectedLength = nFrames * pwf->Format.nBlockAlign;
+    
+    if (nSampleLength != nExpectedLength)
+    {
+      Log("CMPAudioRenderer::DeliverSample incorrect incoming sample length %d expected %d", nSampleLength, nExpectedLength);
+      pSample->SetActualDataLength(nExpectedLength);
+    }
   }
 
   if (m_pSettings->GetLogSampleTimes())
@@ -757,21 +772,6 @@ HRESULT CMPAudioRenderer::EndFlush()
   return CBaseRenderer::EndFlush(); 
 }
 
-// TODO - implement TsReader side as well
-
-/*
-bool CMPAudioRenderer::CheckForLiveSouce()
-{
-  FILTER_INFO filterInfo;
-  ZeroMemory(&filterInfo, sizeof(filterInfo));
-  m_EVRFilter->QueryFilterInfo(&filterInfo); // This addref's the pGraph member
-
-  CComPtr<IBaseFilter> pBaseFilter;
-
-  HRESULT hr = filterInfo.pGraph->FindFilterByName(L"MediaPortal File Reader", &pBaseFilter);
-  filterInfo.pGraph->Release();
-}*/
-
 // IAVSyncClock interface implementation
 
 HRESULT CMPAudioRenderer::AdjustClock(DOUBLE pAdjustment)
@@ -796,7 +796,7 @@ HRESULT CMPAudioRenderer::SetEVRPresentationDelay(DOUBLE pEVRDelay)
 {
   CAutoLock cs(&m_csAudioRenderer);
 
-  bool ret = S_FALSE;
+  HRESULT ret = S_FALSE;
 
   if (m_pSettings->GetUseTimeStretching())
   {
@@ -809,7 +809,7 @@ HRESULT CMPAudioRenderer::SetEVRPresentationDelay(DOUBLE pEVRDelay)
   else
   {
     Log("SetPresentationDelay: %1.10f - failed, time stretching is disabled", pEVRDelay);
-    ret = S_FALSE;  
+    ret = S_FALSE;
   }
 
   return ret;
@@ -819,7 +819,7 @@ HRESULT CMPAudioRenderer::SetBias(DOUBLE pBias)
 {
   //CAutoLock cAutoLock(&m_csResampleLock);
 
-  bool ret = S_FALSE;
+  HRESULT ret = S_FALSE;
 
   if (m_pSettings->GetUseTimeStretching())
   {

@@ -96,7 +96,6 @@ public class MediaPortalApp : D3D, IRender
   private bool                  _startWithBasicHome;
   private bool                  _useOnlyOneHome;
   private bool                  _suspended;
-  private bool                  _resumed;
   private bool                  _ignoreContextMenuAction;
   private bool                  _supportsFiltering;
   private bool                  _supportsAlphaBlend;
@@ -128,6 +127,7 @@ public class MediaPortalApp : D3D, IRender
   private IntPtr                _displayStatusHandle;
   private IntPtr                _userPresenceHandle;
   private IntPtr                _awayModeHandle;
+  private IntPtr                _hWnd;
   private bool                  _resumedAutomatic;
   private bool                  _userActivity;
   private Timer                 _delayTimer;
@@ -1382,6 +1382,10 @@ public class MediaPortalApp : D3D, IRender
     return a;
   }
 
+  /// <summary>
+  /// Message Pump
+  /// </summary>
+  /// <param name="msg"></param>
   protected override void WndProc(ref Message msg)
   {
     try
@@ -1423,12 +1427,12 @@ public class MediaPortalApp : D3D, IRender
           }
           return;
 
-          // power management
+        // power management
         case WM_POWERBROADCAST:
           OnPowerBroadcast(ref msg);
           break;
 
-          // set maximum and minimum form size in windowed mode
+        // set maximum and minimum form size in windowed mode
         case WM_GETMINMAXINFO:
           OnGetMinMaxInfo(ref msg);
           PluginManager.WndProc(ref msg);
@@ -1444,31 +1448,31 @@ public class MediaPortalApp : D3D, IRender
           PluginManager.WndProc(ref msg);
           break;
 
-          // only allow window to be moved inside a valid working area
+        // only allow window to be moved inside a valid working area
         case WM_MOVING:
           OnMoving(ref msg);
           PluginManager.WndProc(ref msg);
           break;
 
-          // verify window size in case it was not resized by the user
+        // verify window size in case it was not resized by the user
         case WM_SIZE:
           OnSize(ref msg);
           PluginManager.WndProc(ref msg);
           break;
 
-          // aspect ratio save window resizing
+        // aspect ratio save window resizing
         case WM_SIZING:
           OnSizing(ref msg);
           PluginManager.WndProc(ref msg);
           break;
 
-          // handle display changes
+        // handle display changes
         case WM_DISPLAYCHANGE:
           OnDisplayChange(ref msg);
           PluginManager.WndProc(ref msg);
           break;
 
-          // handle device changes
+        // handle device changes
         case WM_DEVICECHANGE:
           OnDeviceChange(ref msg);
           PluginManager.WndProc(ref msg);
@@ -1491,13 +1495,13 @@ public class MediaPortalApp : D3D, IRender
           msg.Result = (IntPtr)0;
           break;
 
-          // handle activation and deactivation requests
+        // handle activation and deactivation requests
         case WM_ACTIVATE:
           OnActivate(ref msg);
           PluginManager.WndProc(ref msg);
           break;
 
-          // handle system commands
+        // handle system commands
         case WM_SYSCOMMAND:
           // do not continue with rest of method in case we aborted screen saver or display powering off
           if (!OnSysCommand(ref msg))
@@ -1507,7 +1511,7 @@ public class MediaPortalApp : D3D, IRender
           PluginManager.WndProc(ref msg);
           break;
 
-          // handle default commands needed for plugins
+        // handle default commands needed for plugins
         default:
           PluginManager.WndProc(ref msg);
           break;
@@ -1636,6 +1640,19 @@ public class MediaPortalApp : D3D, IRender
       {
         // The computer is about to enter a suspended state
         case (int)PBT_EVENT.PBT_APMSUSPEND:
+          // Save current MediaPortal Windows handle
+          if (_hWnd == IntPtr.Zero)
+          {
+            Process[] processes = Process.GetProcesses();
+            foreach (Process prc in processes)
+            {
+              if (prc.ProcessName == "MediaPortal")
+              {
+                _hWnd = prc.MainWindowHandle;
+              }
+            }
+          }
+
           // Reset timer and resume states
           if (_delayTimer != null)
           {
@@ -1812,14 +1829,16 @@ public class MediaPortalApp : D3D, IRender
       _delayTimer.Stop();
       _delayTimer.Elapsed -= SendResumeDelayedMsg;
       _delayTimer = null;
+      // Need to look if we need to force _resumedAutomatic
+      //_resumedAutomatic = true;
     }
 
     // Send PBT_APMRESUMEDELAYED message
     Log.Debug("Main: SendResumeDelayedMsg - sending PBT_APMRESUMEDELAYED message");
-    IntPtr hWnd = Form.ActiveForm.Handle;
-    if (hWnd != IntPtr.Zero)
+    if (_hWnd != IntPtr.Zero)
     {
-      PostMessage(hWnd, WM_POWERBROADCAST, new IntPtr((int)PBT_EVENT.PBT_APMRESUMEDELAYED), IntPtr.Zero);
+      PostMessage(_hWnd, WM_POWERBROADCAST, new IntPtr((int)PBT_EVENT.PBT_APMRESUMEDELAYED), IntPtr.Zero);
+      _hWnd = IntPtr.Zero;
     }
   }
 
@@ -1916,14 +1935,14 @@ public class MediaPortalApp : D3D, IRender
               Log.Info("Main: Audio Renderer {0} removed", deviceName);
               try
               {
-                if (_stopOnLostAudioRenderer)
+              if (_stopOnLostAudioRenderer)
+              {
+                g_Player.Stop();
+                while (GUIGraphicsContext.IsPlaying)
                 {
-                  g_Player.Stop();
-                  while (GUIGraphicsContext.IsPlaying)
-                  {
-                    Thread.Sleep(100);
-                  }
+                  Thread.Sleep(100);
                 }
+              }
                 VolumeHandler.Dispose();
                 #pragma warning disable 168
                 VolumeHandler vh = VolumeHandler.Instance;
@@ -1939,14 +1958,14 @@ public class MediaPortalApp : D3D, IRender
               Log.Info("Main: Audio Renderer {0} connected", deviceName);
               try
               {
-                if (_stopOnLostAudioRenderer)
+              if (_stopOnLostAudioRenderer)
+              {
+                g_Player.Stop();
+                while (GUIGraphicsContext.IsPlaying)
                 {
-                  g_Player.Stop();
-                  while (GUIGraphicsContext.IsPlaying)
-                  {
-                    Thread.Sleep(100);
-                  }
+                  Thread.Sleep(100);
                 }
+              }
                 VolumeHandler.Dispose();
                 #pragma warning disable 168
                 VolumeHandler vh = VolumeHandler.Instance;
@@ -2434,53 +2453,41 @@ public class MediaPortalApp : D3D, IRender
   /// </summary>
   private void OnSuspend()
   {
-    if (_suspended)
+    // stop playback
+    Log.Debug("Main: OnSuspend - stopping playback");
+    if (GUIGraphicsContext.IsPlaying)
     {
-      Log.Info("Main: OnSuspend is already in progress");
-      return;
-    }
-    try
-    {
-      // stop playback
-      Log.Debug("Main: OnSuspend - stopping playback");
-      if (GUIGraphicsContext.IsPlaying)
+      Currentmodulefullscreen();
+      g_Player.Stop();
+      while (GUIGraphicsContext.IsPlaying)
       {
-        Currentmodulefullscreen();
-        g_Player.Stop();
-        while (GUIGraphicsContext.IsPlaying)
-        {
-          // This could lead into OS putting system into sleep before MP completes OnSuspend().
-          // OS gives only 2 seconds time to application to react power events (>= Vista)
-          Thread.Sleep(100);
-        }
+        // This could lead into OS putting system into sleep before MP completes OnSuspend().
+        // OS gives only 2 seconds time to application to react power events (>= Vista)
+        Thread.Sleep(100);
       }
-      SaveLastActiveModule();
-
-      Log.Debug("Main: OnSuspend - stopping input devices");
-      InputDevices.Stop();
-
-      Log.Debug("Main: OnSuspend - stopping AutoPlay");
-      AutoPlay.StopListening();
-
-      // un-mute volume in case we are suspending in away mode
-      if (IsInAwayMode && VolumeHandler.Instance.IsMuted)
-      {
-        Log.Debug("Main: OnSuspend - unmute volume");
-        VolumeHandler.Instance.UnMute();
-      }
-      VolumeHandler.Dispose();
-
-      // we only dispose the DB connection if the DB path is remote.      
-      Log.Debug("Main: OnSuspend - dispose DB connection");
-      DisposeDBs();
-
-      _suspended = true;
-      Log.Info("Main: OnSuspend - Done");
     }
-    finally
+    SaveLastActiveModule();
+
+    Log.Debug("Main: OnSuspend - stopping input devices");
+    InputDevices.Stop();
+
+    Log.Debug("Main: OnSuspend - stopping AutoPlay");
+    AutoPlay.StopListening();
+
+    // un-mute volume in case we are suspending in away mode
+    if (IsInAwayMode && VolumeHandler.Instance.IsMuted)
     {
-      _resumed = false;
+      Log.Debug("Main: OnSuspend - unmute volume");
+      VolumeHandler.Instance.UnMute();
     }
+    VolumeHandler.Dispose();
+
+    // we only dispose the DB connection if the DB path is remote.      
+    Log.Debug("Main: OnSuspend - dispose DB connection");
+    DisposeDBs();
+
+    _suspended = true;
+    Log.Info("Main: OnSuspend - Done");
   }
 
   /// <summary>
@@ -4335,8 +4342,8 @@ public class MediaPortalApp : D3D, IRender
     {
       base.MouseMoveEvent(e);
       Point p = ScaleCursorPosition(e.Location);
-      var action = new Action(Action.ActionType.ACTION_MOVE_UP, p.X, p.Y) { MouseButton = e.Button };
-      GUIGraphicsContext.ResetLastActivity();
+      var action = new Action(Action.ActionType.ACTION_MOVE_UP, p.X, p.Y) {MouseButton = e.Button};
+      GUIGraphicsContext.ResetLastActivity(); 
       GUIGraphicsContext.OnAction(action);
       base.MouseMoveEvent(e);
     }
@@ -4344,7 +4351,7 @@ public class MediaPortalApp : D3D, IRender
     {
       base.MouseMoveEvent(e);
       Point p = ScaleCursorPosition(e.Location);
-      var action = new Action(Action.ActionType.ACTION_MOVE_DOWN, p.X, p.Y) { MouseButton = e.Button };
+      var action = new Action(Action.ActionType.ACTION_MOVE_DOWN, p.X, p.Y) {MouseButton = e.Button};
       GUIGraphicsContext.ResetLastActivity();
       GUIGraphicsContext.OnAction(action);
       base.MouseMoveEvent(e);
@@ -4383,7 +4390,7 @@ public class MediaPortalApp : D3D, IRender
         if (GUIWindowManager.GetWindow(GUIWindowManager.ActiveWindow) != null)
         {
           Point p = ScaleCursorPosition(e.Location);
-          var action = new Action(Action.ActionType.ACTION_MOUSE_MOVE, p.X, p.Y) { MouseButton = e.Button };
+          var action = new Action(Action.ActionType.ACTION_MOUSE_MOVE, p.X, p.Y) {MouseButton = e.Button};
           GUIGraphicsContext.OnAction(action);
           if (MouseCursor && current != null)
           {
@@ -4422,7 +4429,7 @@ public class MediaPortalApp : D3D, IRender
       var actionMove = new Action(Action.ActionType.ACTION_MOUSE_MOVE, p.X, p.Y);
       GUIGraphicsContext.OnAction(actionMove);
 
-      var action = new Action(Action.ActionType.ACTION_MOUSE_DOUBLECLICK, p.X, p.Y) { MouseButton = e.Button, SoundFileName = "click.wav" };
+      var action = new Action(Action.ActionType.ACTION_MOUSE_DOUBLECLICK, p.X, p.Y) {MouseButton = e.Button, SoundFileName = "click.wav"};
       if (action.SoundFileName.Length > 0 && !g_Player.Playing)
       {
         Utils.PlaySound(action.SoundFileName, false, true);
@@ -4483,7 +4490,7 @@ public class MediaPortalApp : D3D, IRender
         }
         else
         {
-          action = new Action(Action.ActionType.ACTION_MOUSE_CLICK, p.X, p.Y) { MouseButton = e.Button, SoundFileName = "click.wav" };
+          action = new Action(Action.ActionType.ACTION_MOUSE_CLICK, p.X, p.Y) {MouseButton = e.Button, SoundFileName = "click.wav"};
           if (action.SoundFileName.Length > 0 && !g_Player.Playing)
           {
             Utils.PlaySound(action.SoundFileName, false, true);
@@ -4501,7 +4508,7 @@ public class MediaPortalApp : D3D, IRender
             (GUIWindowManager.ActiveWindow == (int) GUIWindow.Window.WINDOW_SLIDESHOW))
         {
           // Get context menu
-          action = new Action(Action.ActionType.ACTION_CONTEXT_MENU, p.X, p.Y) { MouseButton = e.Button, SoundFileName = "click.wav" };
+          action = new Action(Action.ActionType.ACTION_CONTEXT_MENU, p.X, p.Y) {MouseButton = e.Button, SoundFileName = "click.wav"};
           if (action.SoundFileName.Length > 0 && !g_Player.Playing)
           {
             Utils.PlaySound(action.SoundFileName, false, true);
@@ -4563,7 +4570,7 @@ public class MediaPortalApp : D3D, IRender
     {
       _mouseClickFired = false;
       Point p = ScaleCursorPosition(e.Location);
-      var action = new Action(Action.ActionType.ACTION_MOUSE_CLICK, p.X, p.Y) { MouseButton = _lastMouseClickEvent.Button, SoundFileName = "click.wav" };
+      var action = new Action(Action.ActionType.ACTION_MOUSE_CLICK, p.X, p.Y) {MouseButton = _lastMouseClickEvent.Button, SoundFileName = "click.wav"};
       if (action.SoundFileName.Length > 0 && !g_Player.Playing)
       {
         Utils.PlaySound(action.SoundFileName, false, true);

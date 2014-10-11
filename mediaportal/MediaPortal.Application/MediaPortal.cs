@@ -1712,8 +1712,13 @@ public class MediaPortalApp : D3D, IRender
         // The computer is about to enter a suspended state
         case (int)PBT_EVENT.PBT_APMSUSPEND:
           // Save current MediaPortal Windows handle
+          Show();
           Process prc = Process.GetCurrentProcess();
           Process.GetProcessesByName(prc.ProcessName);
+          if (WindowState == FormWindowState.Minimized || !IsVisible)
+          {
+            Hide();
+          }
           if (prc.ProcessName == "MediaPortal")
           {
             _hWnd = prc.MainWindowHandle;
@@ -2632,13 +2637,15 @@ public class MediaPortalApp : D3D, IRender
     _lastOnresume = DateTime.Now;
 
     // Force Focus after resume done (really weird sequence)
-    Process prc = Process.GetCurrentProcess();
-    SwitchToThisWindow(prc.MainWindowHandle, true);
-    ShowWindow(prc.MainWindowHandle, WindowShowStyle.Show);
-    ShowWindow(prc.MainWindowHandle, WindowShowStyle.Minimize);
-    ShowWindow(prc.MainWindowHandle, WindowShowStyle.Restore);
-    ShowWindow(prc.MainWindowHandle, WindowShowStyle.ShowNormal);
-    SetForegroundWindow(prc.MainWindowHandle);
+    if (WindowState != FormWindowState.Minimized || IsVisible)
+    {
+      SwitchToThisWindow(_hWnd, true);
+      ShowWindow(_hWnd, WindowShowStyle.Show);
+      ShowWindow(_hWnd, WindowShowStyle.Minimize);
+      ShowWindow(_hWnd, WindowShowStyle.Restore);
+      ShowWindow(_hWnd, WindowShowStyle.ShowNormal);
+      SetForegroundWindow(_hWnd);
+    }
 
     Log.Info("Main: OnResumeSuspend - Done");
   }

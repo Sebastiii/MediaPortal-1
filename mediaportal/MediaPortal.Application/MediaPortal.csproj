@@ -355,6 +355,10 @@
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
-    <PostBuildEvent>"$(ProjectDir)PostBuild.bat" "$(SolutionDir)" $(ConfigurationName)</PostBuildEvent>
+    <PostBuildEvent>call "%25VS120COMNTOOLS%25vsvars32.bat"
+editbin /largeaddressaware $(TargetPath)
+"$(ProjectDir)PostBuild.bat" "$(SolutionDir)" $(ConfigurationName)
+
+</PostBuildEvent>
   </PropertyGroup>
 </Project>

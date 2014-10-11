@@ -131,6 +131,7 @@ public class MediaPortalApp : D3D, IRender
   private bool                  _resumedAutomatic;
   private bool                  _userActivity;
   private Timer                 _delayTimer;
+  private FormWindowState       _previousWindowState;
 
   // ReSharper disable InconsistentNaming
   private const int WM_SYSCOMMAND            = 0x0112; // http://msdn.microsoft.com/en-us/library/windows/desktop/ms646360(v=vs.85).aspx
@@ -1711,14 +1712,12 @@ public class MediaPortalApp : D3D, IRender
       {
         // The computer is about to enter a suspended state
         case (int)PBT_EVENT.PBT_APMSUSPEND:
-          // Save current MediaPortal Windows handle
-          Show();
+          // Save current MediaPortal Windows handle and check WindowsState
+          _previousWindowState = WindowState;
+          RestoreFromTray();
           Process prc = Process.GetCurrentProcess();
           Process.GetProcessesByName(prc.ProcessName);
-          if (WindowState == FormWindowState.Minimized || !IsVisible)
-          {
-            Hide();
-          }
+          Log.Debug("Main: MediaPortal WindowsHandle {0}", prc.MainWindowHandle);
           if (prc.ProcessName == "MediaPortal")
           {
             _hWnd = prc.MainWindowHandle;
@@ -2637,7 +2636,7 @@ public class MediaPortalApp : D3D, IRender
     _lastOnresume = DateTime.Now;
 
     // Force Focus after resume done (really weird sequence)
-    if (WindowState != FormWindowState.Minimized || IsVisible)
+    if (_previousWindowState != FormWindowState.Minimized)
     {
       SwitchToThisWindow(_hWnd, true);
       ShowWindow(_hWnd, WindowShowStyle.Show);
@@ -2645,6 +2644,10 @@ public class MediaPortalApp : D3D, IRender
       ShowWindow(_hWnd, WindowShowStyle.Restore);
       ShowWindow(_hWnd, WindowShowStyle.ShowNormal);
       SetForegroundWindow(_hWnd);
+    }
+    else
+    {
+      MinimizeToTray();
     }
 
     Log.Info("Main: OnResumeSuspend - Done");

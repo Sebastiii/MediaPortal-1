@@ -127,9 +127,11 @@ public class MediaPortalApp : D3D, IRender
   private IntPtr                _displayStatusHandle;
   private IntPtr                _userPresenceHandle;
   private IntPtr                _awayModeHandle;
+  private IntPtr                _hWnd;
   private bool                  _resumedAutomatic;
   private bool                  _userActivity;
   private Timer                 _delayTimer;
+  private FormWindowState       _previousWindowState;
 
   // ReSharper disable InconsistentNaming
   private const int WM_SYSCOMMAND            = 0x0112; // http://msdn.microsoft.com/en-us/library/windows/desktop/ms646360(v=vs.85).aspx
@@ -308,6 +310,67 @@ public class MediaPortalApp : D3D, IRender
   // ReSharper restore InconsistentNaming
   // ReSharper restore UnusedMember.Local
 
+  /// <summary>Enumeration of the different ways of showing a window using 
+  /// ShowWindow</summary>
+  private enum WindowShowStyle : uint
+  {
+    /// <summary>Hides the window and activates another window.</summary>
+    /// <remarks>See SW_HIDE</remarks>
+    Hide = 0,
+    /// <summary>Activates and displays a window. If the window is minimized 
+    /// or maximized, the system restores it to its original size and 
+    /// position. An application should specify this flag when displaying 
+    /// the window for the first time.</summary>
+    /// <remarks>See SW_SHOWNORMAL</remarks>
+    ShowNormal = 1,
+    /// <summary>Activates the window and displays it as a minimized window.</summary>
+    /// <remarks>See SW_SHOWMINIMIZED</remarks>
+    ShowMinimized = 2,
+    /// <summary>Activates the window and displays it as a maximized window.</summary>
+    /// <remarks>See SW_SHOWMAXIMIZED</remarks>
+    ShowMaximized = 3,
+    /// <summary>Maximizes the specified window.</summary>
+    /// <remarks>See SW_MAXIMIZE</remarks>
+    Maximize = 3,
+    /// <summary>Displays a window in its most recent size and position. 
+    /// This value is similar to "ShowNormal", except the window is not 
+    /// actived.</summary>
+    /// <remarks>See SW_SHOWNOACTIVATE</remarks>
+    ShowNormalNoActivate = 4,
+    /// <summary>Activates the window and displays it in its current size 
+    /// and position.</summary>
+    /// <remarks>See SW_SHOW</remarks>
+    Show = 5,
+    /// <summary>Minimizes the specified window and activates the next 
+    /// top-level window in the Z order.</summary>
+    /// <remarks>See SW_MINIMIZE</remarks>
+    Minimize = 6,
+    /// <summary>Displays the window as a minimized window. This value is 
+    /// similar to "ShowMinimized", except the window is not activated.</summary>
+    /// <remarks>See SW_SHOWMINNOACTIVE</remarks>
+    ShowMinNoActivate = 7,
+    /// <summary>Displays the window in its current size and position. This 
+    /// value is similar to "Show", except the window is not activated.</summary>
+    /// <remarks>See SW_SHOWNA</remarks>
+    ShowNoActivate = 8,
+    /// <summary>Activates and displays the window. If the window is 
+    /// minimized or maximized, the system restores it to its original size 
+    /// and position. An application should specify this flag when restoring 
+    /// a minimized window.</summary>
+    /// <remarks>See SW_RESTORE</remarks>
+    Restore = 9,
+    /// <summary>Sets the show state based on the SW_ value specified in the 
+    /// STARTUPINFO structure passed to the CreateProcess function by the 
+    /// program that started the application.</summary>
+    /// <remarks>See SW_SHOWDEFAULT</remarks>
+    ShowDefault = 10,
+    /// <summary>Windows 2000/XP: Minimizes a window, even if the thread 
+    /// that owns the window is hung. This flag should only be used when 
+    /// minimizing windows from a different thread.</summary>
+    /// <remarks>See SW_FORCEMINIMIZE</remarks>
+    ForceMinimized = 11
+  }
+
   #endregion
 
   #region structs
@@ -429,6 +492,16 @@ public class MediaPortalApp : D3D, IRender
 
   [DllImport("user32.dll", SetLastError = true)]
   static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+  [DllImport("user32.dll", SetLastError = true)]
+  public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+  [DllImport("user32.dll", SetLastError = true)]
+  public static extern void SwitchToThisWindow(IntPtr hWnd, bool fAltTab);
+
+  [DllImport("user32.dll", SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  private static extern bool ShowWindow(IntPtr hWnd, WindowShowStyle nCmdShow);
 
   #endregion
 
@@ -1376,7 +1449,6 @@ public class MediaPortalApp : D3D, IRender
     }
     return a;
   }
-  
 
   /// <summary>
   /// Message Pump
@@ -1390,7 +1462,7 @@ public class MediaPortalApp : D3D, IRender
       {
         case (int)ShellNotifications.WmShnotify:
           NotifyInfos info = new NotifyInfos((ShellNotifications.SHCNE)(int)msg.LParam);
-          
+
           if (Notifications.NotificationReceipt(msg.WParam, msg.LParam, ref info))
           {
             if (info.Notification == ShellNotifications.SHCNE.SHCNE_MEDIAINSERTED)
@@ -1449,7 +1521,7 @@ public class MediaPortalApp : D3D, IRender
           OnMoving(ref msg);
           PluginManager.WndProc(ref msg);
           break;
-        
+
         // verify window size in case it was not resized by the user
         case WM_SIZE:
           OnSize(ref msg);
@@ -1461,13 +1533,13 @@ public class MediaPortalApp : D3D, IRender
           OnSizing(ref msg);
           PluginManager.WndProc(ref msg);
           break;
-        
+
         // handle display changes
         case WM_DISPLAYCHANGE:
           OnDisplayChange(ref msg);
           PluginManager.WndProc(ref msg);
           break;
-        
+
         // handle device changes
         case WM_DEVICECHANGE:
           OnDeviceChange(ref msg);
@@ -1490,7 +1562,7 @@ public class MediaPortalApp : D3D, IRender
           Application.Exit();
           msg.Result = (IntPtr)0;
           break;
-        
+
         // handle activation and deactivation requests
         case WM_ACTIVATE:
           OnActivate(ref msg);
@@ -1568,7 +1640,6 @@ public class MediaPortalApp : D3D, IRender
     }
   }
 
-
   /// <summary>
   /// 
   /// </summary>
@@ -1623,7 +1694,6 @@ public class MediaPortalApp : D3D, IRender
     return result;
   }
 
-
   /// <summary>
   /// Process WM_POWERBROADCAST messages
   /// </summary>
@@ -1638,6 +1708,17 @@ public class MediaPortalApp : D3D, IRender
       {
         // The computer is about to enter a suspended state
         case (int)PBT_EVENT.PBT_APMSUSPEND:
+          // Save current MediaPortal Windows handle and check WindowsState
+          _previousWindowState = WindowState;
+          RestoreFromTray();
+          Process prc = Process.GetCurrentProcess();
+          Process.GetProcessesByName(prc.ProcessName);
+          Log.Debug("Main: MediaPortal WindowsHandle {0}", prc.MainWindowHandle);
+          if (prc.ProcessName == "MediaPortal")
+          {
+            _hWnd = prc.MainWindowHandle;
+          }
+
           // Reset timer and resume states
           if (_delayTimer != null)
           {
@@ -1818,10 +1899,9 @@ public class MediaPortalApp : D3D, IRender
 
     // Send PBT_APMRESUMEDELAYED message
     Log.Debug("Main: SendResumeDelayedMsg - sending PBT_APMRESUMEDELAYED message");
-    IntPtr hWnd = Form.ActiveForm.Handle;
-    if (hWnd != IntPtr.Zero)
+    if (_hWnd != IntPtr.Zero)
     {
-      PostMessage(hWnd, WM_POWERBROADCAST, new IntPtr((int)PBT_EVENT.PBT_APMRESUMEDELAYED), IntPtr.Zero);
+      PostMessage(_hWnd, WM_POWERBROADCAST, new IntPtr((int)PBT_EVENT.PBT_APMRESUMEDELAYED), IntPtr.Zero);
     }
   }
 
@@ -2240,7 +2320,7 @@ public class MediaPortalApp : D3D, IRender
     {
       case SIZE_RESTORED:
         Log.Debug("Main: WM_SIZE (SIZE_RESTORED: {0}x{1})", x, y);
-  
+
         // do not continue if form is not created yet
         if (!Created)
         {
@@ -2259,7 +2339,7 @@ public class MediaPortalApp : D3D, IRender
           Size maxClientSize = CalcMaxClientArea();
           if (x > maxClientSize.Width || y > maxClientSize.Height)
           {
-            Log.Debug("Main: Requested client size {0}x{1} is larger than the maximum aspect ratio safe client size of {2}x{3} - overriding", 
+            Log.Debug("Main: Requested client size {0}x{1} is larger than the maximum aspect ratio safe client size of {2}x{3} - overriding",
               x, y, maxClientSize.Width, maxClientSize.Height);
             ClientSize = maxClientSize;
             break;
@@ -2269,7 +2349,7 @@ public class MediaPortalApp : D3D, IRender
           var height = (int)((double)x * GUIGraphicsContext.SkinSize.Height / GUIGraphicsContext.SkinSize.Width);
           if (height != y && Windowed)
           {
-            Log.Info("Main: Overriding size from {0}x{1} to {2}x{3} (Skin resized to {4}x{5})", 
+            Log.Info("Main: Overriding size from {0}x{1} to {2}x{3} (Skin resized to {4}x{5})",
               x + border.Width, y + border.Height, x + border.Width, height + border.Height, x, height);
             ClientSize = new Size(x, height);
           }
@@ -2295,7 +2375,7 @@ public class MediaPortalApp : D3D, IRender
       case SIZE_MINIMIZED:
         Log.Debug("Main: WM_SIZE (SIZE_MINIMIZED: {0}x{1})", x, y);
         break;
-      
+
       case SIZE_MAXIMIZED:
         Log.Debug("Main: WM_SIZE (SIZE_MAXIMIZED: {0}x{1})", x, y);
         if (VisualizationBase.VisualizationWindow != null)
@@ -2304,11 +2384,11 @@ public class MediaPortalApp : D3D, IRender
           VisualizationBase.VisualizationWindow.Width = ClientRectangle.Height;
         }
         break;
-      
+
       case SIZE_MAXSHOW:
         Log.Debug("Main: WM_SIZE (SIZE_MAXSHOW: {0}x{1})", x, y);
         break;
-      
+
       case SIZE_MAXHIDE:
         Log.Debug("Main: WM_SIZE (SIZE_MAXHIDE: {0}x{1})", x, y);
         break;
@@ -2316,7 +2396,7 @@ public class MediaPortalApp : D3D, IRender
     msg.Result = (IntPtr)0;
   }
 
-  
+
   /// <summary>
   /// 
   /// </summary>
@@ -2456,7 +2536,7 @@ public class MediaPortalApp : D3D, IRender
 
     Log.Debug("Main: OnSuspend - stopping AutoPlay");
     AutoPlay.StopListening();
-      
+
     // un-mute volume in case we are suspending in away mode
     if (IsInAwayMode && VolumeHandler.Instance.IsMuted)
     {
@@ -2485,7 +2565,7 @@ public class MediaPortalApp : D3D, IRender
   }
 
   /// <summary>
-  /// This event is sent with the  PBT_APMRESUMEAUTOMATIC event if the system has resumed operation due to user activity.
+  /// This event is sent with the PBT_APMRESUMEAUTOMATIC event if the system has resumed operation due to user activity.
   /// </summary>
   private void OnResumeSuspend()
   {
@@ -2548,6 +2628,22 @@ public class MediaPortalApp : D3D, IRender
 
     _suspended = false;
     _lastOnresume = DateTime.Now;
+
+    // Force Focus after resume done (really weird sequence)
+    if (_previousWindowState != FormWindowState.Minimized)
+    {
+      SwitchToThisWindow(_hWnd, true);
+      ShowWindow(_hWnd, WindowShowStyle.Show);
+      ShowWindow(_hWnd, WindowShowStyle.Minimize);
+      ShowWindow(_hWnd, WindowShowStyle.Restore);
+      ShowWindow(_hWnd, WindowShowStyle.ShowNormal);
+      SetForegroundWindow(_hWnd);
+    }
+    else
+    {
+      MinimizeToTray();
+    }
+
     Log.Info("Main: OnResumeSuspend - Done");
   }
 
@@ -2699,7 +2795,7 @@ public class MediaPortalApp : D3D, IRender
       {
         Log.Warn("Main: Could not register for power settings notification GUID_SESSION_USER_PRESENCE");
       }
-    } 
+    }
     else if (OSInfo.OSInfo.VistaOrLater())
     {
       _displayStatusHandle = RegisterPowerSettingNotification(Handle, ref GUID_MONITOR_POWER_ON, DEVICE_NOTIFY_WINDOW_HANDLE);
@@ -2820,7 +2916,7 @@ public class MediaPortalApp : D3D, IRender
         {
           currentmoduleid = Convert.ToString(GUIWindowManager.GetPreviousActiveWindow());
         }
-        
+
         if (!currentmodulefullscreen && currentmodulefullscreenstate == "True")
         {
           currentmodulefullscreen = true;
@@ -2972,7 +3068,7 @@ public class MediaPortalApp : D3D, IRender
     GUIWindowManager.Clear();
     GUIWaitCursor.Dispose();
     GUITextureManager.Dispose();
- 
+
     // Loading keymap.xml
     Log.Info("Startup: Load keymap.xml");
     UpdateSplashScreenMessage(GUILocalizeStrings.Get(65));
@@ -3030,7 +3126,7 @@ public class MediaPortalApp : D3D, IRender
     }
     PluginManager.LoadWindowPlugins();
     PluginManager.CheckExternalPlayersCompatibility();
-    
+
     // Initialize window manager
     UpdateSplashScreenMessage(GUILocalizeStrings.Get(71));
     Log.Info("Startup: Initialize Window Manager...");
@@ -3057,7 +3153,7 @@ public class MediaPortalApp : D3D, IRender
     {
       GUIWindowManager.ActivateWindow(GUIWindowManager.ActiveWindow);
     }
-   
+
     // setting D3D9 helper variables
     if (GUIGraphicsContext.DX9Device != null)
     {
@@ -3414,7 +3510,7 @@ public class MediaPortalApp : D3D, IRender
   #endregion
 
   #region FrameMove()
-  
+
   /// <summary>
   /// 
   /// </summary>
@@ -3539,7 +3635,7 @@ public class MediaPortalApp : D3D, IRender
           _lastContextMenuAction = DateTime.Now;
           return;
         }
-        
+
         if (_lastContextMenuAction != DateTime.MaxValue)
         {
           TimeSpan ts = _lastContextMenuAction - DateTime.Now;
@@ -4026,7 +4122,7 @@ public class MediaPortalApp : D3D, IRender
               }
             }
             break;
- 
+
           // fast rewind...
           case Action.ActionType.ACTION_REWIND:
             {
@@ -4141,7 +4237,7 @@ public class MediaPortalApp : D3D, IRender
   }
 
   #region keypress handlers
-  
+
   /// <summary>
   /// 
   /// </summary>
@@ -4233,7 +4329,6 @@ public class MediaPortalApp : D3D, IRender
   #endregion
 
   #region mouse event handlers
-  
 
   /// <summary>
   /// 
@@ -4469,7 +4564,7 @@ public class MediaPortalApp : D3D, IRender
     }
   }
 
-  
+
   /// <summary>
   /// 
   /// </summary>
@@ -4727,7 +4822,7 @@ public class MediaPortalApp : D3D, IRender
   #endregion
 
   #region External process start / stop handling
-  
+
   /// <summary>
   /// 
   /// </summary>
@@ -4760,7 +4855,7 @@ public class MediaPortalApp : D3D, IRender
   }
 
   #endregion
-  
+
   #region helper funcs
 
   /// <summary>
@@ -4913,8 +5008,8 @@ public class MediaPortalApp : D3D, IRender
   /// <returns>A string containing the current time.</returns>
   protected string GetTime()
   {
-    return DateTime.Now.ToString(_useLongDateFormat 
-      ? Thread.CurrentThread.CurrentCulture.DateTimeFormat.LongTimePattern 
+    return DateTime.Now.ToString(_useLongDateFormat
+      ? Thread.CurrentThread.CurrentCulture.DateTimeFormat.LongTimePattern
       : Thread.CurrentThread.CurrentCulture.DateTimeFormat.ShortTimePattern);
   }
 
@@ -5219,5 +5314,4 @@ public class MediaPortalApp : D3D, IRender
   }
 
   #endregion
-
 }

@@ -1,5 +1,7 @@
 REM %1 = Solution Directory
 REM %2 = $(ConfigurationName) Debug/Release
+REM %3 = VS install directory
+REM %4 = Exe name
 
 
 REM Identify configuration path for <=XP or >=Vista
@@ -142,3 +144,7 @@ xcopy %1\Databases\bin\%2\HtmlAgilityPack.* . /Y /D
 
 REM ffmpeg 
 xcopy %1\..\Packages\ffmpeg.2.1.1\ffmpeg.exe MovieThumbnailer\ /Y /D
+
+REM Enable >2GB for 32 bit process
+call %3..\tools\vsvars32.bat 
+editbin.exe /LARGEADDRESSAWARE %4

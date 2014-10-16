@@ -195,7 +195,6 @@ namespace MediaPortal.GUI.Music
         if (!g_Player.Playing && NextTrackTag == null && !_isStopped)
         {
           _isStopped = true;
-          Log.Error("DoOnEnded {0}", GetID);
           Log.Debug("GUIMusicPlayingNow: All playlist items played - returning to previous window");
           Action action = new Action();
           action.wID = Action.ActionType.ACTION_PREVIOUS_MENU;
@@ -214,7 +213,6 @@ namespace MediaPortal.GUI.Music
       if (GUIWindowManager.ActiveWindow == GetID && !_isStopped)
       {
         _isStopped = true;
-        Log.Error("OnPlayBackStopped {0}", GetID);
         Log.Debug("GUIMusicPlayingNow: g_Player_PlayBackStopped for {0} - stoptime: {1}", filename, stoptime);
         Action action = new Action();
         action.wID = Action.ActionType.ACTION_PREVIOUS_MENU;
@@ -341,7 +339,6 @@ namespace MediaPortal.GUI.Music
 
           if (GUIWindowManager.ActiveWindow == GetID && !_isStopped)
           {
-            Log.Error("OnAction {0}", GetID);
             _isStopped = true;
             Action act = new Action();
             act.wID = Action.ActionType.ACTION_PREVIOUS_MENU;

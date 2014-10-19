@@ -1249,7 +1249,7 @@ public class MediaPortalApp : D3D, IRender
     Log.Info("Main: Init players");
     g_Player.Init();
 
-    GUIGraphicsContext.ActiveForm = Handle;
+    _hWnd = GUIGraphicsContext.ActiveForm = Handle;
 
     var doc = new XmlDocument();
     try
@@ -1654,9 +1654,6 @@ public class MediaPortalApp : D3D, IRender
       {
         // The computer is about to enter a suspended state
         case (int)PBT_EVENT.PBT_APMSUSPEND:
-          // Get window handle
-          _hWnd = GUIGraphicsContext.ActiveForm;
-
           ResetDelayedResumeTimer();
 
           _resumedAutomatic = false;
@@ -1751,6 +1748,9 @@ public class MediaPortalApp : D3D, IRender
 
           if (ps.PowerSetting == GUID_SYSTEM_AWAYMODE && ps.DataLength == Marshal.SizeOf(typeof(Int32)))
           {
+            // focus MP
+            ForceMPFocus();
+
             switch (ps.Data)
             {
               case 0:
@@ -1766,6 +1766,9 @@ public class MediaPortalApp : D3D, IRender
           // GUID_SESSION_DISPLAY_STATUS is only provided on Win8 and above
           else if ((ps.PowerSetting == GUID_MONITOR_POWER_ON || ps.PowerSetting == GUID_SESSION_DISPLAY_STATUS) && ps.DataLength == Marshal.SizeOf(typeof(Int32)))
           {
+            // focus MP
+            ForceMPFocus();
+
             switch (ps.Data)
             {
               case 0:
@@ -1786,6 +1789,9 @@ public class MediaPortalApp : D3D, IRender
           // GUIT_SESSION_USER_PRESENCE is only provide on Win8 and above
           else if (ps.PowerSetting == GUID_SESSION_USER_PRESENCE && ps.DataLength == Marshal.SizeOf(typeof(Int32)))
           {
+            // focus MP
+            ForceMPFocus();
+
             switch (ps.Data)
             {
               case 0:
@@ -3072,7 +3078,7 @@ public class MediaPortalApp : D3D, IRender
     Log.Info("Startup: Load keymap.xml");
     UpdateSplashScreenMessage(GUILocalizeStrings.Get(65));
     ActionTranslator.Load();
-    GUIGraphicsContext.ActiveForm = Handle;
+    _hWnd = GUIGraphicsContext.ActiveForm = Handle;
 
     // Caching Graphics
     Log.Info("Startup: Caching Graphics");

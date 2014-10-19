@@ -128,7 +128,6 @@ public class MediaPortalApp : D3D, IRender
   private IntPtr                _displayStatusHandle;
   private IntPtr                _userPresenceHandle;
   private IntPtr                _awayModeHandle;
-  private IntPtr                _hWnd;
   private bool                  _resumedAutomatic;
   private bool                  _resumedSuspended;
   private Timer                 _delayedResumeTimer;
@@ -1249,7 +1248,7 @@ public class MediaPortalApp : D3D, IRender
     Log.Info("Main: Init players");
     g_Player.Init();
 
-    _hWnd = GUIGraphicsContext.ActiveForm = Handle;
+    GUIGraphicsContext.ActiveForm = Handle;
 
     var doc = new XmlDocument();
     try
@@ -1829,15 +1828,17 @@ public class MediaPortalApp : D3D, IRender
       ResetDelayedResumeTimer();
       Thread.CurrentThread.Name = "ResumedDelayTimer";
 
-      if (_hWnd != IntPtr.Zero)
+      IntPtr hWnd = GUIGraphicsContext.ActiveForm;
+
+      if (hWnd != IntPtr.Zero)
       {
         Log.Info("Main: SendResumeDelayedMsg - sending PBT_APMRESUMEAUTOMATIC_DELAYED message");
-        PostMessage(_hWnd, WM_POWERBROADCAST, new IntPtr((int)PBT_EVENT.PBT_APMRESUMEAUTOMATIC_EXECUTE), IntPtr.Zero);
+        PostMessage(hWnd, WM_POWERBROADCAST, new IntPtr((int)PBT_EVENT.PBT_APMRESUMEAUTOMATIC_EXECUTE), IntPtr.Zero);
 
         if (_delayedResumeType == DELAYED_RESUME_TYPE.USER_PRESENT)
         {
           Log.Info("Main: SendResumeDelayedMsg - sending PBT_APMRESUMESUSPEND_DELAYED message");
-          PostMessage(_hWnd, WM_POWERBROADCAST, new IntPtr((int)PBT_EVENT.PBT_APMRESUMESUSPEND_EXECUTE), IntPtr.Zero);
+          PostMessage(hWnd, WM_POWERBROADCAST, new IntPtr((int)PBT_EVENT.PBT_APMRESUMESUSPEND_EXECUTE), IntPtr.Zero);
         }
       }
 
@@ -3078,7 +3079,7 @@ public class MediaPortalApp : D3D, IRender
     Log.Info("Startup: Load keymap.xml");
     UpdateSplashScreenMessage(GUILocalizeStrings.Get(65));
     ActionTranslator.Load();
-    _hWnd = GUIGraphicsContext.ActiveForm = Handle;
+    GUIGraphicsContext.ActiveForm = Handle;
 
     // Caching Graphics
     Log.Info("Startup: Caching Graphics");
@@ -5075,10 +5076,10 @@ public class MediaPortalApp : D3D, IRender
     if (_previousWindowState != FormWindowState.Minimized)
     {
       // Make MediaPortal window normal ( if minimized )
-      Win32API.ShowWindow(_hWnd, Win32API.ShowWindowFlags.ShowNormal);
+      Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.ShowNormal);
 
       // Make Mediaportal window focused
-      if (Win32API.SetForegroundWindow(_hWnd, true))
+      if (Win32API.SetForegroundWindow(GUIGraphicsContext.ActiveForm, true))
       {
         Log.Info("Main: Successfully switched focus.");
       }

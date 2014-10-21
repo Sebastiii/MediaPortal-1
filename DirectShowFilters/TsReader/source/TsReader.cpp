@@ -222,14 +222,11 @@ void StopLogger()
 void LogDebug(const wchar_t *fmt, ...) 
 {
   static CCritSec lock;
-  CAutoLock logLock(&m_logLock)
+  CAutoLock logLock(&m_logLock);
   
   if (!m_hLogger) {
     StartLogger();
   }
-  
-  va_list ap;
-  va_start(ap,fmt);
 
   wchar_t buffer[2000];
   int tmp;

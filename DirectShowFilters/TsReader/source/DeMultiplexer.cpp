@@ -54,6 +54,8 @@ extern void LogDebug(const char *fmt, ...);
 extern void LogRotate();
 extern void StopLogger();
 extern DWORD m_tGTStartTime;
+extern long m_instanceCount;
+extern CCritSec m_instanceLock;
 
 // *** UNCOMMENT THE NEXT LINE TO ENABLE DYNAMIC VIDEO PIN HANDLING!!!! ******
 #define USE_DYNAMIC_PINS
@@ -63,10 +65,17 @@ CDeMultiplexer::CDeMultiplexer(CTsDuration& duration,CTsReaderFilter& filter)
 :m_duration(duration)
 ,m_filter(filter)
 {
-  //Initialise m_tGTStartTime for GET_TIME_NOW() macro.
-  //The macro is used to avoid having to handle timeGetTime()
-  //rollover issues in the body of the code
-  m_tGTStartTime = (timeGetTime() - 0x40000000); 
+  { // Scope for CAutoLock
+    CAutoLock lock(&m_instanceLock);  
+    if (m_instanceCount == 0)
+    {
+      //Initialise m_tGTStartTime for GET_TIME_NOW() macro.
+      //The macro is used to avoid having to handle timeGetTime()
+      //rollover issues in the body of the code
+      m_tGTStartTime = (timeGetTime() - 0x40000000); 
+    }
+    m_instanceCount++;
+  }
 
   m_patParser.SetCallBack(this);
   m_pCurrentAudioBuffer = new CBuffer();
@@ -138,10 +147,12 @@ CDeMultiplexer::CDeMultiplexer(CTsDuration& duration,CTsReaderFilter& filter)
   m_pFileReadBuffer = NULL;
   m_pFileReadBuffer = new byte[READ_SIZE]; //~130ms of data @ 8Mbit/s
   
+  m_dVidPTSJumpLimit = 2.0; //Maximum allowed time in seconds for video PTS jumps
+  
   LogDebug(" ");
-  LogDebug("=================== New filter instance ===========================");
-  LogDebug("  Logging format: [Date Time] [InstanceID] [ThreadID] Message....  ");
-  LogDebug("===================================================================");
+  LogDebug("=================== New filter instance =========================================");
+  LogDebug("  Logging format: [Date Time] [InstanceID-instanceCount] [ThreadID] Message....  ");
+  LogDebug("==================================================================================");
   LogDebug("demux: Start file read thread");
     
   StartThread();
@@ -169,7 +180,15 @@ CDeMultiplexer::~CDeMultiplexer()
   {
     LogDebug("CDeMultiplexer::dtor - ERROR m_pFileReadBuffer is NULL !!");
   }
-  LogDebug("CDeMultiplexer::dtor - finished");
+  
+  { // Scope for CAutoLock
+    CAutoLock lock(&m_instanceLock); 
+    if (m_instanceCount > 0) 
+    {
+      m_instanceCount--;
+    }
+  }
+  LogDebug("CDeMultiplexer::dtor - finished, instanceCount:%d", m_instanceCount);
   StopLogger();
 }
 
@@ -1669,7 +1688,7 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
               m_vidDTScount++;    
           }        
 
-          if (diff>2.0)
+          if (diff > m_dVidPTSJumpLimit)
           {
             //Large PTS jump - flush the world...
             LogDebug("DeMultiplexer::FillVideoH264 pts jump found : %f %f, %f", (float) diff, (float)pts.ToClock(), (float)m_lastVideoPTS.ToClock());
@@ -2228,7 +2247,7 @@ void CDeMultiplexer::FillVideoMPEG2(CTsHeader& header, byte* tsPacket)
               m_vidDTScount++;    
           }        
 
-          if (diff>2.0)
+          if (diff > m_dVidPTSJumpLimit)
           {
             //Large PTS jump - flush the world...
             LogDebug("DeMultiplexer::FillVideoMPEG2 pts jump found : %f %f, %f", (float) diff, (float)pts.ToClock(), (float)m_lastVideoPTS.ToClock());
@@ -2836,6 +2855,20 @@ void CDeMultiplexer::OnNewChannel(CChannelInfo& info)
   {
     m_duration.SetVideoPid(m_pids.videoPids[0].Pid);
   }
+
+  if (m_pids.videoPids.size() > 0 && m_pids.videoPids[0].Pid>0x1)
+  {
+    //Adjust PTS jump detection limits for still image streams
+    if (m_pids.videoPids[0].DescriptorData & 0x01) //Still image flag
+    {
+      m_dVidPTSJumpLimit = 70.0;
+    }
+    else
+    {
+      m_dVidPTSJumpLimit = 2.0;
+    }
+  }
+
   m_audioStreams.clear();
 
   for(int i(0) ; i < m_pids.audioPids.size() ; i++)
@@ -3211,12 +3244,12 @@ void CDeMultiplexer::ThreadProc()
           )
       {
         m_bReadAheadFromFile = false;
-        if (retryRead && m_filter.m_bEnableBufferLogging)
-        {
-          int ACnt, VCnt;
-          GetBufferCounts(&ACnt, &VCnt);
-          LogDebug("CDeMultiplexer::ThreadProc - Retry read end, A/V/time = %d/%d/%d, sizeReadTemp=%d, sizeRead=%d", ACnt, VCnt, timeNow-lastRetryLoopTime, sizeReadTemp, sizeRead) ; 
-        }
+          // if (retryRead && m_filter.m_bEnableBufferLogging)
+          // {
+          //   int ACnt, VCnt;
+          //   GetBufferCounts(&ACnt, &VCnt);
+          //   LogDebug("CDeMultiplexer::ThreadProc - Retry read end, A/V/time = %d/%d/%d, sizeReadTemp=%d, sizeRead=%d", ACnt, VCnt, timeNow-lastRetryLoopTime, sizeReadTemp, sizeRead) ; 
+          // }
         sizeRead = 0;
         retryRead = false;
       }

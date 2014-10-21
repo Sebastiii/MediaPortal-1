@@ -47,13 +47,18 @@
 // For more details for memory leak detection see the alloctracing.h header
 #include "..\..\alloctracing.h"
 
+//These are global variables, and can be shared between multiple TsReader instances !
 DWORD m_tGTStartTime = 0;
+long m_instanceCount = 0;
+CCritSec m_instanceLock;
+
 
 DEFINE_MP_DEBUG_SETTING(DoNotAllowSlowMotionDuringZapping)
 
 //-------------------- Async logging methods -------------------------------------------------
 
 
+//These are global variables, and can be shared between multiple TsReader instances !
 WORD logFileParsed = -1;
 WORD logFileDate = -1;
 
@@ -62,6 +67,7 @@ CTsReaderFilter* instanceID = 0;
 CCritSec m_qLock;
 CCritSec m_logLock;
 CCritSec m_logFileLock;
+CCritSec m_logThreadLock;
 std::queue<std::wstring> m_logQueue;
 BOOL m_bLoggerRunning = false;
 HANDLE m_hLogger = NULL;
@@ -184,16 +190,21 @@ UINT CALLBACK LogThread(void* param)
 
 
 void StartLogger()
-{
+{ 
+  CAutoLock lock(&m_logThreadLock);
+  if (!m_hLogger)
+  {
+    m_bLoggerRunning = true;
   UINT id;
   m_hLogger = (HANDLE)_beginthreadex(NULL, 0, LogThread, 0, 0, &id);
   SetThreadPriority(m_hLogger, THREAD_PRIORITY_BELOW_NORMAL);
+  }
 }
 
 
 void StopLogger()
 {
-  CAutoLock logLock(&m_logLock);
+  CAutoLock lock(&m_logThreadLock);
   if (m_hLogger)
   {
     m_bLoggerRunning = FALSE;
@@ -210,14 +221,17 @@ void StopLogger()
 
 void LogDebug(const wchar_t *fmt, ...) 
 {
-  CAutoLock logLock(&m_logLock);
+  static CCritSec lock;
+  CAutoLock logLock(&m_logLock)
   
   if (!m_hLogger) {
-    m_bLoggerRunning = true;
     StartLogger();
   }
+  
+  va_list ap;
+  va_start(ap,fmt);
 
-  wchar_t buffer[2000]; 
+  wchar_t buffer[2000];
   int tmp;
   va_list ap;
   va_start(ap,fmt);
@@ -227,10 +241,11 @@ void LogDebug(const wchar_t *fmt, ...)
   SYSTEMTIME systemTime;
   GetLocalTime(&systemTime);
   wchar_t msg[5000];
-  swprintf_s(msg, 5000,L"[%04.4d-%02.2d-%02.2d %02.2d:%02.2d:%02.2d,%03.3d] [%8x] [%4x] - %s\n",
+  swprintf_s(msg, 5000,L"[%04.4d-%02.2d-%02.2d %02.2d:%02.2d:%02.2d,%03.3d] [%8x-%d] [%4x] - %s\n",
     systemTime.wYear, systemTime.wMonth, systemTime.wDay,
     systemTime.wHour, systemTime.wMinute, systemTime.wSecond, systemTime.wMilliseconds,
     instanceID,
+    m_instanceCount,
     GetCurrentThreadId(),
     buffer);
   CAutoLock l(&m_qLock);
@@ -319,12 +334,27 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
   m_pCallback(NULL),
   m_pRequestAudioCallback(NULL)
 {
-  if (m_tGTStartTime == 0)
+  { // Scope for CAutoLock
+    CAutoLock lock(&m_instanceLock);  
+    if (m_instanceCount == 0)
+    {
+      //Initialise m_tGTStartTime for GET_TIME_NOW() macro.
+      //The macro is used to avoid having to handle timeGetTime()
+      //rollover issues in the body of the code
+      m_tGTStartTime = (timeGetTime() - 0x40000000); 
+    }
+  }
+
+  // Set timer resolution to 1 ms (if possible)
+  TIMECAPS tc; 
+  dwResolution = 0; 
+  if (timeGetDevCaps(&tc, sizeof(TIMECAPS)) == MMSYSERR_NOERROR)
   {
-    //Initialise m_tGTStartTime for GET_TIME_NOW() macro.
-    //The macro is used to avoid having to handle timeGetTime()
-    //rollover issues in the body of the code
-    m_tGTStartTime = (timeGetTime() - 0x40000000); 
+    dwResolution = min(max(tc.wPeriodMin, 1), tc.wPeriodMax);
+    if (dwResolution)
+    {
+      timeBeginPeriod(dwResolution);
+    }
   }
 
   instanceID = this;  
@@ -332,7 +362,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
   // use the following line if you are having trouble setting breakpoints
   // #pragma comment( lib, "strmbasd" )
 
-  LogDebug("------------- v%d.%d.%d.%d -------------", TSREADER_MAJOR_VERSION, TSREADER_MID_VERSION, TSREADER_VERSION, TSREADER_POINT_VERSION);
+  LogDebug("------------- v%d.%d.%d.%d ------------- instanceCount:%d", TSREADER_MAJOR_VERSION, TSREADER_MID_VERSION, TSREADER_VERSION, TSREADER_POINT_VERSION, m_instanceCount);
   
   m_fileReader=NULL;
   m_fileDuration=NULL;
@@ -363,6 +393,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
   m_bEnableBufferLogging = false;
   m_bSubPinConnectAlways = false;
   m_regAudioDelay = AUDIO_DELAY; 
+  m_regSlowPlayInPPM = SLOW_PLAY_PPM; 
   if (ERROR_SUCCESS==RegCreateKeyEx(HKEY_CURRENT_USER, _T("Software\\Team MediaPortal\\TsReader"), 0, NULL, 
                                     REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &key, NULL))
   {
@@ -371,7 +402,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
     ReadRegistryKeyDword(key, disableVidSizeRebuildMPEG2, keyValue);
     if (keyValue)
     {
-      LogDebug("----- DisableVidSizeRebuildMPEG2 -----");
+      LogDebug("--- DisableVidSizeRebuildMPEG2 = yes");
       m_bDisableVidSizeRebuildMPEG2 = true;
     }
 
@@ -380,7 +411,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
     ReadRegistryKeyDword(key, disableVidSizeRebuildH264, keyValue);
     if (keyValue)
     {
-      LogDebug("----- DisableVidSizeRebuildH264 -----");
+      LogDebug("--- DisableVidSizeRebuildH264 = yes");
       m_bDisableVidSizeRebuildH264 = true;
     }
 
@@ -389,7 +420,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
     ReadRegistryKeyDword(key, disableAddPMT, keyValue);
     if (keyValue)
     {
-      LogDebug("----- DisableAddPMT -----");
+      LogDebug("--- DisableAddPMT = yes");
       m_bDisableAddPMT = true;
     }
 
@@ -398,7 +429,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
     ReadRegistryKeyDword(key, forceFFDShowSyncFix_RRK, keyValue);
     if (keyValue)
     {
-      LogDebug("----- ForceFFDShowSyncFix -----");
+      LogDebug("--- ForceFFDShowSyncFix = yes");
       m_bForceFFDShowSyncFix = true;
     }
     
@@ -407,7 +438,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
     ReadRegistryKeyDword(key, useFPSfromDTSPTS_RRK, keyValue);
     if (keyValue)
     {
-      LogDebug("----- UseFPSfromDTSPTS -----");
+      LogDebug("--- UseFPSfromDTSPTS = yes");
       m_bUseFPSfromDTSPTS = true;
     }
     else
@@ -434,7 +465,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
     ReadRegistryKeyDword(key, enableBufferLogging, keyValue);
     if (keyValue)
     {
-      LogDebug("----- EnableBufferLogging -----");
+      LogDebug("--- EnableBufferLogging = yes");
       m_bEnableBufferLogging = true;
     }
 
@@ -443,7 +474,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
     ReadRegistryKeyDword(key, subConnectAlways, keyValue);
     if (keyValue)
     {
-      LogDebug("----- SubPinConnectAlways -----");
+      LogDebug("--- SubPinConnectAlways = yes");
       m_bSubPinConnectAlways = true;
     }
 
@@ -461,6 +492,35 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
       LogDebug("--- Audio delay = %d ms (default value, allowed range is %d - %d)", (m_regAudioDelay/10000), 0, 500);
     }
 
+    keyValue = (DWORD)m_regSlowPlayInPPM;
+    LPCTSTR regSlowPlayInPPM_RRK = _T("SlowPlayInPPM");
+    ReadRegistryKeyDword(key, regSlowPlayInPPM_RRK, keyValue);
+    if ((keyValue >= 0) && (keyValue <= 10000))
+    {
+      m_regSlowPlayInPPM = (REFERENCE_TIME)keyValue;
+      LogDebug("--- Slow Play = %d PPM", m_regSlowPlayInPPM);
+    }
+    else
+    {
+      m_regSlowPlayInPPM = SLOW_PLAY_PPM;
+      LogDebug("--- Slow Play = %d PPM (default value, allowed range is %d - %d)", m_regSlowPlayInPPM, 0, 10000);
+    }
+
+    RegCloseKey(key);
+  }
+
+  //Read LAV filter registry settings
+  m_regLAV_AutoAVSync = 0;
+  if (ERROR_SUCCESS==RegOpenKeyEx(HKEY_CURRENT_USER, _T("Software\\LAV\\Audio"), 0, KEY_READ | KEY_WOW64_32KEY, &key))
+  {
+    DWORD keyValue = (DWORD)m_regLAV_AutoAVSync;
+    LPCTSTR regLAV_AutoAVSync_RRK = _T("AutoAVSync");
+    if (ERROR_SUCCESS==ReadOnlyRegistryKeyDword(key, regLAV_AutoAVSync_RRK, keyValue))
+    {
+      m_regLAV_AutoAVSync = keyValue;
+      LogDebug("--- LAV_AutoAVSync = %d", m_regLAV_AutoAVSync);      
+    }
+
     RegCloseKey(key);
   }
   
@@ -469,12 +529,12 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
   
   if(!DoNotAllowSlowMotionDuringZapping())
   {
-    LogDebug("Slow motion video allowed during zapping");
+    LogDebug("--- Slow motion video allowed during zapping = yes");
     m_EnableSlowMotionOnZapping = true;
   }
   else
   {
-    LogDebug("No slow motion video allowed during zapping");
+    LogDebug("--- Slow motion video allowed during zapping = no");
     m_EnableSlowMotionOnZapping = false;
   }
   
@@ -484,6 +544,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
   m_bLiveTv = false;
   m_bTimeShifting = false;
   m_RandomCompensation = 0;     
+  m_TotalDeltaCompensation = 0;    
   m_bAnalog = false;
   m_bStopping = false;
   m_bOnZap = false;
@@ -507,12 +568,19 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
   
   LogDebug("CTsReaderFilter::Start duration thread");
   StartThread();
-  LogDebug("CTsReaderFilter::timeGetTime():0x%x, m_tGTStartTime:0x%x, GET_TIME_NOW:0x%x", timeGetTime(), m_tGTStartTime, GET_TIME_NOW() );
+  LogDebug("CTsReaderFilter::timeGetTime():0x%x, m_tGTStartTime:0x%x, GET_TIME_NOW:0x%x, timer res:%d ms", timeGetTime(), m_tGTStartTime, GET_TIME_NOW(), dwResolution);
 }
 
 CTsReaderFilter::~CTsReaderFilter()
 {
   LogDebug("CTsReaderFilter::dtor");
+
+  // Reset timer resolution (if we managed to set it originally)
+  if (dwResolution)
+  {
+    timeEndPeriod(dwResolution);
+  }
+
   //stop duration thread
   StopThread(5000);
   
@@ -1724,10 +1792,21 @@ void CTsReaderFilter::ThreadProc()
     }
     
  
-    //Update stream position - minimum 50ms between updates
+    //Update stream position - minimum 50ms between updates, nominally DUR_LOOP_TIMEOUT ms between loop iterations
     if ((State() != State_Stopped) && (((timeNow - 50) > lastPosnTime) || m_bForcePosnUpdate))
     {      
       lastPosnTime = timeNow;
+      
+      //Apply 'slow play' compensation adjustment when running
+      if (!m_bForcePosnUpdate && (State() == State_Running))
+      {
+        //m_regSlowPlayInPPM (in hns units) is added to the main 'Compensation' variable,
+        //to push timestamps on outgoing samples into the future.
+        //Since this happens approx every 0.1 sec, m_regSlowPlayInPPM 
+        //is effectively in parts-per-million (micro-seconds per second)
+        DeltaCompensation(m_regSlowPlayInPPM);
+      }
+      
       IMediaSeeking * ptrMediaPos = NULL;
       if (SUCCEEDED(GetFilterGraph()->QueryInterface(IID_IMediaSeeking, (void**)&ptrMediaPos)))
       {
@@ -1749,6 +1828,7 @@ void CTsReaderFilter::ThreadProc()
     if (IsFilterRunning() && (State() != State_Stopped) && !m_bStopping && ((timeNow - 1000) > lastDurTime) )
     {
       lastDurTime = timeNow;
+      
       //are we playing an RTSP stream?
       if (m_fileDuration!=NULL)
       {
@@ -1954,7 +2034,7 @@ void CTsReaderFilter::ThreadProc()
                 
         if ((cntA > AUD_BUF_SIZE_LOG_LIM) || (cntV > VID_BUF_SIZE_LOG_LIM) || m_bEnableBufferLogging)
         {
-          LogDebug("Buffers : A/V = %d/%d, RTSP = %d, A last : %03.3f, V Last : %03.3f", cntA, cntV, rtspBuffSize, (float)lastAudio.Millisecs()/1000.0f, (float)lastVideo.Millisecs()/1000.0f);
+          LogDebug("Buffers : A/V = %d/%d, RTSP = %d, A last : %03.3f, V Last : %03.3f, Compensation : %.3f s", cntA, cntV, rtspBuffSize, (float)lastAudio.Millisecs()/1000.0f, (float)lastVideo.Millisecs()/1000.0f, (float)Compensation.m_time/10000000);
         }
       }
                         
@@ -1963,7 +2043,7 @@ void CTsReaderFilter::ThreadProc()
     
     Sleep(1);
   }
-  while (!ThreadIsStopping(105)) ;
+  while (!ThreadIsStopping(DUR_LOOP_TIMEOUT)) ;
   LogDebug("CTsReaderFilter::ThreadProc stopped()");
 }
 
@@ -2293,11 +2373,25 @@ void CTsReaderFilter::BufferingPause(bool longPause, long extraSleep)
 
 void CTsReaderFilter::DeltaCompensation(REFERENCE_TIME deltaComp)
 {
+  if (m_bStreamCompensated)    
   {
     CAutoLock cObjectLock(&m_GetCompLock);
     Compensation.m_time -= deltaComp ; // positive deltaComp pushes timestamps into the future
+    m_TotalDeltaCompensation += deltaComp;
   }
-  LogDebug("DeltaCompensation : %.3f s, %.3f s",(float)deltaComp/10000000,(float)Compensation.m_time/10000000) ; 
+  //LogDebug("DeltaCompensation : %.3f s, %.3f s",(float)deltaComp/10000000,(float)Compensation.m_time/10000000) ; 
+}
+
+REFERENCE_TIME CTsReaderFilter::GetTotalDeltaComp()
+{
+  CAutoLock cObjectLock(&m_GetCompLock);
+  return m_TotalDeltaCompensation;
+}
+
+void CTsReaderFilter::ClearTotalDeltaComp()
+{
+  CAutoLock cObjectLock(&m_GetCompLock);
+  m_TotalDeltaCompensation = 0;
 }
 
 void CTsReaderFilter::SetCompensation(CRefTime newComp)
@@ -2305,6 +2399,7 @@ void CTsReaderFilter::SetCompensation(CRefTime newComp)
   {
     CAutoLock cObjectLock(&m_GetCompLock);
     Compensation = newComp ;
+    m_TotalDeltaCompensation = 0;
   }
   //LogDebug("SetMediaPosnUpdate : %f %f",(float)MediaPos/10000,(float)m_LastTime/10000) ; 
 }
@@ -2383,6 +2478,15 @@ void CTsReaderFilter::WriteRegistryKeyDword(HKEY hKey, LPCTSTR& lpSubKey, DWORD&
   {
     LogDebug("Error writing to Registry - subkey: %s error: %d", T2A(lpSubKey), result);
   }
+}
+
+LONG CTsReaderFilter::ReadOnlyRegistryKeyDword(HKEY hKey, LPCTSTR& lpSubKey, DWORD& data)
+{
+  USES_CONVERSION;
+  DWORD dwSize = sizeof(DWORD);
+  DWORD dwType = REG_DWORD;
+  LONG error = RegQueryValueEx(hKey, lpSubKey, NULL, &dwType, (PBYTE)&data, &dwSize);
+  return error;
 }
 
 void CTsReaderFilter::SetErrorAbort()

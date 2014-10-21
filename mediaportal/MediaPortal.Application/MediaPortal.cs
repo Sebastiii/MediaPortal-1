@@ -5073,7 +5073,8 @@ public class MediaPortalApp : D3D, IRender
   /// </summary>
   private void ForceMPFocus()
   {
-    if (_previousWindowState != FormWindowState.Minimized)
+    // Focus only when MP is not minimize and when SplashScreen is close
+    if (_previousWindowState != FormWindowState.Minimized && (SplashScreen == null))
     {
       // Make MediaPortal window normal ( if minimized )
       Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.ShowNormal);

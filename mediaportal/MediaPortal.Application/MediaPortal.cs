@@ -133,7 +133,6 @@ public class MediaPortalApp : D3D, IRender
   private Timer                 _delayedResumeTimer;
   private DELAYED_RESUME_TYPE   _delayedResumeType;
   private readonly Object       _delayedResumeLock = new Object();
-  private FormWindowState       _previousWindowState;
 
   // ReSharper disable InconsistentNaming
   private const int WM_SYSCOMMAND            = 0x0112; // http://msdn.microsoft.com/en-us/library/windows/desktop/ms646360(v=vs.85).aspx
@@ -5063,15 +5062,15 @@ public class MediaPortalApp : D3D, IRender
   private void ForceMPFocus()
   {
     // Focus only when MP is not minimize and when SplashScreen is close
-	if (SplashScreen == null)
-	{
-	  Log.Info("Main: SplashScreen is null.");
-	}
-	else
-	{
-	  Log.Info("Main: SplashScreen is not null.");
-	}
-    if ((_previousWindowState != FormWindowState.Minimized) && SplashScreen == null)
+    if (SplashScreen == null)
+    {
+      Log.Info("Main: SplashScreen is null.");
+    }
+    else
+    {
+      Log.Info("Main: SplashScreen is not null.");
+    }
+    if ((WindowState != FormWindowState.Minimized) && SplashScreen == null)
     {
       // Make MediaPortal window normal ( if minimized )
       Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.ShowNormal);

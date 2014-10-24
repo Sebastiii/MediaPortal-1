@@ -1,7 +1,5 @@
 REM %1 = Solution Directory
 REM %2 = $(ConfigurationName) Debug/Release
-REM %3 = VS install directory
-REM %4 = Exe name
 
 
 REM Identify configuration path for <=XP or >=Vista
@@ -184,7 +182,3 @@ xcopy %1\..\Packages\bass.wv.2.4.4\basswv.dll "MusicPlayer\plugins\audio decoder
 REM iMON Display 
 xcopy %1\..\Packages\MediaPortal-iMON-Display.1.1.0\lib\iMONDisplay.dll . /Y /D
 xcopy %1\..\Packages\MediaPortal-iMON-Display.1.1.0\lib\iMONDisplayWrapper.dll . /Y /D
-
-REM Enable >2GB for 32 bit process
-call %3..\tools\vsvars32.bat 
-editbin.exe /LARGEADDRESSAWARE %4

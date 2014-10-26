@@ -355,10 +355,6 @@
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
-    <PostBuildEvent>call "$(DevEnvDir)..\..\vc\vcvarsall.bat" x86
-"$(DevEnvDir)..\..\vc\bin\EditBin.exe" "$(TargetPath)" /LARGEADDRESSAWARE
-"$(ProjectDir)PostBuild.bat" "$(SolutionDir)" $(ConfigurationName)
-
-</PostBuildEvent>
+    <PostBuildEvent>call "$(ProjectDir)PostBuild.bat" "$(SolutionDir)" $(ConfigurationName) "$(DevEnvDir)" "$(TargetPath)"</PostBuildEvent>
   </PropertyGroup>
 </Project>

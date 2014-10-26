@@ -57,7 +57,6 @@ DEFINE_MP_DEBUG_SETTING(DoNotAllowSlowMotionDuringZapping)
 
 //-------------------- Async logging methods -------------------------------------------------
 
-
 //These are global variables, and can be shared between multiple TsReader instances !
 WORD logFileParsed = -1;
 WORD logFileDate = -1;
@@ -67,7 +66,6 @@ CTsReaderFilter* instanceID = 0;
 CCritSec m_qLock;
 CCritSec m_logLock;
 CCritSec m_logFileLock;
-CCritSec m_logThreadLock;
 std::queue<std::wstring> m_logQueue;
 BOOL m_bLoggerRunning = false;
 HANDLE m_hLogger = NULL;
@@ -190,21 +188,16 @@ UINT CALLBACK LogThread(void* param)
 
 
 void StartLogger()
-{ 
-  CAutoLock lock(&m_logThreadLock);
-  if (!m_hLogger)
-  {
-    m_bLoggerRunning = true;
+{
   UINT id;
   m_hLogger = (HANDLE)_beginthreadex(NULL, 0, LogThread, 0, 0, &id);
   SetThreadPriority(m_hLogger, THREAD_PRIORITY_BELOW_NORMAL);
-  }
 }
 
 
 void StopLogger()
 {
-  CAutoLock lock(&m_logThreadLock);
+  CAutoLock logLock(&m_logLock);
   if (m_hLogger)
   {
     m_bLoggerRunning = FALSE;
@@ -225,10 +218,11 @@ void LogDebug(const wchar_t *fmt, ...)
   CAutoLock logLock(&m_logLock);
   
   if (!m_hLogger) {
+    m_bLoggerRunning = true;
     StartLogger();
   }
 
-  wchar_t buffer[2000];
+  wchar_t buffer[2000]; 
   int tmp;
   va_list ap;
   va_start(ap,fmt);
@@ -242,7 +236,6 @@ void LogDebug(const wchar_t *fmt, ...)
     systemTime.wYear, systemTime.wMonth, systemTime.wDay,
     systemTime.wHour, systemTime.wMinute, systemTime.wSecond, systemTime.wMilliseconds,
     instanceID,
-    m_instanceCount,
     GetCurrentThreadId(),
     buffer);
   CAutoLock l(&m_qLock);
@@ -391,6 +384,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
   m_bSubPinConnectAlways = false;
   m_regAudioDelay = AUDIO_DELAY; 
   m_regSlowPlayInPPM = SLOW_PLAY_PPM; 
+  m_AutoSpeedAdjust = 2; //enable both speed up and slow down
   if (ERROR_SUCCESS==RegCreateKeyEx(HKEY_CURRENT_USER, _T("Software\\Team MediaPortal\\TsReader"), 0, NULL, 
                                     REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &key, NULL))
   {
@@ -492,7 +486,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
     keyValue = (DWORD)m_regSlowPlayInPPM;
     LPCTSTR regSlowPlayInPPM_RRK = _T("SlowPlayInPPM");
     ReadRegistryKeyDword(key, regSlowPlayInPPM_RRK, keyValue);
-    if ((keyValue >= 0) && (keyValue <= 10000))
+    if ((keyValue >= 0) && (keyValue <= 2000))
     {
       m_regSlowPlayInPPM = (REFERENCE_TIME)keyValue;
       LogDebug("--- Slow Play = %d PPM", m_regSlowPlayInPPM);
@@ -500,8 +494,14 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
     else
     {
       m_regSlowPlayInPPM = SLOW_PLAY_PPM;
-      LogDebug("--- Slow Play = %d PPM (default value, allowed range is %d - %d)", m_regSlowPlayInPPM, 0, 10000);
+      LogDebug("--- Slow Play = %d PPM (default value, allowed range is %d - %d)", m_regSlowPlayInPPM, 0, 2000);
     }
+
+    keyValue = (DWORD)m_AutoSpeedAdjust;
+    LPCTSTR autoSpeedAdjust_RRK = _T("EnableAutoSpeedAdjust");
+    ReadRegistryKeyDword(key, autoSpeedAdjust_RRK, keyValue);
+    m_AutoSpeedAdjust = (int)keyValue;
+    LogDebug("--- AutoSpeedAdjust = %d", m_AutoSpeedAdjust);
 
     RegCloseKey(key);
   }
@@ -1689,6 +1689,7 @@ void CTsReaderFilter::ThreadProc()
   DWORD timeNow = GET_TIME_NOW();
   DWORD  lastPosnTime = timeNow;
   DWORD  lastDataLowTime = timeNow;
+  DWORD  lastSlowPlayTime = timeNow;
   DWORD  lastDurUpdate = 0;
   DWORD  lastDurTime = timeNow - 2000;
   DWORD  pauseWaitTime = 1000;
@@ -1696,6 +1697,9 @@ void CTsReaderFilter::ThreadProc()
   bool   longPause = true;
   int    isLiveCount = 2;
   CPcr   pcrStartLast, pcrEndLast, pcrMaxLast;
+  
+  REFERENCE_TIME  playSpeedAdjustInPPM = 0;
+  
   
   pcrStartLast.Reset();
   pcrEndLast.Reset();
@@ -1794,14 +1798,54 @@ void CTsReaderFilter::ThreadProc()
     {      
       lastPosnTime = timeNow;
       
-      //Apply 'slow play' compensation adjustment when running
+      //Apply 'play speed' compensation adjustment when running
       if (!m_bForcePosnUpdate && (State() == State_Running))
       {
-        //m_regSlowPlayInPPM (in hns units) is added to the main 'Compensation' variable,
-        //to push timestamps on outgoing samples into the future.
-        //Since this happens approx every 0.1 sec, m_regSlowPlayInPPM 
+        //playSpeedAdjustInPPM (in hns units) is added to the main 'Compensation' variable,
+        //to push timestamps on outgoing samples into the future(+) or past(-).
+        //Since this happens approx every 0.1 sec, playSpeedAdjustInPPM 
         //is effectively in parts-per-million (micro-seconds per second)
-        DeltaCompensation(m_regSlowPlayInPPM);
+        
+        if (m_AutoSpeedAdjust > 0)
+        {
+          if ((timeNow - 1000) > lastSlowPlayTime) //run every 1 seconds
+          {
+            lastSlowPlayTime = timeNow;      
+            double presToRef = GetAudioPin()->GetAudioPresToRefDiff(); //In seconds           
+            if (presToRef < -0.02) //slow down play
+            {
+              //Calculate the playSpeedAdjustInPPM value to compensate for the difference over the next 60 seconds
+              //This assumes the nominal 'DeltaCompensation()' update rate is 10 per second
+              playSpeedAdjustInPPM = (REFERENCE_TIME)(presToRef * ((double)(-1000*1000*DUR_LOOP_TIMEOUT)/(60.0*100.0)));
+              
+              if (playSpeedAdjustInPPM > 1000)
+              {
+                playSpeedAdjustInPPM = 1000;
+      }
+            }
+            else if ((presToRef > 0.02) && (m_AutoSpeedAdjust > 1)) //speed up play
+            {
+              //Calculate the playSpeedAdjustInPPM value to compensate for the difference over the next 60 seconds
+              //This assumes the nominal 'DeltaCompensation()' update rate is 10 per second
+              playSpeedAdjustInPPM = (REFERENCE_TIME)(presToRef * ((double)(-1000*1000*DUR_LOOP_TIMEOUT)/(60.0*100.0)));
+      
+              if (playSpeedAdjustInPPM < -1000)
+              {
+                playSpeedAdjustInPPM = -1000;
+              }
+            }
+            else  //We are within the +/-20ms 'dead band' so don't adjust
+            {
+              playSpeedAdjustInPPM = 0;
+            }
+          }
+        }
+        else //Use static value from registry (can only slow down)
+        {
+          playSpeedAdjustInPPM = (REFERENCE_TIME)((double)(m_regSlowPlayInPPM * DUR_LOOP_TIMEOUT)/100.0);
+        }
+                
+        DeltaCompensation(playSpeedAdjustInPPM);
       }
       
       IMediaSeeking * ptrMediaPos = NULL;
@@ -2031,7 +2075,10 @@ void CTsReaderFilter::ThreadProc()
                 
         if ((cntA > AUD_BUF_SIZE_LOG_LIM) || (cntV > VID_BUF_SIZE_LOG_LIM) || m_bEnableBufferLogging)
         {
-          LogDebug("Buffers : A/V = %d/%d, RTSP = %d, A last : %03.3f, V Last : %03.3f, Compensation : %.3f s", cntA, cntV, rtspBuffSize, (float)lastAudio.Millisecs()/1000.0f, (float)lastVideo.Millisecs()/1000.0f, (float)Compensation.m_time/10000000);
+          LogDebug("Buffers : A/V = %d/%d, RTSP = %d, A last: %03.3f, V Last: %03.3f, Compensation: %.3f s, AudPresToRefDiff: %.3f s, SPPM: %d", 
+          cntA, cntV, rtspBuffSize, 
+          (float)lastAudio.Millisecs()/1000.0f, (float)lastVideo.Millisecs()/1000.0f, 
+          (float)Compensation.m_time/10000000, (float)GetAudioPin()->GetAudioPresToRefDiff(), playSpeedAdjustInPPM);
         }
       }
                         
@@ -2299,7 +2346,16 @@ void CTsReaderFilter::SetMediaPosnUpdate(REFERENCE_TIME MediaPos)
   {
     CAutoLock cObjectLock(&m_GetTimeLock);
     m_MediaPos = MediaPos ;
-    m_BaseTime = (REFERENCE_TIME)GET_TIME_NOW() * 10000 ; // m_pClock->GetTime(&m_BaseTime) ;
+    // m_BaseTime = (REFERENCE_TIME)GET_TIME_NOW() * 10000 ; 
+    if (m_pClock)
+    {
+      m_pClock->GetTime(&m_BaseTime);
+    }
+    else
+    {
+      LogDebug("SetMediaPosnUpdate : m_pClock invalid");
+      m_BaseTime = 0;
+    }
     m_LastTime=m_BaseTime ;
   }
   //LogDebug("SetMediaPosnUpdate : %f %f",(float)MediaPos/10000,(float)m_LastTime/10000) ; 
@@ -2415,7 +2471,15 @@ void CTsReaderFilter::GetMediaPosition(REFERENCE_TIME *pMediaPos)
   REFERENCE_TIME Time=0 ;
   if (State() == State_Running)
   {
-    m_LastTime = (REFERENCE_TIME)GET_TIME_NOW() * 10000 ; 
+    //m_LastTime = (REFERENCE_TIME)GET_TIME_NOW() * 10000 ; 
+    if (m_pClock)
+    {
+      m_pClock->GetTime(&m_LastTime);
+  }
+    else
+    {
+      LogDebug("GetMediaPosition : m_pClock invalid");
+    }
   }
   *pMediaPos = (m_MediaPos + m_LastTime - m_BaseTime) ;
   return ; 

@@ -214,7 +214,6 @@ void StopLogger()
 
 void LogDebug(const wchar_t *fmt, ...) 
 {
-  static CCritSec lock;
   CAutoLock logLock(&m_logLock);
   
   if (!m_hLogger) {
@@ -232,7 +231,7 @@ void LogDebug(const wchar_t *fmt, ...)
   SYSTEMTIME systemTime;
   GetLocalTime(&systemTime);
   wchar_t msg[5000];
-  swprintf_s(msg, 5000,L"[%04.4d-%02.2d-%02.2d %02.2d:%02.2d:%02.2d,%03.3d] [%8x-%d] [%4x] - %s\n",
+  swprintf_s(msg, 5000,L"[%04.4d-%02.2d-%02.2d %02.2d:%02.2d:%02.2d,%03.3d] [%8x] [%4x] - %s\n",
     systemTime.wYear, systemTime.wMonth, systemTime.wDay,
     systemTime.wHour, systemTime.wMinute, systemTime.wSecond, systemTime.wMilliseconds,
     instanceID,
@@ -540,7 +539,7 @@ CTsReaderFilter::CTsReaderFilter(IUnknown *pUnk, HRESULT *phr):
   m_isUNCfile = false;
   m_bLiveTv = false;
   m_bTimeShifting = false;
-  m_RandomCompensation = 0;     
+  m_RandomCompensation = 0; 
   m_TotalDeltaCompensation = 0;    
   m_bAnalog = false;
   m_bStopping = false;
@@ -1821,14 +1820,14 @@ void CTsReaderFilter::ThreadProc()
               if (playSpeedAdjustInPPM > 1000)
               {
                 playSpeedAdjustInPPM = 1000;
-      }
+              }
             }
             else if ((presToRef > 0.02) && (m_AutoSpeedAdjust > 1)) //speed up play
             {
               //Calculate the playSpeedAdjustInPPM value to compensate for the difference over the next 60 seconds
               //This assumes the nominal 'DeltaCompensation()' update rate is 10 per second
               playSpeedAdjustInPPM = (REFERENCE_TIME)(presToRef * ((double)(-1000*1000*DUR_LOOP_TIMEOUT)/(60.0*100.0)));
-      
+              
               if (playSpeedAdjustInPPM < -1000)
               {
                 playSpeedAdjustInPPM = -1000;
@@ -2475,7 +2474,7 @@ void CTsReaderFilter::GetMediaPosition(REFERENCE_TIME *pMediaPos)
     if (m_pClock)
     {
       m_pClock->GetTime(&m_LastTime);
-  }
+    }
     else
     {
       LogDebug("GetMediaPosition : m_pClock invalid");

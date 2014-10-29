@@ -636,6 +636,7 @@ namespace MediaPortal
 
         // restart window manager
         GUIWindowManager.PreInit();
+        GUIWindowManager.OnResize();
         GUIWindowManager.ActivateWindow(activeWin);
         GUIWindowManager.OnDeviceRestored();
 

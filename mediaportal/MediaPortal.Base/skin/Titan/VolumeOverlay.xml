@@ -7,8 +7,8 @@
 <control>
 <id>501</id>
 <type>image</type>
-<posX>1550</posX>
-<posY>170</posY>
+<posX>100</posX>
+<posY>140</posY>
 <width>279</width>
 <height>20</height>
 <texture>volume_back.png</texture>
@@ -18,8 +18,8 @@
 <control>
 <id>502</id>
 <type>image</type>
-<posX>1510</posX>
-<posY>150</posY>
+<posX>60</posX>
+<posY>110</posY>
 <width>345</width>
 <height>66</height>
 <texture>volume.states.mute.png</texture>
@@ -28,8 +28,8 @@
 <control>
 <id>503</id>
 <type>volumebar</type>
-<posX>1540</posX>
-<posY>174</posY>
+<posX>90</posX>
+<posY>134</posY>
 <align>left</align>
 <height>13</height>
 <width>290</width>
@@ -42,8 +42,8 @@
 <control>
 <id>0</id>
 <type>image</type>
-<posX>1510</posX>
-<posY>150</posY>
+<posX>60</posX>
+<posY>110</posY>
 <align>left</align>
 <height>66</height>
 <width>345</width>

@@ -692,6 +692,16 @@ namespace OSInfo
     }
 
     /// <summary>
+    /// Return if running on Windows10 or later
+    /// </summary>
+    /// <returns>true means Windows 10 or later</returns>
+    /// <returns>false means Win 8.1 or previous</returns>
+    public static bool Win10OrLater()
+    {
+      return VerifyVersionGreaterEqual(6, 4);
+    }
+    
+    /// <summary>
     /// Return a numeric value rappresenting OS version
     /// </summary>
     /// <returns>(OSMajorVersion * 10 + OSMinorVersion)</returns>

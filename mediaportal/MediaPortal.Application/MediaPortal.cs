@@ -77,7 +77,6 @@ public class MediaPortalApp : D3D, IRender
   private static bool           _skinOverrideNoTheme;
   private static bool           _waitForTvServer;
   private static bool           _isRendering;
-  private static bool           _deviceLost;
   #if !DEBUG
   private static bool           _avoidVersionChecking;
   #endif
@@ -323,33 +322,6 @@ public class MediaPortalApp : D3D, IRender
   }
   // ReSharper restore InconsistentNaming
   // ReSharper restore UnusedMember.Local
-
-  public enum EnumDisplaySettings_EnumMode : uint
-  {
-    ENUM_CURRENT_SETTINGS = uint.MaxValue,
-    ENUM_REGISTRY_SETTINGS = uint.MaxValue - 1
-  }
-
-
-  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-  public class DISPLAY_DEVICE
-  // ReSharper restore InconsistentNaming
-  {
-    public int cb = 0;
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-    public string DeviceName = new String(' ', 32);
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-    public string DeviceString = new String(' ', 128);
-    public int StateFlags = 0;
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-    public string DeviceID = new String(' ', 128);
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-    public string DeviceKey = new String(' ', 128);
-  }
-
-  [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-  public static extern bool EnumDisplayDevices([In] string lpDevice, [In] uint iDevNum,
-                                              [In] [Out] DISPLAY_DEVICE lpDisplayDevice, [In] uint dwFlags);
 
 
   #endregion
@@ -975,8 +947,6 @@ public class MediaPortalApp : D3D, IRender
             }
             catch (Exception ex)
             {
-              successful = false;
-              successfulInit = false;
               Log.Error(ex);
               Log.Error("MediaPortal stopped due to an exception {0} {1} {2}", ex.Message, ex.Source, ex.StackTrace);
               _mpCrashed = true;
@@ -1476,11 +1446,8 @@ public class MediaPortalApp : D3D, IRender
 
         // set maximum and minimum form size in windowed mode
         case WM_GETMINMAXINFO:
-          if (!_deviceLost)
-          {
-            OnGetMinMaxInfo(ref msg);
-            PluginManager.WndProc(ref msg);
-          }
+          OnGetMinMaxInfo(ref msg);
+          PluginManager.WndProc(ref msg);
           break;
 
         case WM_ENTERSIZEMOVE:
@@ -1513,20 +1480,14 @@ public class MediaPortalApp : D3D, IRender
 
         // handle display changes
         case WM_DISPLAYCHANGE:
-          if (!_deviceLost)
-          {
-            OnDisplayChange(ref msg);
-            PluginManager.WndProc(ref msg);
-          }
+          OnDisplayChange(ref msg);
+          PluginManager.WndProc(ref msg);
           break;
 
         // handle device changes
         case WM_DEVICECHANGE:
-          if (!_deviceLost)
-          {
-            OnDeviceChange(ref msg);
-            PluginManager.WndProc(ref msg);
-          }
+          OnDeviceChange(ref msg);
+          PluginManager.WndProc(ref msg);
           break;
 
         case WM_QUERYENDSESSION:
@@ -1621,7 +1582,6 @@ public class MediaPortalApp : D3D, IRender
     {
       Log.Error(ex);
     }
-    //AttemptRecovery();
   }
 
   /// <summary>
@@ -1721,7 +1681,7 @@ public class MediaPortalApp : D3D, IRender
           {
           Log.Info("Main: Resuming automatic operation");
           OnResumeAutomatic();
-          msg.WParam = new IntPtr((int)PBT_EVENT.PBT_APMRESUMEAUTOMATIC);
+            msg.WParam = new IntPtr((int)PBT_EVENT.PBT_APMRESUMEAUTOMATIC);
           PluginManager.WndProc(ref msg);
           _resumedAutomatic = true;
           }
@@ -1973,7 +1933,6 @@ public class MediaPortalApp : D3D, IRender
   /// <param name="msg"></param>
   private void OnDeviceChange(ref Message msg)
   {
-    //AttemptRecovery();
     Log.Debug("Main: WM_DEVICECHANGE (Event: {0})", Enum.GetName(typeof(DBT_EVENT), msg.WParam.ToInt32()));
     RemovableDriveHelper.HandleDeviceChangedMessage(msg);
 
@@ -3235,39 +3194,6 @@ public class MediaPortalApp : D3D, IRender
     }
   }
 
-  protected void AttemptRecoveryold()
-  {
-    try
-    {
-      if (GUIGraphicsContext.DX9Device != null)
-      {
-        //GUIGraphicsContext.DX9Device.Present();
-        //GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.LOST;
-        GUIGraphicsContext.DX9Device.TestCooperativeLevel();
-        GUIGraphicsContext.DX9Device.CheckCooperativeLevel();
-        GUIGraphicsContext.DX9Device.Reset(GUIGraphicsContext.DX9Device.PresentationParameters);
-        _deviceLost = false;
-      }
-    }
-    catch (DeviceLostException)
-    {
-    }
-    catch (DeviceNotResetException)
-    {
-      try
-      {
-        GUIGraphicsContext.DX9Device.Reset(GUIGraphicsContext.DX9Device.PresentationParameters);
-        _deviceLost = false;
-        // Spew a message into the output window of the debugger 
-        Debug.WriteLine("Device successfully reset");
-      }
-      catch (DeviceLostException)
-      {
-        // If it's still lost or lost again, just do 
-        // nothing
-      }
-    }
-  }
 
   /// <summary>
   /// 
@@ -3276,89 +3202,6 @@ public class MediaPortalApp : D3D, IRender
   /// <param name="e"></param>
   protected override void OnDeviceLost(object sender, EventArgs e)
   {
-    _deviceLost = true;
-    Screen screen = Screen.FromControl(this);
-    while (GUIGraphicsContext.currentStartScreen.Bounds != screen.Bounds)
-    {
-      screen = Screen.FromControl(this);
-      Thread.Sleep(200);
-    }
-    _deviceLost = false;
-    //AttemptRecovery();
-    //AttemptRecovery();
-    //if (GUIGraphicsContext.DX9Device != null)
-    //{
-    //  GUIGraphicsContext.DX9Device.DeviceLost -= OnDeviceLost;
-    //  GUIGraphicsContext.DX9Device.Dispose();
-    //}
-
-    //_deviceLost = false;
-    //successful = false;
-    //successfulInit = false;
-    //GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.LOST;
-    //RecoverDevice();
-    //return;
-    //AttemptRecovery();
-
-    _deviceLost = true;
-    //successful = false;
-    //successfulInit = false;
-
-    //OnDeviceResetAttemptRecovery();
-
-    //OnDeviceReset(sender, e);
-
-    //while (_deviceLost)
-    //{
-
-    //}
-
-    //while (!_deviceLost)
-    //{
-    //  successful = false;
-    //  successfulInit = false;
-
-    //  try
-    //  {
-    //    UpdateSplashScreenMessage(GUILocalizeStrings.Get(62));
-    //    Log.Debug("Main: Initializing DirectX");
-
-    //    var app = new MediaPortalApp();
-    //    if (app.Init())
-    //    {
-    //      try
-    //      {
-    //        Log.Info("Main: Running");
-    //        GUIGraphicsContext.BlankScreen = false;
-    //        Application.Run(app);
-    //        app.Focus();
-    //      }
-    //      catch (Exception ex)
-    //      {
-    //        Log.Error(ex);
-    //        Log.Error("MediaPortal stopped due to an exception {0} {1} {2}", ex.Message, ex.Source, ex.StackTrace);
-    //        _mpCrashed = true;
-    //      }
-    //      app.OnExit();
-    //    }
-    //  }
-    //  catch (Exception ex)
-    //  {
-    //    Log.Error(ex);
-    //    Log.Error("MediaPortal stopped due to an exception {0} {1} {2}", ex.Message, ex.Source, ex.StackTrace);
-    //    _mpCrashed = true;
-    //  }
-    //}
-
-    //try
-    //{
-    //  GUIGraphicsContext.DX9Device.Present();
-    //}
-
-    //{
-      
-    //}
-
     Log.Warn("Main: OnDeviceLost()");
     if (!Created)
     {
@@ -3368,134 +3211,6 @@ public class MediaPortalApp : D3D, IRender
     GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.LOST;
     RecoverDevice();
     base.OnDeviceLost(sender, e);
-  }
-
-  /// <summary>
-  /// 
-  /// </summary>
-  /// <param name="sender"></param>
-  /// <param name="e"></param>
-  protected override void OnDeviceReset(object sender, EventArgs e)
-  {
-    AppActive = false;
-    if (GUIGraphicsContext.DX9Device != null)
-    {
-      GUIGraphicsContext.DX9Device.DeviceLost -= OnDeviceLost;
-      GUIGraphicsContext.DX9Device.Dispose();
-    }
-
-    _deviceLost = false;
-    successful = false;
-    successfulInit = false;
-
-    try
-    {
-      UpdateSplashScreenMessage(GUILocalizeStrings.Get(62));
-      Log.Debug("Main: Initializing DirectX");
-
-      var app = new MediaPortalApp();
-      if (app.Init())
-      {
-        try
-        {
-          Log.Info("Main: Running");
-          GUIGraphicsContext.BlankScreen = false;
-          Application.Run(app);
-          app.Focus();
-        }
-        catch (Exception ex)
-        {
-          Log.Error(ex);
-          Log.Error("MediaPortal stopped due to an exception {0} {1} {2}", ex.Message, ex.Source, ex.StackTrace);
-          _mpCrashed = true;
-        }
-        app.OnExit();
-      }
-    }
-    catch (Exception ex)
-    {
-      Log.Error(ex);
-      Log.Error("MediaPortal stopped due to an exception {0} {1} {2}", ex.Message, ex.Source, ex.StackTrace);
-      _mpCrashed = true;
-    }
-
-    Log.Warn("Main: OnDeviceReset()");
-    //InitializeDeviceObjects();
-    //if (!Created)
-    //{
-    //  Log.Debug("Main: Form not created yet - ignoring Event");
-    //  return;
-    //}
-    GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
-    GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.RUNNING;
-    RecoverDevice();
-    base.OnDeviceReset(sender, e);
-  }
-
-  protected void AttemptRecovery()
-  {
-    //GUIGraphicsContext.DX9Device.Reset(_presentParams);
-    base.Dispose(true);
-    //AppActive = false;
-    if (GUIGraphicsContext.DX9Device != null)
-    {
-      GUIGraphicsContext.DX9Device.DeviceLost -= OnDeviceLost;
-      GUIGraphicsContext.DX9Device.Dispose();
-    }
-
-    _deviceLost = false;
-    successful = false;
-    successfulInit = false;
-    GUIGraphicsContext.form = this;
-    
-    Init();
-
-    //try
-    //{
-    //  UpdateSplashScreenMessage(GUILocalizeStrings.Get(62));
-    //  Log.Debug("Main: Initializing DirectX");
-
-    //  //Init();
-
-    //  var app = new MediaPortalApp();
-    //  if (app.Init())
-    //  {
-    //    try
-    //    {
-    //      Log.Info("Main: Running");
-    //      GUIGraphicsContext.BlankScreen = false;
-    //      Application.Run(app);
-    //      app.Focus();
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //      Log.Error(ex);
-    //      Log.Error("MediaPortal stopped due to an exception {0} {1} {2}", ex.Message, ex.Source, ex.StackTrace);
-    //      _mpCrashed = true;
-    //    }
-    //    app.OnExit();
-    //  }
-    //}
-    //catch (Exception ex)
-    //{
-    //  Log.Error(ex);
-    //  Log.Error("MediaPortal stopped due to an exception {0} {1} {2}", ex.Message, ex.Source, ex.StackTrace);
-    //  _mpCrashed = true;
-    //}
-
-    Log.Warn("Main: OnDeviceReset()");
-    //InitializeDeviceObjects();
-    //if (!Created)
-    //{
-    //  Log.Debug("Main: Form not created yet - ignoring Event");
-    //  return;
-    //}
-    if (GUIGraphicsContext.DX9Device != null)
-    {
-      GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
-    }
-    GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.RUNNING;
-    RecoverDevice();
   }
 
   #endregion
@@ -3520,32 +3235,6 @@ public class MediaPortalApp : D3D, IRender
       if (GUIGraphicsContext.Vmr9Active)
       {
         Log.Error("Main: MediaPortal.Render() called while VMR9 active");
-        return;
-      }
-
-      try
-      {
-        // Copy the back buffer to the display
-        //GUIGraphicsContext.DX9Device.Present();
-      }
-      catch (DeviceLostException)
-      {
-        // Indicate that the device has been lost 
-        _deviceLost = true;
-
-        // Spew a message into the output window of the debugger
-        //Debug.WriteLine("Device was lost");
-      }
-
-      if (_deviceLost)
-      {
-        // Try to get the device back
-        //AttemptRecovery();
-      }
-
-      // If we couldn't get the device back, don't try to render
-      if (_deviceLost)
-      {
         return;
       }
 
@@ -3683,7 +3372,6 @@ public class MediaPortalApp : D3D, IRender
               g_Player.Stop();
             }
             GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.LOST;
-            //AttemptRecovery();
             break;
 
           default:
@@ -3711,127 +3399,124 @@ public class MediaPortalApp : D3D, IRender
   /// </summary>
   protected override void OnProcess()
   {
-    if (!_deviceLost)
+    // Set the date & time
+    if (DateTime.Now.Second != _updateTimer.Second)
     {
-      // Set the date & time
-      if (DateTime.Now.Second != _updateTimer.Second)
+      _updateTimer = DateTime.Now;
+      GUIPropertyManager.SetProperty("#date", GetDate());
+      GUIPropertyManager.SetProperty("#time", GetTime());
+    }
+
+    g_Player.Process();
+    RecoverDevice();
+
+    if (g_Player.Playing)
+    {
+      _playingState = true;
+      if (GUIWindowManager.ActiveWindow == (int) GUIWindow.Window.WINDOW_FULLSCREEN_VIDEO)
       {
-        _updateTimer = DateTime.Now;
-        GUIPropertyManager.SetProperty("#date", GetDate());
-        GUIPropertyManager.SetProperty("#time", GetTime());
+        GUIGraphicsContext.IsFullScreenVideo = true;
       }
 
-      g_Player.Process();
-      RecoverDevice();
+      GUIGraphicsContext.IsPlaying = true;
+      GUIGraphicsContext.IsPlayingVideo = (g_Player.IsVideo || g_Player.IsTV);
 
-      if (g_Player.Playing)
+      if (g_Player.Paused)
       {
-        _playingState = true;
-        if (GUIWindowManager.ActiveWindow == (int)GUIWindow.Window.WINDOW_FULLSCREEN_VIDEO)
-        {
-          GUIGraphicsContext.IsFullScreenVideo = true;
-        }
+        GUIPropertyManager.SetProperty("#playlogo", "logo_pause.png");
+      }
+      else if (g_Player.Speed > 1)
+      {
+        GUIPropertyManager.SetProperty("#playlogo", "logo_fastforward.png");
+      }
+      else if (g_Player.Speed < 1)
+      {
+        GUIPropertyManager.SetProperty("#playlogo", "logo_rewind.png");
+      }
+      else if (g_Player.Playing)
+      {
+        GUIPropertyManager.SetProperty("#playlogo", "logo_play.png");
+      }
 
-        GUIGraphicsContext.IsPlaying = true;
-        GUIGraphicsContext.IsPlayingVideo = (g_Player.IsVideo || g_Player.IsTV);
-
-        if (g_Player.Paused)
-        {
-          GUIPropertyManager.SetProperty("#playlogo", "logo_pause.png");
-        }
-        else if (g_Player.Speed > 1)
-        {
-          GUIPropertyManager.SetProperty("#playlogo", "logo_fastforward.png");
-        }
-        else if (g_Player.Speed < 1)
-        {
-          GUIPropertyManager.SetProperty("#playlogo", "logo_rewind.png");
-        }
-        else if (g_Player.Playing)
-        {
-          GUIPropertyManager.SetProperty("#playlogo", "logo_play.png");
-        }
-
-        if (g_Player.IsTV && !g_Player.IsTVRecording)
-        {
-          GUIPropertyManager.SetProperty("#currentplaytime", GUIPropertyManager.GetProperty("#TV.Record.current"));
-          GUIPropertyManager.SetProperty("#shortcurrentplaytime", GUIPropertyManager.GetProperty("#TV.Record.current"));
-        }
-        else
-        {
-          GUIPropertyManager.SetProperty("#currentplaytime", Utils.SecondsToHMSString((int)g_Player.CurrentPosition));
-          GUIPropertyManager.SetProperty("#currentremaining",
-                                         Utils.SecondsToHMSString((int)(g_Player.Duration - g_Player.CurrentPosition)));
-          GUIPropertyManager.SetProperty("#shortcurrentremaining",
-                                         Utils.SecondsToShortHMSString(
-                                           (int)(g_Player.Duration - g_Player.CurrentPosition)));
-          GUIPropertyManager.SetProperty("#shortcurrentplaytime",
-                                         Utils.SecondsToShortHMSString((int)g_Player.CurrentPosition));
-        }
-
-        if (g_Player.Duration > 0)
-        {
-          GUIPropertyManager.SetProperty("#duration", Utils.SecondsToHMSString((int)g_Player.Duration));
-          GUIPropertyManager.SetProperty("#shortduration", Utils.SecondsToShortHMSString((int)g_Player.Duration));
-          double percent = 100 * g_Player.CurrentPosition / g_Player.Duration;
-          GUIPropertyManager.SetProperty("#percentage", percent.ToString(CultureInfo.CurrentCulture));
-
-          // Set comskip or chapter markers
-          string strJumpPoints = string.Empty;
-          string strChapters = string.Empty;
-          if (((g_Player.IsTV && g_Player.IsTVRecording) || g_Player.HasVideo) && g_Player.HasChapters)
-          {
-            if (g_Player.JumpPoints != null)
-            {
-              // Set the marker start to indicate the start of commercials
-              foreach (double jump in g_Player.JumpPoints)
-              {
-                double jumpPercent = jump / g_Player.Duration * 100.0d;
-                strJumpPoints += String.Format("{0:0.00}", jumpPercent) + " ";
-              }
-              // Set the marker end to indicate the end of commercials
-              foreach (double chapter in g_Player.Chapters)
-              {
-                double chapterPercent = chapter / g_Player.Duration * 100.0d;
-                strChapters += String.Format("{0:0.00}", chapterPercent) + " ";
-              }
-            }
-            else
-            {
-              // Set a fixed size marker at the start of each chapter
-              double markerWidth = 0.7d;
-              foreach (double chapter in g_Player.Chapters)
-              {
-                double chapterPercent = chapter / g_Player.Duration * 100.0d;
-                strChapters += String.Format("{0:0.00}", chapterPercent) + " ";
-                chapterPercent = (chapterPercent >= markerWidth) ? chapterPercent - markerWidth : 0.0d;
-                strJumpPoints += String.Format("{0:0.00}", chapterPercent) + " ";
-              }
-            }
-          }
-          GUIPropertyManager.SetProperty("#chapters", strChapters);
-          GUIPropertyManager.SetProperty("#jumppoints", strJumpPoints);
-        }
-        else
-        {
-          GUIPropertyManager.SetProperty("#duration", string.Empty);
-          GUIPropertyManager.SetProperty("#shortduration", string.Empty);
-          GUIPropertyManager.SetProperty("#percentage", "0,0");
-
-          GUIPropertyManager.SetProperty("#chapters", string.Empty);
-          GUIPropertyManager.SetProperty("#jumppoints", string.Empty);
-        }
-
-        GUIPropertyManager.SetProperty("#playspeed", g_Player.Speed.ToString(CultureInfo.InvariantCulture));
+      if (g_Player.IsTV && !g_Player.IsTVRecording)
+      {
+        GUIPropertyManager.SetProperty("#currentplaytime", GUIPropertyManager.GetProperty("#TV.Record.current"));
+        GUIPropertyManager.SetProperty("#shortcurrentplaytime", GUIPropertyManager.GetProperty("#TV.Record.current"));
       }
       else
       {
-        GUIGraphicsContext.IsPlaying = false;
-        if (_playingState)
+        GUIPropertyManager.SetProperty("#currentplaytime", Utils.SecondsToHMSString((int) g_Player.CurrentPosition));
+        GUIPropertyManager.SetProperty("#currentremaining",
+                                       Utils.SecondsToHMSString((int) (g_Player.Duration - g_Player.CurrentPosition)));
+        GUIPropertyManager.SetProperty("#shortcurrentremaining",
+                                       Utils.SecondsToShortHMSString(
+                                         (int) (g_Player.Duration - g_Player.CurrentPosition)));
+        GUIPropertyManager.SetProperty("#shortcurrentplaytime",
+                                       Utils.SecondsToShortHMSString((int) g_Player.CurrentPosition));
+      }
+
+      if (g_Player.Duration > 0)
+      {
+        GUIPropertyManager.SetProperty("#duration", Utils.SecondsToHMSString((int) g_Player.Duration));
+        GUIPropertyManager.SetProperty("#shortduration", Utils.SecondsToShortHMSString((int) g_Player.Duration));
+        double percent = 100*g_Player.CurrentPosition/g_Player.Duration;
+        GUIPropertyManager.SetProperty("#percentage", percent.ToString(CultureInfo.CurrentCulture));
+
+        // Set comskip or chapter markers
+        string strJumpPoints = string.Empty;
+        string strChapters = string.Empty;
+        if (((g_Player.IsTV && g_Player.IsTVRecording) || g_Player.HasVideo) && g_Player.HasChapters)
         {
-          GUIPropertyManager.RemovePlayerProperties();
-          _playingState = false;
+          if (g_Player.JumpPoints != null)
+          {
+            // Set the marker start to indicate the start of commercials
+            foreach (double jump in g_Player.JumpPoints)
+            {
+              double jumpPercent = jump/g_Player.Duration*100.0d;
+              strJumpPoints += String.Format("{0:0.00}", jumpPercent) + " ";
+            }
+            // Set the marker end to indicate the end of commercials
+            foreach (double chapter in g_Player.Chapters)
+            {
+              double chapterPercent = chapter/g_Player.Duration*100.0d;
+              strChapters += String.Format("{0:0.00}", chapterPercent) + " ";
+            }
+          }
+          else
+          {
+            // Set a fixed size marker at the start of each chapter
+            double markerWidth = 0.7d;
+            foreach (double chapter in g_Player.Chapters)
+            {
+              double chapterPercent = chapter/g_Player.Duration*100.0d;
+              strChapters += String.Format("{0:0.00}", chapterPercent) + " ";
+              chapterPercent = (chapterPercent >= markerWidth) ? chapterPercent - markerWidth : 0.0d;
+              strJumpPoints += String.Format("{0:0.00}", chapterPercent) + " ";
+            }
+          }
         }
+        GUIPropertyManager.SetProperty("#chapters", strChapters);
+        GUIPropertyManager.SetProperty("#jumppoints", strJumpPoints);
+      }
+      else
+      {
+        GUIPropertyManager.SetProperty("#duration", string.Empty);
+        GUIPropertyManager.SetProperty("#shortduration", string.Empty);
+        GUIPropertyManager.SetProperty("#percentage", "0,0");
+
+        GUIPropertyManager.SetProperty("#chapters", string.Empty);
+        GUIPropertyManager.SetProperty("#jumppoints", string.Empty);
+      }
+
+      GUIPropertyManager.SetProperty("#playspeed", g_Player.Speed.ToString(CultureInfo.InvariantCulture));
+    }
+    else
+    {
+      GUIGraphicsContext.IsPlaying = false;
+      if (_playingState)
+      {
+        GUIPropertyManager.RemovePlayerProperties();
+        _playingState = false;
       }
     }
   }

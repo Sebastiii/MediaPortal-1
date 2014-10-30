@@ -85,13 +85,9 @@ namespace MediaPortal
     private const int numberOfRetriesAdaptor = 20;
     private const int delayBetweenTries = 5000;
     private static int retries = 0;
-    protected static bool successful = false;
-    protected static bool successfulInit = false;
+    private static bool successful = false;
+    private static bool successfulInit = false;
     // ReSharper restore InconsistentNaming
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    public static extern bool EnumDisplayDevices([In] string lpDevice, [In] uint iDevNum,
-                                                [In] [Out] MediaPortalApp.DISPLAY_DEVICE lpDisplayDevice, [In] uint dwFlags);
 
     #endregion
 
@@ -150,7 +146,7 @@ namespace MediaPortal
     #region private attributes
 
     private readonly Control           _renderTarget;             // render target object
-    internal readonly PresentParameters _presentParams;            // D3D presentation parameters
+    private readonly PresentParameters _presentParams;            // D3D presentation parameters
     internal D3DEnumeration            _enumerationSettings;      //
     private readonly bool              _useExclusiveDirectXMode;  // 
     private readonly bool              _disableMouseEvents;       //
@@ -289,13 +285,6 @@ namespace MediaPortal
     /// <param name="sender"></param>
     /// <param name="e"></param>
     protected virtual void OnDeviceLost(Object sender, EventArgs e) { }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="e"></param>
-    protected virtual void OnDeviceReset(Object sender, EventArgs e) { }
 
 
     /// <summary>
@@ -485,7 +474,6 @@ namespace MediaPortal
 
       // disable event handlers
       GUIGraphicsContext.DX9Device.DeviceLost -= OnDeviceLost;
-      //GUIGraphicsContext.DX9Device.DeviceReset -= OnDeviceReset;
 
       // Reset DialogMenu to avoid freeze when going to fullscreen/windowed
       var dialogMenu = (GUIDialogMenu)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
@@ -567,7 +555,6 @@ namespace MediaPortal
 
       // enable event handlers
       GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
-      GUIGraphicsContext.DX9Device.DeviceReset += OnDeviceReset;
     }
 
 
@@ -743,37 +730,7 @@ namespace MediaPortal
     /// </summary>
     protected void RecoverDevice()
     {
-      try
-      {
-        if (GUIGraphicsContext.DX9Device != null)
-        {
-          //GUIGraphicsContext.DX9Device.Present();
-          //GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.LOST;
-          //GUIGraphicsContext.DX9Device.TestCooperativeLevel();
-          //GUIGraphicsContext.DX9Device.CheckCooperativeLevel();
-          //GUIGraphicsContext.DX9Device.Reset(GUIGraphicsContext.DX9Device.PresentationParameters);
-          //_deviceLost = false;
-        }
-      }
-      catch (DeviceLostException)
-      {
-      }
-      catch (DeviceNotResetException)
-      {
-        try
-        {
-          GUIGraphicsContext.DX9Device.Reset(GUIGraphicsContext.DX9Device.PresentationParameters);
-          //_deviceLost = false;
-          // Spew a message into the output window of the debugger 
-          Debug.WriteLine("Device successfully reset");
-        }
-        catch (DeviceLostException)
-        {
-          // If it's still lost or lost again, just do 
-          // nothing
-        }
-      }
-      // do not try to recover device, when MP does not set a lost state
+      // do not try to receover device, when MP does not set a lost state
       if (GUIGraphicsContext.CurrentState != GUIGraphicsContext.State.LOST)
       {
         return;
@@ -781,7 +738,6 @@ namespace MediaPortal
 
       // disable event handlers
       GUIGraphicsContext.DX9Device.DeviceLost -= OnDeviceLost;
-      //GUIGraphicsContext.DX9Device.DeviceReset -= OnDeviceReset;
 
       Log.Debug("D3D: RecoverDevice()");
 
@@ -807,11 +763,10 @@ namespace MediaPortal
       // lock rendering loop and recreate the backbuffer for the current D3D device
       RecreateSwapChain();
 
-        GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.RUNNING;
+      GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.RUNNING;
 
       // enable handlers
       GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
-      GUIGraphicsContext.DX9Device.DeviceReset += OnDeviceReset;
 
 
       if (RefreshRateChanger.RefreshRateChangePending && RefreshRateChanger.RefreshRateChangeStrFile.Length > 0)
@@ -1182,31 +1137,6 @@ namespace MediaPortal
     /// <returns>The adapter that has the specified screen on its primary monitor</returns>
     private GraphicsAdapterInfo FindAdapterForScreen(Screen screen)
     {
-      Manager.Adapters.Reset();
-      foreach (Screen screen1 in Screen.AllScreens)
-      {
-        const int dwf = 0;
-        var info = new MediaPortalApp.DISPLAY_DEVICE();
-        string monitorname = null;
-        info.cb = Marshal.SizeOf(info);
-        if (EnumDisplayDevices(screen1.DeviceName, 0, info, dwf))
-        {
-          monitorname = info.DeviceString;
-        }
-        if (monitorname == null)
-        {
-          monitorname = "";
-        }
-
-        foreach (AdapterInformation adapter in Manager.Adapters)
-        {
-          if (screen.DeviceName.Equals(adapter.Information.DeviceName.Trim()))
-          {
-            Log.Debug("{0} ({1}x{2}) on {3}", monitorname, adapter.CurrentDisplayMode.Width, adapter.CurrentDisplayMode.Height, adapter.Information.Description);
-            GUIGraphicsContext.currentStartScreen = GUIGraphicsContext.currentScreen;
-          }
-        }
-      }
       foreach (GraphicsAdapterInfo adapterInfo in _enumerationSettings.AdapterInfoList)
       {
         var hMon = Manager.GetAdapterMonitor(adapterInfo.AdapterOrdinal);
@@ -1369,14 +1299,7 @@ namespace MediaPortal
         }
 
         // update some magic number use for animations
-        try
-        {
-          GUIGraphicsContext.MaxFPS = Manager.Adapters[AdapterInfo.AdapterOrdinal].CurrentDisplayMode.RefreshRate;
-        }
-        catch (Exception ex)
-        {
-          Log.Error("Main Exception {0}", ex);
-        }
+        GUIGraphicsContext.MaxFPS = Manager.Adapters[AdapterInfo.AdapterOrdinal].CurrentDisplayMode.RefreshRate;
 
         // set always on top parameter
         TopMost = _alwaysOnTop;
@@ -1391,7 +1314,6 @@ namespace MediaPortal
 
         // Setup the event handlers for our device
         GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
-        GUIGraphicsContext.DX9Device.DeviceReset += OnDeviceReset;
 
         // Initialize the app's device-dependent objects
         try
@@ -1762,7 +1684,6 @@ namespace MediaPortal
 
         // remove the device lost and reset handlers as application is already closing down
         GUIGraphicsContext.DX9Device.DeviceLost  -= OnDeviceLost;
-        //GUIGraphicsContext.DX9Device.DeviceReset -= OnDeviceReset;
         GUIGraphicsContext.DX9Device.Dispose();
       }
     }

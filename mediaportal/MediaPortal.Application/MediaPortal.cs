@@ -77,6 +77,7 @@ public class MediaPortalApp : D3D, IRender
   private static bool           _skinOverrideNoTheme;
   private static bool           _waitForTvServer;
   private static bool           _isRendering;
+  private static bool           _deviceLost;
   #if !DEBUG
   private static bool           _avoidVersionChecking;
   #endif
@@ -1446,8 +1447,11 @@ public class MediaPortalApp : D3D, IRender
 
         // set maximum and minimum form size in windowed mode
         case WM_GETMINMAXINFO:
-          OnGetMinMaxInfo(ref msg);
-          PluginManager.WndProc(ref msg);
+          if (!_deviceLost)
+          {
+            OnGetMinMaxInfo(ref msg);
+            PluginManager.WndProc(ref msg);
+          }
           break;
 
         case WM_ENTERSIZEMOVE:
@@ -1480,14 +1484,20 @@ public class MediaPortalApp : D3D, IRender
 
         // handle display changes
         case WM_DISPLAYCHANGE:
-          OnDisplayChange(ref msg);
-          PluginManager.WndProc(ref msg);
+          if (!_deviceLost)
+          {
+            OnDisplayChange(ref msg);
+            PluginManager.WndProc(ref msg);
+          }
           break;
 
         // handle device changes
         case WM_DEVICECHANGE:
-          OnDeviceChange(ref msg);
-          PluginManager.WndProc(ref msg);
+          if (!_deviceLost)
+          {
+            OnDeviceChange(ref msg);
+            PluginManager.WndProc(ref msg);
+          }
           break;
 
         case WM_QUERYENDSESSION:
@@ -2060,6 +2070,10 @@ public class MediaPortalApp : D3D, IRender
       }
       if (!Equals(currentBounds.Size, newBounds.Size))
       {
+        // disable event handlers
+        GUIGraphicsContext.DX9Device.DeviceLost -= OnDeviceLost;
+        GUIGraphicsContext.DX9Device.DeviceReset -= OnDeviceReset;
+
         // Check if start screen is equal to device screen and check if current screen bond differ from current detected screen bond then recreate swap chain.
         Log.Debug("Main: Screen MP OnDisplayChange current screen detected                                {0}", GetCleanDisplayName(screen));
         Log.Debug("Main: Screen MP OnDisplayChange current screen                                         {0}", GetCleanDisplayName(GUIGraphicsContext.currentScreen));
@@ -2148,6 +2162,10 @@ public class MediaPortalApp : D3D, IRender
 
     if (!Equals(currentBounds.Size, newBounds.Size) && !_firstLoadedScreen && !_restoreLoadedScreen)
     {
+      // disable event handlers
+      GUIGraphicsContext.DX9Device.DeviceLost -= OnDeviceLost;
+      GUIGraphicsContext.DX9Device.DeviceReset -= OnDeviceReset;
+
       // Check if start screen is equal to device screen and check if current screen bond differ from current detected screen bond then recreate swap chain.
       Log.Debug("Main: Screen MP OnGetMinMaxInfo Information.DeviceName Manager.Adapters                {0}", adapterOrdinalScreenName);
       Log.Debug("Main: Screen MP OnGetMinMaxInfo current screen detected                                {0}", GetCleanDisplayName(screen));
@@ -3203,6 +3221,15 @@ public class MediaPortalApp : D3D, IRender
   protected override void OnDeviceLost(object sender, EventArgs e)
   {
     Log.Warn("Main: OnDeviceLost()");
+    _deviceLost = true;
+    Screen screen = Screen.FromControl(this);
+    while (GUIGraphicsContext.currentStartScreen.Bounds != screen.Bounds)
+    {
+      screen = Screen.FromControl(this);
+      Thread.Sleep(200);
+    }
+    _deviceLost = false;
+    Log.Warn("Main: OnDeviceLost() after loop");
     if (!Created)
     {
       Log.Debug("Main: Form not created yet - ignoring Event");
@@ -3213,6 +3240,27 @@ public class MediaPortalApp : D3D, IRender
     base.OnDeviceLost(sender, e);
   }
 
+  /// <summary>
+  /// 
+  /// </summary>
+  /// <param name="sender"></param>
+  /// <param name="e"></param>
+  protected override void OnDeviceReset(object sender, EventArgs e)
+  {
+    if (_deviceLost)
+    {
+      _deviceLost = false;
+      Log.Warn("Main: OnDeviceReset()");
+      if (!Created)
+      {
+        Log.Debug("Main: Form not created yet - ignoring Event");
+        return;
+      }
+      GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.LOST;
+      RecoverDevice();
+      base.OnDeviceReset(sender, e);
+    }
+  }
   #endregion
 
   #region Render()
@@ -3238,6 +3286,11 @@ public class MediaPortalApp : D3D, IRender
         return;
       }
 
+      // If we couldn't get the device back, don't try to render
+      if (_deviceLost)
+      {
+        return;
+      }
       // render frame
       try
       {
@@ -3399,124 +3452,127 @@ public class MediaPortalApp : D3D, IRender
   /// </summary>
   protected override void OnProcess()
   {
-    // Set the date & time
-    if (DateTime.Now.Second != _updateTimer.Second)
+    if (!_deviceLost)
     {
-      _updateTimer = DateTime.Now;
-      GUIPropertyManager.SetProperty("#date", GetDate());
-      GUIPropertyManager.SetProperty("#time", GetTime());
-    }
-
-    g_Player.Process();
-    RecoverDevice();
-
-    if (g_Player.Playing)
-    {
-      _playingState = true;
-      if (GUIWindowManager.ActiveWindow == (int) GUIWindow.Window.WINDOW_FULLSCREEN_VIDEO)
+      // Set the date & time
+      if (DateTime.Now.Second != _updateTimer.Second)
       {
-        GUIGraphicsContext.IsFullScreenVideo = true;
+        _updateTimer = DateTime.Now;
+        GUIPropertyManager.SetProperty("#date", GetDate());
+        GUIPropertyManager.SetProperty("#time", GetTime());
       }
 
-      GUIGraphicsContext.IsPlaying = true;
-      GUIGraphicsContext.IsPlayingVideo = (g_Player.IsVideo || g_Player.IsTV);
+      g_Player.Process();
+      RecoverDevice();
 
-      if (g_Player.Paused)
+      if (g_Player.Playing)
       {
-        GUIPropertyManager.SetProperty("#playlogo", "logo_pause.png");
-      }
-      else if (g_Player.Speed > 1)
-      {
-        GUIPropertyManager.SetProperty("#playlogo", "logo_fastforward.png");
-      }
-      else if (g_Player.Speed < 1)
-      {
-        GUIPropertyManager.SetProperty("#playlogo", "logo_rewind.png");
-      }
-      else if (g_Player.Playing)
-      {
-        GUIPropertyManager.SetProperty("#playlogo", "logo_play.png");
-      }
-
-      if (g_Player.IsTV && !g_Player.IsTVRecording)
-      {
-        GUIPropertyManager.SetProperty("#currentplaytime", GUIPropertyManager.GetProperty("#TV.Record.current"));
-        GUIPropertyManager.SetProperty("#shortcurrentplaytime", GUIPropertyManager.GetProperty("#TV.Record.current"));
-      }
-      else
-      {
-        GUIPropertyManager.SetProperty("#currentplaytime", Utils.SecondsToHMSString((int) g_Player.CurrentPosition));
-        GUIPropertyManager.SetProperty("#currentremaining",
-                                       Utils.SecondsToHMSString((int) (g_Player.Duration - g_Player.CurrentPosition)));
-        GUIPropertyManager.SetProperty("#shortcurrentremaining",
-                                       Utils.SecondsToShortHMSString(
-                                         (int) (g_Player.Duration - g_Player.CurrentPosition)));
-        GUIPropertyManager.SetProperty("#shortcurrentplaytime",
-                                       Utils.SecondsToShortHMSString((int) g_Player.CurrentPosition));
-      }
-
-      if (g_Player.Duration > 0)
-      {
-        GUIPropertyManager.SetProperty("#duration", Utils.SecondsToHMSString((int) g_Player.Duration));
-        GUIPropertyManager.SetProperty("#shortduration", Utils.SecondsToShortHMSString((int) g_Player.Duration));
-        double percent = 100*g_Player.CurrentPosition/g_Player.Duration;
-        GUIPropertyManager.SetProperty("#percentage", percent.ToString(CultureInfo.CurrentCulture));
-
-        // Set comskip or chapter markers
-        string strJumpPoints = string.Empty;
-        string strChapters = string.Empty;
-        if (((g_Player.IsTV && g_Player.IsTVRecording) || g_Player.HasVideo) && g_Player.HasChapters)
+        _playingState = true;
+        if (GUIWindowManager.ActiveWindow == (int)GUIWindow.Window.WINDOW_FULLSCREEN_VIDEO)
         {
-          if (g_Player.JumpPoints != null)
-          {
-            // Set the marker start to indicate the start of commercials
-            foreach (double jump in g_Player.JumpPoints)
-            {
-              double jumpPercent = jump/g_Player.Duration*100.0d;
-              strJumpPoints += String.Format("{0:0.00}", jumpPercent) + " ";
-            }
-            // Set the marker end to indicate the end of commercials
-            foreach (double chapter in g_Player.Chapters)
-            {
-              double chapterPercent = chapter/g_Player.Duration*100.0d;
-              strChapters += String.Format("{0:0.00}", chapterPercent) + " ";
-            }
-          }
-          else
-          {
-            // Set a fixed size marker at the start of each chapter
-            double markerWidth = 0.7d;
-            foreach (double chapter in g_Player.Chapters)
-            {
-              double chapterPercent = chapter/g_Player.Duration*100.0d;
-              strChapters += String.Format("{0:0.00}", chapterPercent) + " ";
-              chapterPercent = (chapterPercent >= markerWidth) ? chapterPercent - markerWidth : 0.0d;
-              strJumpPoints += String.Format("{0:0.00}", chapterPercent) + " ";
-            }
-          }
+          GUIGraphicsContext.IsFullScreenVideo = true;
         }
-        GUIPropertyManager.SetProperty("#chapters", strChapters);
-        GUIPropertyManager.SetProperty("#jumppoints", strJumpPoints);
+
+        GUIGraphicsContext.IsPlaying = true;
+        GUIGraphicsContext.IsPlayingVideo = (g_Player.IsVideo || g_Player.IsTV);
+
+        if (g_Player.Paused)
+        {
+          GUIPropertyManager.SetProperty("#playlogo", "logo_pause.png");
+        }
+        else if (g_Player.Speed > 1)
+        {
+          GUIPropertyManager.SetProperty("#playlogo", "logo_fastforward.png");
+        }
+        else if (g_Player.Speed < 1)
+        {
+          GUIPropertyManager.SetProperty("#playlogo", "logo_rewind.png");
+        }
+        else if (g_Player.Playing)
+        {
+          GUIPropertyManager.SetProperty("#playlogo", "logo_play.png");
+        }
+
+        if (g_Player.IsTV && !g_Player.IsTVRecording)
+        {
+          GUIPropertyManager.SetProperty("#currentplaytime", GUIPropertyManager.GetProperty("#TV.Record.current"));
+          GUIPropertyManager.SetProperty("#shortcurrentplaytime", GUIPropertyManager.GetProperty("#TV.Record.current"));
+        }
+        else
+        {
+          GUIPropertyManager.SetProperty("#currentplaytime", Utils.SecondsToHMSString((int)g_Player.CurrentPosition));
+          GUIPropertyManager.SetProperty("#currentremaining",
+                                         Utils.SecondsToHMSString((int)(g_Player.Duration - g_Player.CurrentPosition)));
+          GUIPropertyManager.SetProperty("#shortcurrentremaining",
+                                         Utils.SecondsToShortHMSString(
+                                           (int)(g_Player.Duration - g_Player.CurrentPosition)));
+          GUIPropertyManager.SetProperty("#shortcurrentplaytime",
+                                         Utils.SecondsToShortHMSString((int)g_Player.CurrentPosition));
+        }
+
+        if (g_Player.Duration > 0)
+        {
+          GUIPropertyManager.SetProperty("#duration", Utils.SecondsToHMSString((int)g_Player.Duration));
+          GUIPropertyManager.SetProperty("#shortduration", Utils.SecondsToShortHMSString((int)g_Player.Duration));
+          double percent = 100 * g_Player.CurrentPosition / g_Player.Duration;
+          GUIPropertyManager.SetProperty("#percentage", percent.ToString(CultureInfo.CurrentCulture));
+
+          // Set comskip or chapter markers
+          string strJumpPoints = string.Empty;
+          string strChapters = string.Empty;
+          if (((g_Player.IsTV && g_Player.IsTVRecording) || g_Player.HasVideo) && g_Player.HasChapters)
+          {
+            if (g_Player.JumpPoints != null)
+            {
+              // Set the marker start to indicate the start of commercials
+              foreach (double jump in g_Player.JumpPoints)
+              {
+                double jumpPercent = jump / g_Player.Duration * 100.0d;
+                strJumpPoints += String.Format("{0:0.00}", jumpPercent) + " ";
+              }
+              // Set the marker end to indicate the end of commercials
+              foreach (double chapter in g_Player.Chapters)
+              {
+                double chapterPercent = chapter / g_Player.Duration * 100.0d;
+                strChapters += String.Format("{0:0.00}", chapterPercent) + " ";
+              }
+            }
+            else
+            {
+              // Set a fixed size marker at the start of each chapter
+              double markerWidth = 0.7d;
+              foreach (double chapter in g_Player.Chapters)
+              {
+                double chapterPercent = chapter / g_Player.Duration * 100.0d;
+                strChapters += String.Format("{0:0.00}", chapterPercent) + " ";
+                chapterPercent = (chapterPercent >= markerWidth) ? chapterPercent - markerWidth : 0.0d;
+                strJumpPoints += String.Format("{0:0.00}", chapterPercent) + " ";
+              }
+            }
+          }
+          GUIPropertyManager.SetProperty("#chapters", strChapters);
+          GUIPropertyManager.SetProperty("#jumppoints", strJumpPoints);
+        }
+        else
+        {
+          GUIPropertyManager.SetProperty("#duration", string.Empty);
+          GUIPropertyManager.SetProperty("#shortduration", string.Empty);
+          GUIPropertyManager.SetProperty("#percentage", "0,0");
+
+          GUIPropertyManager.SetProperty("#chapters", string.Empty);
+          GUIPropertyManager.SetProperty("#jumppoints", string.Empty);
+        }
+
+        GUIPropertyManager.SetProperty("#playspeed", g_Player.Speed.ToString(CultureInfo.InvariantCulture));
       }
       else
       {
-        GUIPropertyManager.SetProperty("#duration", string.Empty);
-        GUIPropertyManager.SetProperty("#shortduration", string.Empty);
-        GUIPropertyManager.SetProperty("#percentage", "0,0");
-
-        GUIPropertyManager.SetProperty("#chapters", string.Empty);
-        GUIPropertyManager.SetProperty("#jumppoints", string.Empty);
-      }
-
-      GUIPropertyManager.SetProperty("#playspeed", g_Player.Speed.ToString(CultureInfo.InvariantCulture));
-    }
-    else
-    {
-      GUIGraphicsContext.IsPlaying = false;
-      if (_playingState)
-      {
-        GUIPropertyManager.RemovePlayerProperties();
-        _playingState = false;
+        GUIGraphicsContext.IsPlaying = false;
+        if (_playingState)
+        {
+          GUIPropertyManager.RemovePlayerProperties();
+          _playingState = false;
+        }
       }
     }
   }

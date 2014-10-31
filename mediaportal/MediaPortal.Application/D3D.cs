@@ -286,6 +286,13 @@ namespace MediaPortal
     /// <param name="e"></param>
     protected virtual void OnDeviceLost(Object sender, EventArgs e) { }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    protected virtual void OnDeviceReset(Object sender, EventArgs e) { }
+
 
     /// <summary>
     /// 
@@ -474,6 +481,7 @@ namespace MediaPortal
 
       // disable event handlers
       GUIGraphicsContext.DX9Device.DeviceLost -= OnDeviceLost;
+      GUIGraphicsContext.DX9Device.DeviceReset -= OnDeviceReset;
 
       // Reset DialogMenu to avoid freeze when going to fullscreen/windowed
       var dialogMenu = (GUIDialogMenu)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
@@ -555,6 +563,7 @@ namespace MediaPortal
 
       // enable event handlers
       GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
+      GUIGraphicsContext.DX9Device.DeviceReset += OnDeviceReset;
     }
 
 
@@ -634,6 +643,10 @@ namespace MediaPortal
         AppActive = true;
         NeedRecreateSwapChain = false;
       }
+
+      // enable event handlers
+      GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
+      GUIGraphicsContext.DX9Device.DeviceReset += OnDeviceReset;
     }
 
 
@@ -738,6 +751,7 @@ namespace MediaPortal
 
       // disable event handlers
       GUIGraphicsContext.DX9Device.DeviceLost -= OnDeviceLost;
+      GUIGraphicsContext.DX9Device.DeviceReset -= OnDeviceReset;
 
       Log.Debug("D3D: RecoverDevice()");
 
@@ -767,6 +781,7 @@ namespace MediaPortal
 
       // enable handlers
       GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
+      GUIGraphicsContext.DX9Device.DeviceReset += OnDeviceReset;
 
 
       if (RefreshRateChanger.RefreshRateChangePending && RefreshRateChanger.RefreshRateChangeStrFile.Length > 0)
@@ -1299,7 +1314,14 @@ namespace MediaPortal
         }
 
         // update some magic number use for animations
-        GUIGraphicsContext.MaxFPS = Manager.Adapters[AdapterInfo.AdapterOrdinal].CurrentDisplayMode.RefreshRate;
+        try
+        {
+          GUIGraphicsContext.MaxFPS = Manager.Adapters[AdapterInfo.AdapterOrdinal].CurrentDisplayMode.RefreshRate;
+        }
+        catch (Exception ex)
+        {
+          Log.Error("Main Exception {0}", ex);
+        }
 
         // set always on top parameter
         TopMost = _alwaysOnTop;
@@ -1314,6 +1336,7 @@ namespace MediaPortal
 
         // Setup the event handlers for our device
         GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
+        GUIGraphicsContext.DX9Device.DeviceReset += OnDeviceReset;
 
         // Initialize the app's device-dependent objects
         try
@@ -1684,6 +1707,7 @@ namespace MediaPortal
 
         // remove the device lost and reset handlers as application is already closing down
         GUIGraphicsContext.DX9Device.DeviceLost  -= OnDeviceLost;
+        GUIGraphicsContext.DX9Device.DeviceReset -= OnDeviceReset;
         GUIGraphicsContext.DX9Device.Dispose();
       }
     }

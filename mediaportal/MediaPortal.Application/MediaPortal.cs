@@ -2086,6 +2086,10 @@ public class MediaPortalApp : D3D, IRender
         NeedRecreateSwapChain = true;
         RecreateSwapChain();
         _changeScreenDisplayChange = true;
+
+        // enable event handlers
+        GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
+        GUIGraphicsContext.DX9Device.DeviceReset += OnDeviceReset;
       }
       // Restore original Start Screen in case of change from RDP Session
       if (!Equals(screen, GUIGraphicsContext.currentStartScreen))
@@ -2184,6 +2188,10 @@ public class MediaPortalApp : D3D, IRender
       {
         SetBounds(GUIGraphicsContext.currentScreen.Bounds.X, GUIGraphicsContext.currentScreen.Bounds.Y, GUIGraphicsContext.currentScreen.Bounds.Width, GUIGraphicsContext.currentScreen.Bounds.Height);
       }
+
+      // enable event handlers
+      GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
+      GUIGraphicsContext.DX9Device.DeviceReset += OnDeviceReset;
     }
 
     if (_changeScreen || _changeScreenDisplayChange)

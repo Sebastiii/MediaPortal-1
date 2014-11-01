@@ -643,10 +643,6 @@ namespace MediaPortal
         AppActive = true;
         NeedRecreateSwapChain = false;
       }
-
-      // enable event handlers
-      GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
-      GUIGraphicsContext.DX9Device.DeviceReset += OnDeviceReset;
     }
 
 

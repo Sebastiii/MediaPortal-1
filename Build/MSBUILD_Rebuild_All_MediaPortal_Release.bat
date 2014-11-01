@@ -87,8 +87,7 @@ DEL version.txt >> %log%
 
 echo.
 echo Make MediaPortal 2GB LARGEADDRESSAWARE...
-call "%VS120COMNTOOLS%vsvars32.bat"
-EditBin.exe %MediaPortal%\MediaPortal.Application\bin\Release\MediaPortal.exe /LARGEADDRESSAWARE
+call MSBUILD_MP_LargeAddressAware.bat %BUILD_TYPE%
 
 echo.
 echo Building Installer...

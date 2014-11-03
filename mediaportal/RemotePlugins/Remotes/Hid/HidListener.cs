@@ -163,7 +163,7 @@ namespace MediaPortal.InputDevices
             key = (char)0;
             keyCode = Keys.A;
 
-            AppCommands appCommand = (AppCommands)((msg.LParam.ToInt32() >> 16) & ~0xF000);
+            AppCommands appCommand = (AppCommands)Win32API.GET_APPCOMMAND_LPARAM(msg.LParam);
 
             // find out which request the MCE remote handled last
             if ((appCommand == InputDevices.LastHidRequest) && (appCommand != AppCommands.VolumeDown) &&
@@ -183,11 +183,10 @@ namespace MediaPortal.InputDevices
 
             if (logVerbose)
             {
-                Log.Info("HID: Command: {0} - {1}", ((msg.LParam.ToInt32() >> 16) & ~0xF000),
-                         InputDevices.LastHidRequest.ToString());
+                Log.Info("HID: Command: {0} - {1}", appCommand, InputDevices.LastHidRequest.ToString());
             }
 
-            if (!_inputHandler.MapAction((msg.LParam.ToInt32() >> 16) & ~0xF000))
+            if (!_inputHandler.MapAction((int)appCommand))
             {
                 return false;
             }

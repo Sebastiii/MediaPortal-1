@@ -447,6 +447,19 @@ namespace MediaPortal.Util
 
     #endregion
 
+    #region MACROS
+    /// <summary>
+    /// Retrieves the application command from the specified LPARAM value.
+    /// </summary>
+    /// <param name="lParam"></param>
+    /// <returns></returns>
+    public static short GET_APPCOMMAND_LPARAM(IntPtr lParam)
+    {
+        return (short)(lParam.ToInt32() >> 16 & ~0xf000);
+    }
+
+    #endregion
+
     //Checks if the computer is connected to the internet...
     public static bool IsConnectedToInternet()
     {

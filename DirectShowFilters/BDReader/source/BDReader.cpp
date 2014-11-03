@@ -61,7 +61,7 @@ const AMOVIESETUP_PIN pins[] =
 
 const AMOVIESETUP_FILTER BDReader =
 {
-  &CLSID_BDReader, L"MediaPortal BD Reader", MERIT_NORMAL + 1000, 3, pins, CLSID_LegacyAmFilterCategory
+  &CLSID_BDReader, L"MediaPortal BD Reader", MERIT_NORMAL + 1000, 2, pins, CLSID_LegacyAmFilterCategory
 };
 
 CFactoryTemplate g_Templates[] =

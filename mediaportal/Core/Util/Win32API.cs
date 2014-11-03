@@ -34,14 +34,25 @@ namespace MediaPortal.Util
   /// <summary>
   /// Summary description for Win32API.
   /// </summary>
-  public static class Win32API
-  {
+    public static class Win32API
+    {
     #region Interop declarations
 
     #region Constants
 
     private const int WPF_RESTORETOMAXIMIZED = 2;
     public const int WM_SHOWWINDOW = 0x0018;
+
+    /// <summary>
+    /// Notifies a window that the user generated an application command event, for example, by clicking an application command button using the mouse or typing an application command key on the keyboard.
+    /// </summary>
+    public const int WM_APPCOMMAND = 0x0319;
+    /// <summary>
+    /// Sent to the window that is getting raw input.
+    /// </summary>
+    public const int WM_INPUT = 0x00FF; 
+
+    //
     private const int WM_ACTIVATE = 0x0006; // http://msdn.microsoft.com/en-us/library/windows/desktop/ms646274(v=vs.85).aspx
     private const int WA_CLICKACTIVE = 2;   // http://msdn.microsoft.com/en-us/library/windows/desktop/ms646274(v=vs.85).aspx
 
@@ -60,6 +71,28 @@ namespace MediaPortal.Util
 
     //   [DllImportAttribute("user32", ExactSpelling=true, CharSet=CharSet.Ansi, SetLastError=true)]
     //   public static extern int GetKeyState(int nVirtKey);
+
+    /// <summary>
+    /// Registers the devices that supply the raw input data.
+    /// <para />
+    /// See: http://msdn.microsoft.com/en-us/library/windows/desktop/ms645600%28v=vs.85%29.aspx
+    /// </summary>
+    /// <param name="pRawInputDevices"></param>
+    /// <param name="uiNumDevices"></param>
+    /// <param name="cbSize"></param>
+    /// <returns></returns>
+    [DllImport("User32.dll", EntryPoint = "RegisterRawInputDevices", SetLastError = true)]
+    public static extern bool RegisterRawInputDevices([In] RAWINPUTDEVICE[] pRawInputDevices, [In] uint uiNumDevices, [In] uint cbSize);
+    /// <summary>
+    /// Sends the specified message to one or more windows.
+    /// </summary>
+    /// <param name="hWnd"></param>
+    /// <param name="Msg"></param>
+    /// <param name="wParam"></param>
+    /// <param name="lParam"></param>
+    /// <returns></returns>
+    [DllImport("user32.dll")]
+    public static extern bool SendMessage(IntPtr hWnd, uint Msg, uint wParam, uint lParam);
 
     [DllImport("user32")]
     public static extern IntPtr SetWindowsHookEx(HookType code, HookDelegate func, IntPtr hInstance, int threadID);
@@ -303,6 +336,20 @@ namespace MediaPortal.Util
       public IntPtr dwData;
       public int cbData;
       public IntPtr lpData;
+    }
+
+    /// <summary>
+    /// Defines information for the raw input devices.
+    /// <para />
+    /// See: http://msdn.microsoft.com/en-us/library/windows/desktop/ms645565%28v=vs.85%29.aspx
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RAWINPUTDEVICE
+    {
+        public ushort usUsagePage;
+        public ushort usUsage;
+        public uint dwFlags;
+        public IntPtr hwndTarget;
     }
 
     #endregion

@@ -31,6 +31,7 @@ using MediaPortal.InputDevices;
 using MediaPortal.InputDevices.FireDTV;
 using MediaPortal.Profile;
 using MediaPortal.UserInterface.Controls;
+using MediaPortal.Util;
 
 #pragma warning disable 108
 
@@ -171,23 +172,11 @@ namespace MediaPortal.Configuration.Sections
 
     #region Structures
 
-    public struct RAWINPUTDEVICE
-    {
-      public ushort usUsagePage;
-      public ushort usUsage;
-      public uint dwFlags;
-      public IntPtr hwndTarget;
-    }
 
     #endregion
 
     #region Interop
 
-    [DllImport("User32.dll", EntryPoint = "RegisterRawInputDevices", SetLastError = true)]
-    public static extern bool RegisterRawInputDevices(
-      [In] RAWINPUTDEVICE[] pRawInputDevices,
-      [In] uint uiNumDevices,
-      [In] uint cbSize);
 
     #endregion
 
@@ -2042,33 +2031,33 @@ namespace MediaPortal.Configuration.Sections
 
     public static bool IsMceRemoteInstalled(IntPtr hwnd)
     {
-      try
-      {
-        RAWINPUTDEVICE[] rid1 = new RAWINPUTDEVICE[1];
-
-        rid1[0].usUsagePage = 0xFFBC;
-        rid1[0].usUsage = 0x88;
-        rid1[0].dwFlags = 0;
-        rid1[0].hwndTarget = hwnd;
-        bool Success = RegisterRawInputDevices(rid1, (uint)rid1.Length, (uint)Marshal.SizeOf(rid1[0]));
-        if (Success)
+        try
         {
-          return true;
-        }
+            Win32API.RAWINPUTDEVICE[] rid1 = new Win32API.RAWINPUTDEVICE[1];
 
-        rid1[0].usUsagePage = 0x0C;
-        rid1[0].usUsage = 0x01;
-        rid1[0].dwFlags = 0;
-        rid1[0].hwndTarget = hwnd;
-        Success = RegisterRawInputDevices(rid1, (uint)rid1.Length, (uint)Marshal.SizeOf(rid1[0]));
-        if (Success)
-        {
-          return true;
-        }
-      }
-      catch (Exception) {}
+            rid1[0].usUsagePage = 0xFFBC;
+            rid1[0].usUsage = 0x88;
+            rid1[0].dwFlags = 0;
+            rid1[0].hwndTarget = hwnd;
+            bool Success = Win32API.RegisterRawInputDevices(rid1, (uint)rid1.Length, (uint)Marshal.SizeOf(rid1[0]));
+            if (Success)
+            {
+                return true;
+            }
 
-      return false;
+            rid1[0].usUsagePage = 0x0C;
+            rid1[0].usUsage = 0x01;
+            rid1[0].dwFlags = 0;
+            rid1[0].hwndTarget = hwnd;
+            Success = Win32API.RegisterRawInputDevices(rid1, (uint)rid1.Length, (uint)Marshal.SizeOf(rid1[0]));
+            if (Success)
+            {
+                return true;
+            }
+        }
+        catch (Exception) {}
+
+        return false;
     }
 
     #endregion

@@ -38,6 +38,29 @@ namespace MediaPortal.Util
     {
     #region Interop declarations
 
+    #region MACROS
+    /// <summary>
+    /// Retrieves the application command from the specified LPARAM value.
+    /// </summary>
+    /// <param name="lParam"></param>
+    /// <returns></returns>
+    public static short GET_APPCOMMAND_LPARAM(IntPtr lParam)
+    {
+        return (short)(lParam.ToInt32() >> 16 & ~0xf000);
+    }
+
+    /// <summary>
+    /// Retrieves the input code from wParam in WM_INPUT.
+    /// </summary>
+    /// <param name="wParam"></param>
+    /// <returns></returns>
+    public static int GET_RAWINPUT_CODE_WPARAM(IntPtr wParam)
+    {
+        return (wParam.ToInt32() & 0xff);
+    }
+      
+    #endregion
+
     #region Constants
 
     private const int WPF_RESTORETOMAXIMIZED = 2;
@@ -62,6 +85,19 @@ namespace MediaPortal.Util
     public const int CSIDL_MYVIDEO = 0x000e; // "My Videos" folder
     public const int CSIDL_MYPICTURES = 0x0027; // "My Pictures" folder
 
+    /// <summary>
+    /// Possible value taken by wParam for WM_INPUT.
+    /// <para />
+    /// Input occurred while the application was in the foreground. The application must call DefWindowProc so the system can perform cleanup.
+    /// </summary>
+    public const int RIM_INPUT = 0;
+    /// <summary>
+    /// Possible value taken by wParam for WM_INPUT.
+    /// <para />
+    /// Input occurred while the application was not in the foreground. The application must call DefWindowProc so the system can perform the cleanup.
+    /// </summary>
+    public const int RIM_INPUTSINK = 0;
+
     #endregion
 
     #region Methods
@@ -83,6 +119,17 @@ namespace MediaPortal.Util
     /// <returns></returns>
     [DllImport("User32.dll", EntryPoint = "RegisterRawInputDevices", SetLastError = true)]
     public static extern bool RegisterRawInputDevices([In] RAWINPUTDEVICE[] pRawInputDevices, [In] uint uiNumDevices, [In] uint cbSize);
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="hRawInput"></param>
+    /// <param name="uiCommand"></param>
+    /// <param name="pData"></param>
+    /// <param name="pcbSize"></param>
+    /// <param name="cbSizeHeader"></param>
+    /// <returns></returns>
+    [DllImport("user32.dll", EntryPoint = "RegisterRawInputDevices", SetLastError = true)]
+    static extern int GetRawInputData(IntPtr hRawInput, uint uiCommand, out RAWINPUT pData, ref int pcbSize, int cbSizeHeader);
     /// <summary>
     /// Sends the specified message to one or more windows.
     /// </summary>
@@ -352,6 +399,36 @@ namespace MediaPortal.Util
         public IntPtr hwndTarget;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RAWINPUTHEADER
+    {
+        public uint dwType;
+        public uint dwSize;
+        public IntPtr Device;
+        public IntPtr wParam;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RAWKEYBOARD
+    {
+        public ushort MakeCode;
+        public ushort Flags;
+        public ushort Reserved;
+        public ushort VirtualKey;
+        public int Message;
+        public int ExtraInformation;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct RAWINPUT
+    {
+        [FieldOffset(0)]
+        public RAWINPUTHEADER Header;
+        [FieldOffset(16)]
+        public RAWKEYBOARD Keyboard;
+        //mouse and HID parts omitted
+    }
+
     #endregion
 
     #region Enums
@@ -447,18 +524,6 @@ namespace MediaPortal.Util
 
     #endregion
 
-    #region MACROS
-    /// <summary>
-    /// Retrieves the application command from the specified LPARAM value.
-    /// </summary>
-    /// <param name="lParam"></param>
-    /// <returns></returns>
-    public static short GET_APPCOMMAND_LPARAM(IntPtr lParam)
-    {
-        return (short)(lParam.ToInt32() >> 16 & ~0xf000);
-    }
-
-    #endregion
 
     //Checks if the computer is connected to the internet...
     public static bool IsConnectedToInternet()

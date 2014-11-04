@@ -150,7 +150,7 @@ namespace MediaPortal.InputDevices
         }
 
         /// <summary>
-        /// 
+        /// Handle WM_APPCOMMAND messages.
         /// </summary>
         /// <param name="msg"></param>
         /// <param name="action"></param>
@@ -197,7 +197,7 @@ namespace MediaPortal.InputDevices
         }
 
         /// <summary>
-        /// 
+        /// Handle WM_INPUT messages.
         /// </summary>
         /// <param name="msg"></param>
         /// <param name="action"></param>
@@ -209,6 +209,17 @@ namespace MediaPortal.InputDevices
             action = null;
             key = (char)0;
             keyCode = Keys.A;
+
+            int inputCode = Win32API.GET_RAWINPUT_CODE_WPARAM(msg.WParam);
+
+            if (inputCode == Win32API.RIM_INPUT)
+            {
+                //Event occurred while our application was in the foreground
+            }
+            else if (inputCode == Win32API.RIM_INPUTSINK)
+            {
+                //Event occurred while our application was in the background
+            }
 
             return false;
         }

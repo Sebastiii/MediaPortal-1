@@ -2,21 +2,21 @@
 
 // Copyright (C) 2005-2011 Team MediaPortal
 // http://www.team-mediaportal.com
-// 
+//
 // MediaPortal is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 2 of the License, or
 // (at your option) any later version.
-// 
+//
 // MediaPortal is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with MediaPortal. If not, see <http://www.gnu.org/licenses/>.
 
-#endregion
+#endregion Copyright (C) 2005-2011 Team MediaPortal
 
 using System;
 using System.Runtime.InteropServices;
@@ -38,7 +38,10 @@ namespace MediaPortal.InputDevices
         private InputHandler _inputHandler;
         private KeyboardHook _keyboardHook;
 
-        public HidListener() {}
+        public HidListener()
+        {
+
+        }
 
         public void Init(IntPtr hwnd)
         {
@@ -57,7 +60,7 @@ namespace MediaPortal.InputDevices
             }
             else
             {
-                Log.Info("HID: Could not register for MCE buttons WM_INPUT");                
+                Log.Info("HID: Could not register for MCE buttons WM_INPUT");
             }
         }
 
@@ -97,7 +100,7 @@ namespace MediaPortal.InputDevices
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -113,8 +116,8 @@ namespace MediaPortal.InputDevices
                     int keys = (((int)appCommand & ~0xF000) | (device & 0xF000));
                     int lParam = (((keys) << 16) | (((int)e.KeyCode)));
 
-                  // since the normal process involves getting polled via WndProc we have to get a tiny bit dirty 
-                  // and send a message back to the main form in order to get the key press handled without 
+                  // since the normal process involves getting polled via WndProc we have to get a tiny bit dirty
+                  // and send a message back to the main form in order to get the key press handled without
                   // duplicating action mapping code from the main app
                   Win32API.SendMessage(GUIGraphicsContext.form.Handle, 0x0319, (uint)GUIGraphicsContext.form.Handle, (uint)lParam);
                 }
@@ -122,7 +125,7 @@ namespace MediaPortal.InputDevices
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="keyCode"></param>
         /// <returns></returns>
@@ -215,6 +218,21 @@ namespace MediaPortal.InputDevices
             if (inputCode == Win32API.RIM_INPUT)
             {
                 //Event occurred while our application was in the foreground
+                uint dwSize = 0;
+                //Get the size of our raw input buffer
+                Win32API.GetRawInputData(msg.WParam, Win32API.RID_INPUT, IntPtr.Zero, ref dwSize, (uint)Marshal.SizeOf(typeof(Win32API.RAWINPUTHEADER)));
+
+                Win32API.RAWINPUT data;
+                //Read our raw input
+                if (dwSize > (uint)Marshal.SizeOf(typeof(Win32API.RAWINPUT)) //If we don't have enough room to read it all
+                    && dwSize != Win32API.GetRawInputData(msg.WParam, Win32API.RID_INPUT, out data, ref dwSize, (uint)Marshal.SizeOf(typeof(Win32API.RAWINPUTHEADER))))
+                {
+                    //Debug.WriteLine("Error getting the rawinput buffer");
+                    return false;
+                }
+
+                //Parse our raw data
+                //TODO
             }
             else if (inputCode == Win32API.RIM_INPUTSINK)
             {
@@ -225,7 +243,7 @@ namespace MediaPortal.InputDevices
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="msg"></param>
         /// <param name="action"></param>
@@ -253,7 +271,7 @@ namespace MediaPortal.InputDevices
 
                 default:
                     return false;
-            }    
+            }
         }
 
 

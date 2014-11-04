@@ -49,8 +49,8 @@ namespace MediaPortal.InputDevices
 
             //Let's try getting WM_INPUT corresponding to MCE buttons
             Win32API.RAWINPUTDEVICE[] rid1 = new Win32API.RAWINPUTDEVICE[1];
-            rid1[0].usUsagePage = 0xFFBC;
-            rid1[0].usUsage = 0x88;
+            rid1[0].usUsagePage = (ushort)Hid.UsagePage.MceRemote;
+            rid1[0].usUsage = Hid.MceRemoteUsage;
             rid1[0].dwFlags = 0;
             rid1[0].hwndTarget = hwnd;
             bool success = Win32API.RegisterRawInputDevices(rid1, (uint)rid1.Length, (uint)Marshal.SizeOf(rid1[0]));

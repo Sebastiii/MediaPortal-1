@@ -80,6 +80,8 @@ CWASAPIRenderFilter::CWASAPIRenderFilter(AudioRendererSettings* pSettings, CSync
   m_bNextFormatPassthru = false; 
 
   m_nOutBufferCount = WASAPI_OUT_BUFFER_COUNT;
+
+  ResetClockData();
 }
 
 CWASAPIRenderFilter::~CWASAPIRenderFilter(void)
@@ -1010,6 +1012,9 @@ HRESULT CWASAPIRenderFilter::GetWASAPIBuffer(UINT32& bufferSize, UINT32& current
 
 void CWASAPIRenderFilter::RenderSilence(BYTE* pTarget, UINT32 bufferSizeInBytes, LONGLONG &writeSilence, UINT32 &bytesFilled)
 {
+  if (!pTarget)
+    return;
+
   UINT32 silentBytes = min(writeSilence, bufferSizeInBytes - bytesFilled);
   memset(pTarget + bytesFilled, 0, silentBytes);
   bytesFilled += silentBytes;
@@ -1021,6 +1026,9 @@ void CWASAPIRenderFilter::RenderSilence(BYTE* pTarget, UINT32 bufferSizeInBytes,
 
 void CWASAPIRenderFilter::RenderAudio(BYTE* pTarget, UINT32 bufferSizeInBytes, UINT32 &dataLeftInSample, UINT32 &sampleOffset, IMediaSample* pSample, UINT32 &bytesFilled)
 {
+  if (!pTarget || !pSample)
+    return;
+
   BYTE* sampleData = NULL;
   pSample->GetPointer(&sampleData);
 

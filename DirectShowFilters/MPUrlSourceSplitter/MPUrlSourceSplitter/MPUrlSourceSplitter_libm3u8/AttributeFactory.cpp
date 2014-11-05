@@ -28,26 +28,26 @@
 #include "ProgramIdAttribute.h"
 #include "InitializationVectorAttribute.h"
 #include "ResolutionAttribute.h"
+#include "AudioAttribute.h"
+#include "VideoAttribute.h"
+#include "TypeAttribute.h"
+#include "GroupIdAttribute.h"
+#include "LanguageAttribute.h"
+#include "NameAttribute.h"
+#include "DefaultAttribute.h"
+#include "AutoselectAttribute.h"
+#include "KeyFormatAttribute.h"
+#include "KeyFormatVersionsAttribute.h"
+#include "ForcedAttribute.h"
+#include "CharacteristicsAttribute.h"
+#include "SubtitlesAttribute.h"
 
-//#include "AudioAttribute.h"
-//#include "VideoAttribute.h"
-//#include "SubtitlesAttribute.h"
 //#include "ClosedCaptionsAttribute.h"
-//#include "KeyFormatAttribute.h"
-//#include "KeyFormatVersionsAttribute.h"
 //#include "ByteRangeAttribute.h"
 //#include "TimeOffsetAttribute.h"
 //#include "PreciseAttribute.h"
-//#include "TypeAttribute.h"
-//#include "GroupIdAttribute.h"
-//#include "LanguageAttribute.h"
 //#include "AssociatedLanguageAttribute.h"
-//#include "NameAttribute.h"
-//#include "DefaultAttribute.h"
-//#include "AutoselectAttribute.h"
-//#include "ForcedAttribute.h"
 //#include "InstreamIdAttribute.h"
-//#include "CharacteristicsAttribute.h"
 
 CAttributeFactory::CAttributeFactory(HRESULT *result)
 {
@@ -84,26 +84,26 @@ CAttribute *CAttributeFactory::CreateAttribute(unsigned int version, const wchar
       CREATE_SPECIFIC_ATTRIBUTE(attribute, PROGRAM_ID_ATTRIBUTE_NAME, CProgramIdAttribute, continueParsing, result, version);
       CREATE_SPECIFIC_ATTRIBUTE(attribute, INITIALIZATION_VECTOR_ATTRIBUTE_NAME, CInitializationVectorAttribute, continueParsing, result, version);
       CREATE_SPECIFIC_ATTRIBUTE(attribute, RESOLUTION_ATTRIBUTE_NAME, CResolutionAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, AUDIO_ATTRIBUTE_NAME, CAudioAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, VIDEO_ATTRIBUTE_NAME, CVideoAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, TYPE_ATTRIBUTE_NAME, CTypeAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, GROUP_ID_ATTRIBUTE_NAME, CGroupIdAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, LANGUAGE_ATTRIBUTE_NAME, CLanguageAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, NAME_ATTRIBUTE_NAME, CNameAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, DEFAULT_ATTRIBUTE_NAME, CDefaultAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, AUTOSELECT_ATTRIBUTE_NAME, CAutoselectAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, KEY_FORMAT_ATTRIBUTE_NAME, CKeyFormatAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, KEY_FORMAT_VERSIONS_ATTRIBUTE_NAME, CKeyFormatVersionsAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, FORCED_ATTRIBUTE_NAME, CForcedAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, CHARACTERISTICS_ATTRIBUTE_NAME, CCharacteristicsAttribute, continueParsing, result, version);
+      CREATE_SPECIFIC_ATTRIBUTE(attribute, SUBTITLES_ATTRIBUTE_NAME, CSubtitlesAttribute, continueParsing, result, version);
 
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, AUDIO_ATTRIBUTE_NAME, CAudioAttribute, continueParsing, result);
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, VIDEO_ATTRIBUTE_NAME, CVideoAttribute, continueParsing, result);
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, SUBTITLES_ATTRIBUTE_NAME, CSubtitlesAttribute, continueParsing, result);
       //CREATE_SPECIFIC_ATTRIBUTE(attribute, CLOSED_CAPTIONS_ATTRIBUTE_NAME, CClosedCaptionsAttribute, continueParsing, result);
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, KEY_FORMAT_ATTRIBUTE_NAME, CKeyFormatAttribute, continueParsing, result);
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, KEY_FORMAT_VERSIONS_ATTRIBUTE_NAME, CKeyFormatVersionsAttribute, continueParsing, result);
       //CREATE_SPECIFIC_ATTRIBUTE(attribute, BYTE_RANGE_ATTRIBUTE_NAME, CByteRangeAttribute, continueParsing, result);
       //CREATE_SPECIFIC_ATTRIBUTE(attribute, TIME_OFFSET_ATTRIBUTE_NAME, CTimeOffsetAttribute, continueParsing, result);
       //CREATE_SPECIFIC_ATTRIBUTE(attribute, PRECISE_ATTRIBUTE_NAME, CPreciseAttribute, continueParsing, result);
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, TYPE_ATTRIBUTE_NAME, CTypeAttribute, continueParsing, result);
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, GROUP_ID_ATTRIBUTE_NAME, CGroupIdAttribute, continueParsing, result);
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, LANGUAGE_ATTRIBUTE_NAME, CLanguageAttribute, continueParsing, result);
       //CREATE_SPECIFIC_ATTRIBUTE(attribute, ASSOCIATED_LANGUAGE_ATTRIBUTE_NAME, CAssociatedLanguageAttribute, continueParsing, result);
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, NAME_ATTRIBUTE_NAME, CNameAttribute, continueParsing, result);
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, DEFAULT_ATTRIBUTE_NAME, CDefaultAttribute, continueParsing, result);
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, AUTOSELECT_ATTRIBUTE_NAME, CAutoselectAttribute, continueParsing, result);
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, FORCED_ATTRIBUTE_NAME, CForcedAttribute, continueParsing, result);
       //CREATE_SPECIFIC_ATTRIBUTE(attribute, INSTREAM_ID_ATTRIBUTE_NAME, CInstreamIdAttribute, continueParsing, result);
-      //CREATE_SPECIFIC_ATTRIBUTE(attribute, CHARACTERISTICS_ATTRIBUTE_NAME, CCharacteristicsAttribute, continueParsing, result);*/
     }
 
     CHECK_CONDITION_NOT_NULL_EXECUTE(result, FREE_MEM_CLASS(attribute));

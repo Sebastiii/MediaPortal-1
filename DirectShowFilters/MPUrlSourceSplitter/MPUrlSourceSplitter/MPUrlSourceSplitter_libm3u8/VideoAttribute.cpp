@@ -46,14 +46,21 @@ void CVideoAttribute::Clear(void)
   FREE_MEM(this->videoGroupId);
 }
 
-bool CVideoAttribute::Parse(const wchar_t *name, const wchar_t *value)
+bool CVideoAttribute::Parse(unsigned int version, const wchar_t *name, const wchar_t *value)
 {
-  bool result = __super::Parse(name, value);
+  bool result = __super::Parse(version, name, value);
 
   if (result)
   {
-    this->videoGroupId = CAttribute::GetQuotedString(value);
-    result &= (this->videoGroupId != NULL);
+    if ((version == PLAYLIST_VERSION_04) || (version == PLAYLIST_VERSION_05))
+    {
+      this->videoGroupId = CAttribute::GetQuotedString(value);
+      result &= (this->videoGroupId != NULL);
+    }
+    else
+    {
+      result = false;
+    }
   }
 
   return result;

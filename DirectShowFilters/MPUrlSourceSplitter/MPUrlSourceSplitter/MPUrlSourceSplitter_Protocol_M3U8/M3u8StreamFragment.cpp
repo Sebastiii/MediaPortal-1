@@ -23,21 +23,6 @@
 #include "M3u8StreamFragment.h"
 #include "FastSearchItemCollection.h"
 
-//CM3u8StreamFragment::CM3u8StreamFragment(HRESULT *result, const wchar_t *uri, unsigned int fragment)
-//  : CStreamFragment(result)
-//{
-//  this->uri = NULL;
-//  this->fragmentTimestamp = 0;
-//  this->fragment = fragment;
-//
-//  if ((result != NULL) && (SUCCEEDED(*result)))
-//  {
-//    this->uri = Duplicate(uri);
-//
-//    CHECK_POINTER_HRESULT(*result, this->uri, *result, E_OUTOFMEMORY);
-//  }
-//}
-
 CM3u8StreamFragment::CM3u8StreamFragment(HRESULT *result, const wchar_t *uri, unsigned int fragment, int64_t fragmentTimestamp, unsigned int duration)
   : CStreamFragment(result)
 {
@@ -45,6 +30,8 @@ CM3u8StreamFragment::CM3u8StreamFragment(HRESULT *result, const wchar_t *uri, un
   this->fragmentTimestamp = fragmentTimestamp;
   this->fragment = fragment;
   this->duration = duration;
+  this->byteRangeOffset = UINT_MAX;
+  this->byteRangeLength = UINT_MAX;
 
   if ((result != NULL) && (SUCCEEDED(*result)))
   {
@@ -81,6 +68,16 @@ unsigned int CM3u8StreamFragment::GetDuration(void)
   return this->duration;
 }
 
+unsigned int CM3u8StreamFragment::GetByteRangeOffset(void)
+{
+  return this->byteRangeOffset;
+}
+
+unsigned int CM3u8StreamFragment::GetByteRangeLength(void)
+{
+  return this->byteRangeLength;
+}
+
 /* set methods */
 
 void CM3u8StreamFragment::SetEncrypted(bool ecnrypted)
@@ -93,6 +90,16 @@ void CM3u8StreamFragment::SetEndOfStream(bool endOfStream)
 {
   this->flags &= ~M3U8_STREAM_FRAGMENT_FLAG_END_OF_STREAM;
   this->flags |= endOfStream ? M3U8_STREAM_FRAGMENT_FLAG_END_OF_STREAM : M3U8_STREAM_FRAGMENT_FLAG_NONE;
+}
+
+void CM3u8StreamFragment::SetByteRangeOffset(unsigned int offset)
+{
+  this->byteRangeOffset = offset;
+}
+
+void CM3u8StreamFragment::SetByteRangeLength(unsigned int length)
+{
+  this->byteRangeLength = length;
 }
 
 /* other methods */
@@ -128,9 +135,11 @@ bool CM3u8StreamFragment::InternalClone(CFastSearchItem *item)
     CM3u8StreamFragment *fragment = dynamic_cast<CM3u8StreamFragment *>(item);
     result &= (fragment != NULL);
 
-    /*if (result)
+    if (result)
     {
-    }*/
+      fragment->byteRangeOffset = this->byteRangeOffset;
+      fragment->byteRangeLength = this->byteRangeLength;
+    }
   }
 
   return result;

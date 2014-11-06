@@ -31,7 +31,7 @@
 
 #define TIME_OFFSET_ATTRIBUTE_NAME                                    L"TIME-OFFSET"
 
-#define TIME_OFFSET_NOT_SPECIFIED                                     DECIMAL_FLOATING_NOT_SPECIFIED
+#define TIME_OFFSET_NOT_SPECIFIED                                     DECIMAL_INTEGER_NOT_SPECIFIED
 
 class CTimeOffsetAttribute : public CAttribute
 {
@@ -49,15 +49,16 @@ public:
   virtual void Clear(void);
 
   // parses name and value
+  // @param version : the playlist version
   // @param name : the name of attribute
   // @param value : the value of attribute
   // @return : true if successful, false otherwise
-  virtual bool Parse(const wchar_t *name, const wchar_t *value);
+  virtual bool Parse(unsigned int version, const wchar_t *name, const wchar_t *value);
 
 protected:
 
-  // holds time offset in seconds
-  double timeOffset;
+  // holds time offset in ms (can be negative)
+  int timeOffset;
 
   /* methods */
 

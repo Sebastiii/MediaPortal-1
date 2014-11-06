@@ -31,7 +31,7 @@
 
 #define BANDWIDTH_ATTRIBUTE_NAME                                      L"BANDWIDTH"
 
-#define BANDWIDTH_NOT_SPECIFIED                                       UINT_MAX
+#define BANDWIDTH_NOT_SPECIFIED                                       DECIMAL_INTEGER_NOT_SPECIFIED
 
 class CBandwidthAttribute : public CAttribute
 {

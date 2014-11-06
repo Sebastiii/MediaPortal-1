@@ -31,6 +31,8 @@
 
 #define MEDIA_PLAYLIST_VERSION_04                                     PLAYLIST_VERSION_04
 
+#define MEDIA_SEQUENCE_ID_V04_DEFAULT                                 0
+
 class CMediaPlaylistV04 : public CMediaPlaylist
 {
 public:

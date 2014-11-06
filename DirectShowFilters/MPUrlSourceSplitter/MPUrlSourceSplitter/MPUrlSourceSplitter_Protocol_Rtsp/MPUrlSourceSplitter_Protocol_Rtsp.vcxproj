@@ -168,6 +168,7 @@ echo #endif &gt;&gt; VersionInfo.h</Command>
     <ClInclude Include="InterleavedDataPacket.h" />
     <ClInclude Include="MPUrlSourceSplitter_Protocol_Rtsp.h" />
     <ClInclude Include="MPUrlSourceSplitter_Protocol_Rtsp_Parameters.h" />
+    <ClInclude Include="MPUrlSourceSplitter_Protocol_Rtsp_Registry.h" />
     <ClInclude Include="RtpInfoTrack.h" />
     <ClInclude Include="RtpInfoTrackCollection.h" />
     <ClInclude Include="RtspAcceptApplicationSdpRequestHeader.h" />

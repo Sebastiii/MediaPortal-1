@@ -77,7 +77,6 @@ public class MediaPortalApp : D3D, IRender
   private static bool           _skinOverrideNoTheme;
   private static bool           _waitForTvServer;
   private static bool           _isRendering;
-  private static bool           _deviceLost;
   #if !DEBUG
   private static bool           _avoidVersionChecking;
   #endif
@@ -131,8 +130,7 @@ public class MediaPortalApp : D3D, IRender
   private IntPtr                _awayModeHandle;
   private bool                  _resumedAutomatic;
   private bool                  _resumedSuspended;
-  private Timer                 _delayedResumeTimer;
-  private DELAYED_RESUME_TYPE   _delayedResumeType;
+  private bool                  _delayedResume;
   private readonly Object       _delayedResumeLock = new Object();
 
   // ReSharper disable InconsistentNaming
@@ -240,13 +238,6 @@ public class MediaPortalApp : D3D, IRender
   // ReSharper restore UnusedMember.Local
   // ReSharper restore InconsistentNaming
 
-  private enum DELAYED_RESUME_TYPE
-  {
-    NONE = 0,
-    AUTOMATIC = 1,
-    USER_PRESENT = 2
-  }
-
   // http://msdn.microsoft.com/en-us/library/windows/desktop/aa373247(v=vs.85).aspx
   // ReSharper disable InconsistentNaming
   // ReSharper disable UnusedMember.Local
@@ -262,10 +253,8 @@ public class MediaPortalApp : D3D, IRender
     PBT_APMOEMEVENT           = 0x000B,
     PBT_APMQUERYSUSPEND       = 0x0000,
     PBT_APMQUERYSUSPENDFAILED = 0x0002,
-    PBT_APMRESUMECRITICAL     = 0x0006,
-    // Delay resume pseudo message
-    PBT_APMRESUMEAUTOMATIC_EXECUTE = 0x000E,
-    PBT_APMRESUMESUSPEND_EXECUTE   = 0x000F
+    PBT_APMRESUMECRITICAL     = 0x0006
+
   }
   // ReSharper restore UnusedMember.Local
   // ReSharper restore InconsistentNaming
@@ -323,7 +312,6 @@ public class MediaPortalApp : D3D, IRender
   }
   // ReSharper restore InconsistentNaming
   // ReSharper restore UnusedMember.Local
-
 
   #endregion
 
@@ -1447,11 +1435,8 @@ public class MediaPortalApp : D3D, IRender
 
         // set maximum and minimum form size in windowed mode
         case WM_GETMINMAXINFO:
-          if (!_deviceLost)
-          {
-            OnGetMinMaxInfo(ref msg);
-            PluginManager.WndProc(ref msg);
-          }
+          OnGetMinMaxInfo(ref msg);
+          PluginManager.WndProc(ref msg);
           break;
 
         case WM_ENTERSIZEMOVE:
@@ -1484,20 +1469,14 @@ public class MediaPortalApp : D3D, IRender
 
         // handle display changes
         case WM_DISPLAYCHANGE:
-          if (!_deviceLost)
-          {
-            OnDisplayChange(ref msg);
-            PluginManager.WndProc(ref msg);
-          }
+          OnDisplayChange(ref msg);
+          PluginManager.WndProc(ref msg);
           break;
 
         // handle device changes
         case WM_DEVICECHANGE:
-          if (!_deviceLost)
-          {
-            OnDeviceChange(ref msg);
-            PluginManager.WndProc(ref msg);
-          }
+          OnDeviceChange(ref msg);
+          PluginManager.WndProc(ref msg);
           break;
 
         case WM_QUERYENDSESSION:
@@ -1662,10 +1641,10 @@ public class MediaPortalApp : D3D, IRender
       {
         // The computer is about to enter a suspended state
         case (int)PBT_EVENT.PBT_APMSUSPEND:
-          ResetDelayedResumeTimer();
 
           _resumedAutomatic = false;
           _resumedSuspended = false;
+          _delayedResume = false;
 
           // Suspend operation
           Log.Info("Main: Suspending operation");
@@ -1674,26 +1653,18 @@ public class MediaPortalApp : D3D, IRender
           OnSuspend();
           break;
 
-
-        // The computer has woken up automatically to handle an event
         case (int)PBT_EVENT.PBT_APMRESUMEAUTOMATIC:
-          if (CheckDelayedResume(DELAYED_RESUME_TYPE.AUTOMATIC))
-          {
-            break;
-            }
+          // Check Delayed Resume
+          CheckDelayedResume();
 
-          // Delayed resume is not active
-          goto case (int)PBT_EVENT.PBT_APMRESUMEAUTOMATIC_EXECUTE; // fall trough by design
-
-        case (int)PBT_EVENT.PBT_APMRESUMEAUTOMATIC_EXECUTE:
           // Resume automatic operation
           if (!_resumedAutomatic)
           {
-          Log.Info("Main: Resuming automatic operation");
-          OnResumeAutomatic();
+            Log.Info("Main: Resuming automatic operation");
+            OnResumeAutomatic();
             msg.WParam = new IntPtr((int)PBT_EVENT.PBT_APMRESUMEAUTOMATIC);
-          PluginManager.WndProc(ref msg);
-          _resumedAutomatic = true;
+            PluginManager.WndProc(ref msg);
+            _resumedAutomatic = true;
           }
           else
           {
@@ -1715,17 +1686,10 @@ public class MediaPortalApp : D3D, IRender
           // PBT_APMRESUMECRITICAL should be handled in same way as PBT_APMRESUMEAUTOMATIC
           goto case (int)PBT_EVENT.PBT_APMRESUMEAUTOMATIC;
 
-        // The system has resumed operation on a user activity
         case (int)PBT_EVENT.PBT_APMRESUMESUSPEND:
-          if (CheckDelayedResume(DELAYED_RESUME_TYPE.USER_PRESENT))
-          {
-            break;
-          }
+          // Check Delayed Resume
+          CheckDelayedResume();
 
-          // Delayed resume is not active
-          goto case (int)PBT_EVENT.PBT_APMRESUMESUSPEND_EXECUTE; // fall trough by design
-
-        case (int)PBT_EVENT.PBT_APMRESUMESUSPEND_EXECUTE:
           if (!_resumedAutomatic)
           {
             Log.Info("Main: Resuming automatic operation - order of events is wrong");
@@ -1737,17 +1701,16 @@ public class MediaPortalApp : D3D, IRender
 
           if (!_resumedSuspended)
           {
-          // Resume operation of user interface
-          Log.Info("Main: Resuming operation of user interface");
-          OnResumeSuspend();
-          PluginManager.WndProc(ref msg);
+            // Resume operation of user interface
+            Log.Info("Main: Resuming operation of user interface");
+            OnResumeSuspend();
+            PluginManager.WndProc(ref msg);
             _resumedSuspended = true;
           }
           else
           {
             Log.Info("Main: PBT_APMRESUMESUSPEND was already handled, skipping");
           }
-
           break;
 
         // A change in the power status of the computer is detected
@@ -1825,83 +1788,20 @@ public class MediaPortalApp : D3D, IRender
     }
   }
 
-  /// <summary>
-  /// Timer callback: Stop timer and send PBT_RESUMEDELAYED message
-  /// </summary>
-  /// <param name="sender"></param>
-  /// <param name="e"></param>
-  private void SendResumeDelayedMsg(object sender, ElapsedEventArgs e)
+  private bool CheckDelayedResume()
   {
-    lock (_delayedResumeLock)
-    {
-      ResetDelayedResumeTimer();
-      Thread.CurrentThread.Name = "ResumedDelayTimer";
-
-      IntPtr hWnd = GUIGraphicsContext.ActiveForm;
-
-      if (hWnd != IntPtr.Zero)
-      {
-        Log.Info("Main: SendResumeDelayedMsg - sending PBT_APMRESUMEAUTOMATIC_DELAYED message");
-        PostMessage(hWnd, WM_POWERBROADCAST, new IntPtr((int)PBT_EVENT.PBT_APMRESUMEAUTOMATIC_EXECUTE), IntPtr.Zero);
-
-        if (_delayedResumeType == DELAYED_RESUME_TYPE.USER_PRESENT)
-        {
-          Log.Info("Main: SendResumeDelayedMsg - sending PBT_APMRESUMESUSPEND_DELAYED message");
-          PostMessage(hWnd, WM_POWERBROADCAST, new IntPtr((int)PBT_EVENT.PBT_APMRESUMESUSPEND_EXECUTE), IntPtr.Zero);
-        }
-      }
-
-      Log.Info("Main: SendResumeDelayedMsg - setting _delayedResumeType NONE");
-      _delayedResumeType = DELAYED_RESUME_TYPE.NONE;
-    }
-  }
-
-  private void ResetDelayedResumeTimer()
-  {
-    // Reset timer and resume states
-    if (_delayedResumeTimer != null)
-    {
-      _delayedResumeTimer.Stop();
-      _delayedResumeTimer.Elapsed -= SendResumeDelayedMsg;
-      _delayedResumeTimer = null;
-    }
-  }
-
-  private bool CheckDelayedResume(DELAYED_RESUME_TYPE type)
-  {
-    if (_delayOnResume > 0)
+    if (_delayOnResume > 0 && !_delayedResume)
     {
       // Use delayed resume events
       lock (_delayedResumeLock)
       {
-        if (_delayedResumeType >= type)
-        {
-          Log.Info("Main: CheckDelayedResume _delayedResumeType was already: {0} type: {1}", _delayedResumeType, type);
-          return true;
-        }
-
-        Log.Info("Main: CheckDelayedResume delay resuming operation for {0} secs", _delayOnResume);
-
-        _delayedResumeType = type;
-
-        if (_delayedResumeTimer != null)
-        {
-          Log.Info("Main: CheckDelayedResume stopping timer");
-          _delayedResumeTimer.Stop();
-        }
-        else
-        {
-          Log.Info("Main: CheckDelayedResume creating timer");
-          _delayedResumeTimer = new System.Timers.Timer(_delayOnResume * 1000);
-          _delayedResumeTimer.AutoReset = false;
-          _delayedResumeTimer.Elapsed += new ElapsedEventHandler(SendResumeDelayedMsg);
-        }
-
-        _delayedResumeTimer.Enabled = true;
+        // delay resuming as configured
+        Log.Info("Main: DelayedResume - waiting on resume {0} secs", _delayOnResume);
+        Thread.Sleep(_delayOnResume * 1000);
+        _delayedResume = true;
       }
       return true;
     }
-
     return false;
   }
 
@@ -2072,7 +1972,6 @@ public class MediaPortalApp : D3D, IRender
       {
         // disable event handlers
         GUIGraphicsContext.DX9Device.DeviceLost -= OnDeviceLost;
-        GUIGraphicsContext.DX9Device.DeviceReset -= OnDeviceReset;
 
         // Check if start screen is equal to device screen and check if current screen bond differ from current detected screen bond then recreate swap chain.
         Log.Debug("Main: Screen MP OnDisplayChange current screen detected                                {0}", GetCleanDisplayName(screen));
@@ -2089,7 +1988,6 @@ public class MediaPortalApp : D3D, IRender
 
         // enable event handlers
         GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
-        GUIGraphicsContext.DX9Device.DeviceReset += OnDeviceReset;
       }
       // Restore original Start Screen in case of change from RDP Session
       if (!Equals(screen, GUIGraphicsContext.currentStartScreen))
@@ -2168,7 +2066,6 @@ public class MediaPortalApp : D3D, IRender
     {
       // disable event handlers
       GUIGraphicsContext.DX9Device.DeviceLost -= OnDeviceLost;
-      GUIGraphicsContext.DX9Device.DeviceReset -= OnDeviceReset;
 
       // Check if start screen is equal to device screen and check if current screen bond differ from current detected screen bond then recreate swap chain.
       Log.Debug("Main: Screen MP OnGetMinMaxInfo Information.DeviceName Manager.Adapters                {0}", adapterOrdinalScreenName);
@@ -2191,7 +2088,6 @@ public class MediaPortalApp : D3D, IRender
 
       // enable event handlers
       GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
-      GUIGraphicsContext.DX9Device.DeviceReset += OnDeviceReset;
     }
 
     if (_changeScreen || _changeScreenDisplayChange)
@@ -3229,15 +3125,6 @@ public class MediaPortalApp : D3D, IRender
   protected override void OnDeviceLost(object sender, EventArgs e)
   {
     Log.Warn("Main: OnDeviceLost()");
-    _deviceLost = true;
-    Screen screen = Screen.FromControl(this);
-    while (GUIGraphicsContext.currentStartScreen.Bounds != screen.Bounds)
-    {
-      screen = Screen.FromControl(this);
-      Thread.Sleep(200);
-    }
-    _deviceLost = false;
-    Log.Warn("Main: OnDeviceLost() after loop");
     if (!Created)
     {
       Log.Debug("Main: Form not created yet - ignoring Event");
@@ -3248,27 +3135,6 @@ public class MediaPortalApp : D3D, IRender
     base.OnDeviceLost(sender, e);
   }
 
-  /// <summary>
-  /// 
-  /// </summary>
-  /// <param name="sender"></param>
-  /// <param name="e"></param>
-  protected override void OnDeviceReset(object sender, EventArgs e)
-  {
-    if (_deviceLost)
-    {
-      _deviceLost = false;
-      Log.Warn("Main: OnDeviceReset()");
-      if (!Created)
-      {
-        Log.Debug("Main: Form not created yet - ignoring Event");
-        return;
-      }
-      GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.LOST;
-      RecoverDevice();
-      base.OnDeviceReset(sender, e);
-    }
-  }
   #endregion
 
   #region Render()
@@ -3294,11 +3160,6 @@ public class MediaPortalApp : D3D, IRender
         return;
       }
 
-      // If we couldn't get the device back, don't try to render
-      if (_deviceLost)
-      {
-        return;
-      }
       // render frame
       try
       {
@@ -3460,127 +3321,124 @@ public class MediaPortalApp : D3D, IRender
   /// </summary>
   protected override void OnProcess()
   {
-    if (!_deviceLost)
+    // Set the date & time
+    if (DateTime.Now.Second != _updateTimer.Second)
     {
-      // Set the date & time
-      if (DateTime.Now.Second != _updateTimer.Second)
+      _updateTimer = DateTime.Now;
+      GUIPropertyManager.SetProperty("#date", GetDate());
+      GUIPropertyManager.SetProperty("#time", GetTime());
+    }
+
+    g_Player.Process();
+    RecoverDevice();
+
+    if (g_Player.Playing)
+    {
+      _playingState = true;
+      if (GUIWindowManager.ActiveWindow == (int) GUIWindow.Window.WINDOW_FULLSCREEN_VIDEO)
       {
-        _updateTimer = DateTime.Now;
-        GUIPropertyManager.SetProperty("#date", GetDate());
-        GUIPropertyManager.SetProperty("#time", GetTime());
+        GUIGraphicsContext.IsFullScreenVideo = true;
       }
 
-      g_Player.Process();
-      RecoverDevice();
+      GUIGraphicsContext.IsPlaying = true;
+      GUIGraphicsContext.IsPlayingVideo = (g_Player.IsVideo || g_Player.IsTV);
 
-      if (g_Player.Playing)
+      if (g_Player.Paused)
       {
-        _playingState = true;
-        if (GUIWindowManager.ActiveWindow == (int)GUIWindow.Window.WINDOW_FULLSCREEN_VIDEO)
-        {
-          GUIGraphicsContext.IsFullScreenVideo = true;
-        }
+        GUIPropertyManager.SetProperty("#playlogo", "logo_pause.png");
+      }
+      else if (g_Player.Speed > 1)
+      {
+        GUIPropertyManager.SetProperty("#playlogo", "logo_fastforward.png");
+      }
+      else if (g_Player.Speed < 1)
+      {
+        GUIPropertyManager.SetProperty("#playlogo", "logo_rewind.png");
+      }
+      else if (g_Player.Playing)
+      {
+        GUIPropertyManager.SetProperty("#playlogo", "logo_play.png");
+      }
 
-        GUIGraphicsContext.IsPlaying = true;
-        GUIGraphicsContext.IsPlayingVideo = (g_Player.IsVideo || g_Player.IsTV);
-
-        if (g_Player.Paused)
-        {
-          GUIPropertyManager.SetProperty("#playlogo", "logo_pause.png");
-        }
-        else if (g_Player.Speed > 1)
-        {
-          GUIPropertyManager.SetProperty("#playlogo", "logo_fastforward.png");
-        }
-        else if (g_Player.Speed < 1)
-        {
-          GUIPropertyManager.SetProperty("#playlogo", "logo_rewind.png");
-        }
-        else if (g_Player.Playing)
-        {
-          GUIPropertyManager.SetProperty("#playlogo", "logo_play.png");
-        }
-
-        if (g_Player.IsTV && !g_Player.IsTVRecording)
-        {
-          GUIPropertyManager.SetProperty("#currentplaytime", GUIPropertyManager.GetProperty("#TV.Record.current"));
-          GUIPropertyManager.SetProperty("#shortcurrentplaytime", GUIPropertyManager.GetProperty("#TV.Record.current"));
-        }
-        else
-        {
-          GUIPropertyManager.SetProperty("#currentplaytime", Utils.SecondsToHMSString((int)g_Player.CurrentPosition));
-          GUIPropertyManager.SetProperty("#currentremaining",
-                                         Utils.SecondsToHMSString((int)(g_Player.Duration - g_Player.CurrentPosition)));
-          GUIPropertyManager.SetProperty("#shortcurrentremaining",
-                                         Utils.SecondsToShortHMSString(
-                                           (int)(g_Player.Duration - g_Player.CurrentPosition)));
-          GUIPropertyManager.SetProperty("#shortcurrentplaytime",
-                                         Utils.SecondsToShortHMSString((int)g_Player.CurrentPosition));
-        }
-
-        if (g_Player.Duration > 0)
-        {
-          GUIPropertyManager.SetProperty("#duration", Utils.SecondsToHMSString((int)g_Player.Duration));
-          GUIPropertyManager.SetProperty("#shortduration", Utils.SecondsToShortHMSString((int)g_Player.Duration));
-          double percent = 100 * g_Player.CurrentPosition / g_Player.Duration;
-          GUIPropertyManager.SetProperty("#percentage", percent.ToString(CultureInfo.CurrentCulture));
-
-          // Set comskip or chapter markers
-          string strJumpPoints = string.Empty;
-          string strChapters = string.Empty;
-          if (((g_Player.IsTV && g_Player.IsTVRecording) || g_Player.HasVideo) && g_Player.HasChapters)
-          {
-            if (g_Player.JumpPoints != null)
-            {
-              // Set the marker start to indicate the start of commercials
-              foreach (double jump in g_Player.JumpPoints)
-              {
-                double jumpPercent = jump / g_Player.Duration * 100.0d;
-                strJumpPoints += String.Format("{0:0.00}", jumpPercent) + " ";
-              }
-              // Set the marker end to indicate the end of commercials
-              foreach (double chapter in g_Player.Chapters)
-              {
-                double chapterPercent = chapter / g_Player.Duration * 100.0d;
-                strChapters += String.Format("{0:0.00}", chapterPercent) + " ";
-              }
-            }
-            else
-            {
-              // Set a fixed size marker at the start of each chapter
-              double markerWidth = 0.7d;
-              foreach (double chapter in g_Player.Chapters)
-              {
-                double chapterPercent = chapter / g_Player.Duration * 100.0d;
-                strChapters += String.Format("{0:0.00}", chapterPercent) + " ";
-                chapterPercent = (chapterPercent >= markerWidth) ? chapterPercent - markerWidth : 0.0d;
-                strJumpPoints += String.Format("{0:0.00}", chapterPercent) + " ";
-              }
-            }
-          }
-          GUIPropertyManager.SetProperty("#chapters", strChapters);
-          GUIPropertyManager.SetProperty("#jumppoints", strJumpPoints);
-        }
-        else
-        {
-          GUIPropertyManager.SetProperty("#duration", string.Empty);
-          GUIPropertyManager.SetProperty("#shortduration", string.Empty);
-          GUIPropertyManager.SetProperty("#percentage", "0,0");
-
-          GUIPropertyManager.SetProperty("#chapters", string.Empty);
-          GUIPropertyManager.SetProperty("#jumppoints", string.Empty);
-        }
-
-        GUIPropertyManager.SetProperty("#playspeed", g_Player.Speed.ToString(CultureInfo.InvariantCulture));
+      if (g_Player.IsTV && !g_Player.IsTVRecording)
+      {
+        GUIPropertyManager.SetProperty("#currentplaytime", GUIPropertyManager.GetProperty("#TV.Record.current"));
+        GUIPropertyManager.SetProperty("#shortcurrentplaytime", GUIPropertyManager.GetProperty("#TV.Record.current"));
       }
       else
       {
-        GUIGraphicsContext.IsPlaying = false;
-        if (_playingState)
+        GUIPropertyManager.SetProperty("#currentplaytime", Utils.SecondsToHMSString((int) g_Player.CurrentPosition));
+        GUIPropertyManager.SetProperty("#currentremaining",
+                                       Utils.SecondsToHMSString((int) (g_Player.Duration - g_Player.CurrentPosition)));
+        GUIPropertyManager.SetProperty("#shortcurrentremaining",
+                                       Utils.SecondsToShortHMSString(
+                                         (int) (g_Player.Duration - g_Player.CurrentPosition)));
+        GUIPropertyManager.SetProperty("#shortcurrentplaytime",
+                                       Utils.SecondsToShortHMSString((int) g_Player.CurrentPosition));
+      }
+
+      if (g_Player.Duration > 0)
+      {
+        GUIPropertyManager.SetProperty("#duration", Utils.SecondsToHMSString((int) g_Player.Duration));
+        GUIPropertyManager.SetProperty("#shortduration", Utils.SecondsToShortHMSString((int) g_Player.Duration));
+        double percent = 100*g_Player.CurrentPosition/g_Player.Duration;
+        GUIPropertyManager.SetProperty("#percentage", percent.ToString(CultureInfo.CurrentCulture));
+
+        // Set comskip or chapter markers
+        string strJumpPoints = string.Empty;
+        string strChapters = string.Empty;
+        if (((g_Player.IsTV && g_Player.IsTVRecording) || g_Player.HasVideo) && g_Player.HasChapters)
         {
-          GUIPropertyManager.RemovePlayerProperties();
-          _playingState = false;
+          if (g_Player.JumpPoints != null)
+          {
+            // Set the marker start to indicate the start of commercials
+            foreach (double jump in g_Player.JumpPoints)
+            {
+              double jumpPercent = jump/g_Player.Duration*100.0d;
+              strJumpPoints += String.Format("{0:0.00}", jumpPercent) + " ";
+            }
+            // Set the marker end to indicate the end of commercials
+            foreach (double chapter in g_Player.Chapters)
+            {
+              double chapterPercent = chapter/g_Player.Duration*100.0d;
+              strChapters += String.Format("{0:0.00}", chapterPercent) + " ";
+            }
+          }
+          else
+          {
+            // Set a fixed size marker at the start of each chapter
+            double markerWidth = 0.7d;
+            foreach (double chapter in g_Player.Chapters)
+            {
+              double chapterPercent = chapter/g_Player.Duration*100.0d;
+              strChapters += String.Format("{0:0.00}", chapterPercent) + " ";
+              chapterPercent = (chapterPercent >= markerWidth) ? chapterPercent - markerWidth : 0.0d;
+              strJumpPoints += String.Format("{0:0.00}", chapterPercent) + " ";
+            }
+          }
         }
+        GUIPropertyManager.SetProperty("#chapters", strChapters);
+        GUIPropertyManager.SetProperty("#jumppoints", strJumpPoints);
+      }
+      else
+      {
+        GUIPropertyManager.SetProperty("#duration", string.Empty);
+        GUIPropertyManager.SetProperty("#shortduration", string.Empty);
+        GUIPropertyManager.SetProperty("#percentage", "0,0");
+
+        GUIPropertyManager.SetProperty("#chapters", string.Empty);
+        GUIPropertyManager.SetProperty("#jumppoints", string.Empty);
+      }
+
+      GUIPropertyManager.SetProperty("#playspeed", g_Player.Speed.ToString(CultureInfo.InvariantCulture));
+    }
+    else
+    {
+      GUIGraphicsContext.IsPlaying = false;
+      if (_playingState)
+      {
+        GUIPropertyManager.RemovePlayerProperties();
+        _playingState = false;
       }
     }
   }
@@ -5120,40 +4978,6 @@ public class MediaPortalApp : D3D, IRender
     return string.Empty;
   }
 
-  /// <summary>
-  /// Focus Mediaportal is visible.
-  /// </summary>
-  private void ForceMPFocus()
-  {
-    // Focus only when MP is not minimize and when SplashScreen is close
-    if (SplashScreen == null)
-    {
-      Log.Info("Main: SplashScreen is null.");
-    }
-    else
-    {
-      Log.Info("Main: SplashScreen is not null.");
-    }
-    if ((WindowState != FormWindowState.Minimized) && SplashScreen == null)
-    {
-      // Make MediaPortal window normal ( if minimized )
-      Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.ShowNormal);
-
-      // Make Mediaportal window focused
-      if (Win32API.SetForegroundWindow(GUIGraphicsContext.ActiveForm, true))
-      {
-        Log.Info("Main: Successfully switched focus.");
-      }
-
-      // Bring MP to front
-      BringToFront();
-    }
-    else
-    {
-      MinimizeToTray();
-    }
-  }
-
 
   /// <summary>
   /// Get the current time from the system. Set the format in the Home plugin's config
@@ -5401,6 +5225,40 @@ public class MediaPortalApp : D3D, IRender
     int length = screen.DeviceName.IndexOf("\0", StringComparison.Ordinal);
     string deviceName = length == -1 ? screen.DeviceName : screen.DeviceName.Substring(0, length);
     return deviceName;
+  }
+
+  /// <summary>
+  /// Focus Mediaportal is visible.
+  /// </summary>
+  private void ForceMPFocus()
+  {
+    // Focus only when MP is not minimize and when SplashScreen is close
+    if (SplashScreen == null)
+    {
+      Log.Info("Main: SplashScreen is null.");
+    }
+    else
+    {
+      Log.Info("Main: SplashScreen is not null.");
+    }
+    if ((WindowState != FormWindowState.Minimized) && SplashScreen == null)
+    {
+      // Make MediaPortal window normal ( if minimized )
+      Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.ShowNormal);
+
+      // Make Mediaportal window focused
+      if (Win32API.SetForegroundWindow(GUIGraphicsContext.ActiveForm, true))
+      {
+        Log.Info("Main: Successfully switched focus.");
+      }
+
+      // Bring MP to front
+      BringToFront();
+    }
+    else
+    {
+      MinimizeToTray();
+    }
   }
 
   #endregion

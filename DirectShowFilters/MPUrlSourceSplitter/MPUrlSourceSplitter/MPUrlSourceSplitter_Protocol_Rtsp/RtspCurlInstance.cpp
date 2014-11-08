@@ -101,7 +101,7 @@ void CRtspCurlInstance::LoadSettingsFromRegistry()
   char* lpData = new char[MAX_REG_LENGTH];
 
   // Try to access the setting root "Software\Team MediaPortal\Audio Renderer"
-  RegOpenKeyEx(HKEY_CURRENT_USER, folder, NULL, KEY_ALL_ACCESS, &hKey);
+  RegOpenKeyEx(HKEY_LOCAL_MACHINE, folder, NULL, KEY_ALL_ACCESS, &hKey);
 
   if (hKey)
   {
@@ -111,7 +111,7 @@ void CRtspCurlInstance::LoadSettingsFromRegistry()
   {
     //USES_CONVERSION;
 
-    LONG result = RegCreateKeyEx(HKEY_CURRENT_USER, folder, 0, NULL, REG_OPTION_NON_VOLATILE,
+    LONG result = RegCreateKeyEx(HKEY_LOCAL_MACHINE, folder, 0, NULL, REG_OPTION_NON_VOLATILE,
                                   KEY_ALL_ACCESS, NULL, &hKey, NULL);
 
     if (result == ERROR_SUCCESS) 

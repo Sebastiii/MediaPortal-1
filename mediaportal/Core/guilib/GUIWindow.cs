@@ -251,6 +251,7 @@ namespace MediaPortal.GUI.Library
 
     private VisualEffect _showAnimation = new VisualEffect(); // for dialogs
     private VisualEffect _closeAnimation = new VisualEffect();
+    public static readonly SynchronizationContext _mainThreadContext = SynchronizationContext.Current;
 
     #endregion
 

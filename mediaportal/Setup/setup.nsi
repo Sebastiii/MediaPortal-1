@@ -835,7 +835,7 @@ SectionGroupEnd
 ${MementoSectionDone}
 
 #---------------------------------------------------------------------------
-# This Section is executed after the Main secxtion has finished and writes Uninstall information into the registry
+# This Section is executed after the Main section has finished and writes Uninstall information into the registry
 Section -Post
   ${LOG_TEXT} "INFO" "Doing post installation stuff..."
 

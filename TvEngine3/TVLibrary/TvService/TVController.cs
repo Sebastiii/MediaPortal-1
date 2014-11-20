@@ -2495,18 +2495,10 @@ namespace TvService
         }
         try
         {
-          string chaptersFile = Path.ChangeExtension(recording.FileName, ".txt");
-          string edlChaptersFile = Path.ChangeExtension(recording.FileName, ".edl");
-          if (File.Exists(edlChaptersFile))
+          string chapterFile = Path.ChangeExtension(recording.FileName, ".txt");
+          if (File.Exists(chapterFile))
           {
-            using (StreamReader chapters = new StreamReader(new FileStream(edlChaptersFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
-            {
-              return chapters.ReadToEnd();
-            }
-          }
-          else if (File.Exists(chaptersFile))
-          {
-            using (StreamReader chapters = new StreamReader(new FileStream(chaptersFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
+            using (StreamReader chapters = new StreamReader(chapterFile))
             {
               return chapters.ReadToEnd();
             }

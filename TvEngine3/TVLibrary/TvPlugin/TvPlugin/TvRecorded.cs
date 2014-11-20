@@ -1798,7 +1798,6 @@ namespace TvPlugin
 
     private void OnPlayRecordingBackStopped(g_Player.MediaType type, int stoptime, string filename)
     {
-      TVUtil.StopWatchingCommercialFile();
       doOnPlayBackStoppedOrChanged(type, stoptime, filename, "OnPlayRecordingBackStopped");
     }
 
@@ -1808,7 +1807,7 @@ namespace TvPlugin
       {
         return;
       }
-      TVUtil.StopWatchingCommercialFile();
+
       g_Player.Stop();
 
       TvBusinessLayer layer = new TvBusinessLayer();

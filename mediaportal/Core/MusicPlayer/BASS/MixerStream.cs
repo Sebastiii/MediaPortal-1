@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Windows.Forms;
 using MediaPortal.GUI.Library;
 using MediaPortal.Player;
 using Un4seen.Bass;
@@ -42,8 +42,6 @@ namespace MediaPortal.MusicPlayer.BASS
     private SYNCPROC _playbackEndProcDelegate = null;
     private int _syncProc = 0;
 
-    private Dictionary<int, GCHandle> _pinnedObjects = new Dictionary<int, GCHandle>();
-    
     #endregion
 
     #region Properties
@@ -419,33 +417,12 @@ namespace MediaPortal.MusicPlayer.BASS
         Bass.BASS_ChannelRemoveSync(_mixer, _syncProc);
       }
 
-      // We might have stored the pinned object already, because we are skipping 
-      // Only store object it, when it doesn't exist
-      if (!_pinnedObjects.ContainsKey(stream.BassStream))
-      {
-        // Add the pinned object to the global dictionary, so that we can free it later in the Sync End Proc
-        _pinnedObjects.Add(stream.BassStream, GCHandle.Alloc(stream));
-      }
+      GCHandle pFilePath = GCHandle.Alloc(stream);
 
       _syncProc = Bass.BASS_ChannelSetSync(_mixer,
         BASSSync.BASS_SYNC_ONETIME | BASSSync.BASS_SYNC_POS | BASSSync.BASS_SYNC_MIXTIME,
         syncPos, _playbackEndProcDelegate,
-        new IntPtr(stream.BassStream));
-    }
-
-    /// <summary>
-    /// Free the pinned Object
-    /// </summary>
-    /// <param name="stream"></param>
-    public void FreeGcHandle(int stream)
-    {
-      // Free pinned objects
-      if (_pinnedObjects.ContainsKey(stream))
-      {
-        Log.Debug("BASS: Free GCHandle for stream {0}", stream);
-        _pinnedObjects[stream].Free();
-        _pinnedObjects.Remove(stream);
-      }
+        GCHandle.ToIntPtr(pFilePath));
     }
 
     #endregion
@@ -869,18 +846,8 @@ namespace MediaPortal.MusicPlayer.BASS
     {
       try
       {
-        MusicStream musicstream;
-        // Get the GC handle of the pinned object
-        try
-        {
-          musicstream = (MusicStream)_pinnedObjects[userData.ToInt32()].Target;
-        }
-        catch (KeyNotFoundException)
-        {
-          Log.Error("BASS: GCHandle of Musicstream not found in Dictionary");
-          g_Player.Stop();
-          return;
-        }
+        GCHandle gch = GCHandle.FromIntPtr(userData);
+        MusicStream musicstream = (MusicStream)gch.Target;
 
         Log.Debug("BASS: End of Song {0}", musicstream.FilePath);
 

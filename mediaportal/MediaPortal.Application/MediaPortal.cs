@@ -1881,8 +1881,11 @@ public class MediaPortalApp : D3D, IRender
 
       case WA_ACTIVE:
       case WA_CLICKACTIVE:
-        Log.Info("Main: Activation request received");
-        RestoreFromTray();
+        if (!_suspended)
+        {
+          Log.Info("Main: Activation request received");
+          RestoreFromTray();
+        }
         break;
     }
     msg.Result = (IntPtr)0;
@@ -2615,6 +2618,8 @@ public class MediaPortalApp : D3D, IRender
     {
       GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.RUNNING;
     }
+
+    RestoreFromTray();
 
     // Force Focus after resume done (really weird sequence)
     ForceMPFocus();

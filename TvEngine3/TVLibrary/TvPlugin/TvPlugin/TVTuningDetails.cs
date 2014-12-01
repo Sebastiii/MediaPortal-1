@@ -128,6 +128,7 @@ namespace TvPlugin
           IUser user = TVHome.Card.User;
           IVideoStream videoStream = TVHome.Card.GetCurrentVideoStream((User)user);
           IAudioStream[] audioStreams = TVHome.Card.AvailableAudioStreams;
+          MediaPortal.Player.VideoStreamFormat videoFormat = MediaPortal.Player.g_Player.GetVideoFormat();
 
           String audioPids = String.Empty;
           String videoPid = String.Empty;		  
@@ -138,6 +139,10 @@ namespace TvPlugin
           }
 		  
           videoPid = videoStream.Pid.ToString() + " (" + videoStream.StreamType + ")";
+
+          GUIPropertyManager.SetProperty("#Play.Current.TSBitRate", videoFormat.bitrate.ToString());
+          GUIPropertyManager.SetProperty("#Play.Current.VideoFormat.RawResolution",
+            videoFormat.width.ToString() + "x" + videoFormat.height.ToString());
 
           GUIPropertyManager.SetProperty("#TV.TuningDetails.CountryId", detail.CountryId.ToString());
           GUIPropertyManager.SetProperty("#TV.TuningDetails.FreeToAir", detail.FreeToAir.ToString());
@@ -177,6 +182,8 @@ namespace TvPlugin
 
       GUIPropertyManager.SetProperty("#TV.TuningDetails.TSPacketsTransferred", Convert.ToString(totalTSpackets));
       GUIPropertyManager.SetProperty("#TV.TuningDetails.Discontinuities", Convert.ToString(discontinuityCounter));
+
+      GUIPropertyManager.SetProperty("#Play.Current.TSBitRate", ((float)MediaPortal.Player.g_Player.GetVideoFormat().bitrate/1024/1024).ToString("0.0"));
 
       _updateTimer = DateTime.Now;
     }

@@ -192,5 +192,18 @@ namespace MediaPortal
         Log.Error(e.ToString());
       }
     }
+
+    /// <summary>
+    /// Method to tell if anything is subscribed to the FrameGrabber event.
+    /// </summary>
+    /// <returns></returns>
+    public bool HasSubscribers()
+    {
+      if (OnNewFrame == null)
+      {
+        return false;
+      }
+      return true;
+    }
   }
 }

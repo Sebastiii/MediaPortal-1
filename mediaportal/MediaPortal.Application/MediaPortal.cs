@@ -3351,16 +3351,16 @@ public class MediaPortalApp : D3D, IRender
               GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.SideBySideTo2D ||
               GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.TopAndBottomTo2D)
           {
-            // Call Framegrabber with UI Surface
-            // Needed for AtmoLight UI capture
-            Surface atmoLightSurface = GUIGraphicsContext.DX9Device.GetBackBuffer(0, 0, BackBufferType.Mono);
-            Int16 atmoLightWidth = (Int16)atmoLightSurface.Description.Width;
-            Int16 atmoLightHeight = (Int16)atmoLightSurface.Description.Height;
-            unsafe
+            // Call FrameGrabber with UI Surface
+            if (grabber.HasSubscribers())
             {
-              grabber.OnFrame(atmoLightWidth, atmoLightHeight, 0, 0, (uint)atmoLightSurface.UnmanagedComPointer);
+              Surface frameGrabberSurface = GUIGraphicsContext.DX9Device.GetBackBuffer(0, 0, BackBufferType.Mono);
+              unsafe
+              {
+                grabber.OnFrame((Int16)frameGrabberSurface.Description.Width, (Int16)frameGrabberSurface.Description.Height, 0, 0, (uint)frameGrabberSurface.UnmanagedComPointer);
+              }
+              frameGrabberSurface.Dispose();
             }
-            atmoLightSurface.Dispose();
 
             // clear the surface
             GUIGraphicsContext.DX9Device.Clear(ClearFlags.Target, Color.Black, 1.0f, 0);
@@ -3395,13 +3395,13 @@ public class MediaPortalApp : D3D, IRender
 
             Surface backbuffer = GUIGraphicsContext.DX9Device.GetBackBuffer(0, 0, BackBufferType.Mono);
 
-            // Call Framegrabber with UI Surface
-            // Needed for AtmoLight UI capture
-            Int16 atmoLightWidth = (Int16)backbuffer.Description.Width;
-            Int16 atmoLightHeight = (Int16)backbuffer.Description.Height;
-            unsafe
+            // Call FrameGrabber with UI Surface
+            if (grabber.HasSubscribers())
             {
-              grabber.OnFrame(atmoLightWidth, atmoLightHeight, 0, 0, (uint)backbuffer.UnmanagedComPointer);
+              unsafe
+              {
+                grabber.OnFrame((Int16)backbuffer.Description.Width, (Int16)backbuffer.Description.Height, 0, 0, (uint)backbuffer.UnmanagedComPointer);
+              }
             }
 
             // create texture/surface for preparation for 3D output if they don't exist

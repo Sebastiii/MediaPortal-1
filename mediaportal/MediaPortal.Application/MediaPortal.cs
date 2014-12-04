@@ -2436,7 +2436,7 @@ public class MediaPortalApp : D3D, IRender
         else
         {
           // force form dimensions to screen size to compensate for HDMI hot plug problems (e.g. WM_DiSPLAYCHANGE reported 1920x1080 but system is still in 1024x768 mode).
-          if (Bounds != GUIGraphicsContext.currentScreen.Bounds)
+          if ((Bounds != GUIGraphicsContext.currentScreen.Bounds) && !_suspended)
           {
             Log.Debug("Main: Setting full screen bonds to: {0}x{1} @ {2},{3}",
                       GUIGraphicsContext.currentScreen.Bounds.Width, GUIGraphicsContext.currentScreen.Bounds.Height, GUIGraphicsContext.currentScreen.Bounds.X, GUIGraphicsContext.currentScreen.Bounds.Y);
@@ -2703,7 +2703,8 @@ public class MediaPortalApp : D3D, IRender
     WindowState = FormWindowState.Normal;
 
     // Force restore DirectX (workaround to avoid GPU Crash)
-    RecreateSwapChain(true);
+    // Disabled for testing
+    //RecreateSwapChain(true);
 
     // Restore GUIGraphicsContext.State when we recover from minimize
     if (GUIGraphicsContext.CurrentState == GUIGraphicsContext.State.SUSPENDING)

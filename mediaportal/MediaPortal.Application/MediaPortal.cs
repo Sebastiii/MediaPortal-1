@@ -3352,16 +3352,7 @@ public class MediaPortalApp : D3D, IRender
               GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.SideBySideTo2D ||
               GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.TopAndBottomTo2D)
           {
-            // Call FrameGrabber with UI Surface
-            if (grabber.HasSubscribers())
-            {
-              Surface frameGrabberSurface = GUIGraphicsContext.DX9Device.GetBackBuffer(0, 0, BackBufferType.Mono);
-              unsafe
-              {
-                grabber.OnFrame((Int16)frameGrabberSurface.Description.Width, (Int16)frameGrabberSurface.Description.Height, 0, 0, (uint)frameGrabberSurface.UnmanagedComPointer);
-              }
-              frameGrabberSurface.Dispose();
-            }
+            grabber.OnFrame();
 
             // clear the surface
             GUIGraphicsContext.DX9Device.Clear(ClearFlags.Target, Color.Black, 1.0f, 0);
@@ -3396,14 +3387,7 @@ public class MediaPortalApp : D3D, IRender
 
             Surface backbuffer = GUIGraphicsContext.DX9Device.GetBackBuffer(0, 0, BackBufferType.Mono);
 
-            // Call FrameGrabber with UI Surface
-            if (grabber.HasSubscribers())
-            {
-              unsafe
-              {
-                grabber.OnFrame((Int16)backbuffer.Description.Width, (Int16)backbuffer.Description.Height, 0, 0, (uint)backbuffer.UnmanagedComPointer);
-              }
-            }
+            grabber.OnFrame(backbuffer);
 
             // create texture/surface for preparation for 3D output if they don't exist
 

@@ -1650,10 +1650,12 @@ public class MediaPortalApp : D3D, IRender
           _resumedAutomatic = false;
           _resumedSuspended = false;
           _delayedResume = false;
+          Screen screen = Screen.FromControl(this);
 
           // force form dimensions to screen size to compensate for HDMI hot plug problems (e.g. WM_DiSPLAYCHANGE reported 1920x1080 but system is still in 1024x768 mode).
-          if (GUIGraphicsContext.currentScreen.Bounds.Width == 1024 &&
-              GUIGraphicsContext.currentScreen.Bounds.Height == 768)
+          if ((GUIGraphicsContext.currentScreen.Bounds.Width == 1024 &&
+               GUIGraphicsContext.currentScreen.Bounds.Height == 768) || (screen.Bounds.Width == 1024 &&
+                                                                          screen.Bounds.Height == 768))
           {
             _restoreLoadedScreen = true;
             Bounds = _backupBounds;
@@ -2172,7 +2174,7 @@ public class MediaPortalApp : D3D, IRender
       if (screen.Bounds.Width == 1024 &&
           screen.Bounds.Height == 768)
       {
-        Log.Debug("Main: OnGetMinMaxInfo native bounds {0}x{1} detected after fresh video device connected bypass it", screen.Bounds.Width, screen.Bounds.Height);
+        Log.Debug("Main: OnGetMinMaxInfo : don't change native bounds to {0}x{1} detected after fresh video device connected", screen.Bounds.Width, screen.Bounds.Height);
         return;
       }
     }

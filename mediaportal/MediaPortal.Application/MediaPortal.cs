@@ -1650,15 +1650,21 @@ public class MediaPortalApp : D3D, IRender
           _resumedAutomatic = false;
           _resumedSuspended = false;
           _delayedResume = false;
+          _suspended = true;
+
           Screen screen = Screen.FromControl(this);
 
           // force form dimensions to screen size to compensate for HDMI hot plug problems (e.g. WM_DiSPLAYCHANGE reported 1920x1080 but system is still in 1024x768 mode).
-          if ((GUIGraphicsContext.currentScreen.Bounds.Width == 1024 &&
-               GUIGraphicsContext.currentScreen.Bounds.Height == 768) || (screen.Bounds.Width == 1024 &&
-                                                                          screen.Bounds.Height == 768))
+          Log.Debug("Main: PBT_APMSUSPEND GUIGraphicsContext.currentScreen.Bounds {0}x{1}", GUIGraphicsContext.currentScreen.Bounds.Width, GUIGraphicsContext.currentScreen.Bounds.Height);
+          Log.Debug("Main: PBT_APMSUSPEND screen.Bounds {0}x{1}", screen.Bounds.Width, screen.Bounds.Height);
+
+          if (screen.Bounds.Width == 1024 && screen.Bounds.Height == 768)
           {
             _restoreLoadedScreen = true;
+            Log.Debug("Main: PBT_APMSUSPEND BackupBounds {0}", _backupBounds);
+            Log.Debug("Main: PBT_APMSUSPEND Bounds {0}", Bounds);
             Bounds = _backupBounds;
+            Log.Debug("Main: PBT_APMSUSPEND Bounds after {0}", Bounds);
             GUIGraphicsContext.currentScreen = _backupscreen;
             BuildPresentParams(Windowed);
 
@@ -1697,8 +1703,6 @@ public class MediaPortalApp : D3D, IRender
           {
             GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
           }
-
-          _suspended = true;
           break;
 
         case (int)PBT_EVENT.PBT_APMRESUMEAUTOMATIC:

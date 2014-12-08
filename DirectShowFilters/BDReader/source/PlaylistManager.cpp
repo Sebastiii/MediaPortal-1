@@ -297,18 +297,6 @@ void CPlaylistManager::ClearClips(bool skipCurrentClip)
   }
 }
 
-REFERENCE_TIME CPlaylistManager::Incomplete()
-{
-  CAutoLock vectorLock(&m_sectionVector);
-
-  REFERENCE_TIME ret = 0LL;
-
-  if (!m_vecPlaylists.empty())
-    ret = m_vecPlaylists.back()->Incomplete();
-    
-  return ret;
-}
-
 REFERENCE_TIME CPlaylistManager::ClipPlayTime()
 {
   CAutoLock vectorLock(&m_sectionVector);

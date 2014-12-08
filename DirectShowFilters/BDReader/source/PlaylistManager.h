@@ -66,7 +66,6 @@ protected:
   bool firstVideo;
   bool firstAudio;
 
-  REFERENCE_TIME Incomplete();
   REFERENCE_TIME ClipPlayTime();
   REFERENCE_TIME m_rtPlaylistOffset;
 

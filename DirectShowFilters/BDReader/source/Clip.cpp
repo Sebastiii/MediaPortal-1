@@ -446,21 +446,6 @@ bool CClip::HasVideo()
   return false;
 }
 
-REFERENCE_TIME CClip::Incomplete()
-{
-  // clip not played so not incomplete
-  if (!firstPacketReturned || !firstPacketAccepted || firstVideo)
-    return 0LL;
-
-  REFERENCE_TIME ret = clipDuration - earliestPacketAccepted + playlistFirstPacketTime - PlayedDuration();
-  if (ret > HALF_SECOND)
-  {    
-    LogDebug("clip: Incomplete - nClip: %d lastAudioPosition: %I64d first: %I64d duration: %I64d", 
-      nClip, lastAudioPosition, playlistFirstPacketTime, clipDuration);
-  }
-  return ret;
-}
-
 REFERENCE_TIME CClip::PlayedDuration()
 {
   REFERENCE_TIME start = earliestPacketAccepted;

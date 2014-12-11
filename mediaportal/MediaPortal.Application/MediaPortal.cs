@@ -1663,7 +1663,10 @@ public class MediaPortalApp : D3D, IRender
             _restoreLoadedScreen = true;
             Log.Debug("Main: PBT_APMSUSPEND BackupBounds {0}", _backupBounds);
             Log.Debug("Main: PBT_APMSUSPEND Bounds {0}", Bounds);
-            Bounds = _backupBounds;
+            if (!Windowed)
+            {
+              SetBounds(_backupBounds.X, _backupBounds.Y, _backupBounds.Width, _backupBounds.Height);
+            }
             Log.Debug("Main: PBT_APMSUSPEND Bounds after {0}", Bounds);
             GUIGraphicsContext.currentScreen = _backupscreen;
             BuildPresentParams(Windowed);

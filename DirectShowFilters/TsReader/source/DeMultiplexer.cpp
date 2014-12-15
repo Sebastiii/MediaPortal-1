@@ -128,15 +128,9 @@ CDeMultiplexer::CDeMultiplexer(CTsDuration& duration,CTsReaderFilter& filter)
   m_bFirstGopParsed = false;
   m_lastVidResX=-1 ;
   m_lastVidResY=-1 ;
-  m_lastARX=-1;
-  m_lastARY=-1;
   m_FirstVideoSample = 0x7FFFFFFF00000000LL;
   m_LastVideoSample = 0;
   
-  m_sampleTime = GET_TIME_NOW();
-  m_sampleTimePrev = GET_TIME_NOW();
-  m_byteRead = 0;
-  m_bitRate = 0;
   m_LastDataFromRtsp = GET_TIME_NOW();
   m_targetAVready = m_LastDataFromRtsp;
   m_tWaitForMediaChange=m_LastDataFromRtsp ;
@@ -156,6 +150,9 @@ CDeMultiplexer::CDeMultiplexer(CTsDuration& duration,CTsReaderFilter& filter)
   
   m_dVidPTSJumpLimit = 2.0; //Maximum allowed time in seconds for video PTS jumps
   m_dfAudSampleDuration = -1.0;
+  m_currentADTSheader = 0;
+  m_ADTSheaderCount = 0;
+
   
   LogDebug(" ");
   LogDebug("=================== New filter instance =========================================");
@@ -638,6 +635,8 @@ void CDeMultiplexer::FlushAudio()
   }
   m_bSetAudioDiscontinuity=true;
   m_bAudioSampleLate=false;
+  m_currentADTSheader = 0;
+  m_ADTSheaderCount = 0;
   
   Reset();  // PacketSync reset.
 }
@@ -1289,7 +1288,7 @@ void CDeMultiplexer::OnTsPacket(byte* tsPacket, int bufferOffset, int bufferLeng
   {
   	return;
   }
-  
+
   //process the ts packet further
   FillVideo(header,tsPacket, bufferOffset, bufferLength);
   FillAudio(header,tsPacket, bufferOffset, bufferLength);
@@ -1359,6 +1358,18 @@ void CDeMultiplexer::FillAudio(CTsHeader& header, byte* tsPacket, int bufferOffs
     {
       m_t_vecAudioBuffers.push_back(m_pCurrentAudioBuffer);
       m_pCurrentAudioBuffer = new CBuffer();
+    }
+
+    //m_AudioValidPES = true;     
+
+    if (1)
+    {
+      //write in pes header data (only)
+      int headerLen=9+tsPacket[posn+8] ;
+      if (headerLen>0 && headerLen < 188)
+      {
+        m_pCurrentAudioBuffer->Add(&tsPacket[posn],headerLen);
+      }
     }
 
     if (m_t_vecAudioBuffers.size()) //Process the previous PES packet
@@ -1434,11 +1445,85 @@ void CDeMultiplexer::FillAudio(CTsHeader& header, byte* tsPacket, int bufferOffs
         //skip pes header
         int headerLen=9+p[8] ;
         int len = Cbuf->Length()-headerLen;
+        int lastADTSheaderPosn = 0;
         if (len > 0)
         {
           byte *ps = p+headerLen;
-          Cbuf->SetLength(len);
-          while(len--) *p++ = *ps++;   // memcpy could be not safe.
+          int length = len;
+          bool foundADTSheader = false;
+          int copyLen = 0;
+          
+          if (m_AudioStreamType == SERVICE_TYPE_AUDIO_AAC) //ADTS AAC audio stream - requires data frame re-alignment 
+          {
+            // LogDebug("ADTS start PES = %d", len);
+            while(len) 
+            {
+              //Find correct ADTS frame header sync sequence by 'learning' the most frequent 28 bit header start pattern
+              if (len > 3 && ((*(INT16 *)ps & 0xF6FF) == 0xF0FF)) //Syncword bits==111111111111 and Layer bits==00
+              {     
+                if (m_ADTSheaderCount<4)  // Learning/training state
+                {
+                  if (m_currentADTSheader == (*(INT32 *)ps & 0xF0FFFFFF)) //compare first 28 bits only
+                  {
+                    m_ADTSheaderCount++;
+                  }  
+                  else 
+                  {  
+                    m_currentADTSheader = (*(INT32 *)ps & 0xF0FFFFFF); //ony first 28 bits are relevant
+                    if (m_ADTSheaderCount>0) 
+                    {
+                      m_ADTSheaderCount--;
+                    } 
+                  }            
+                  // LogDebug("ADTS find sync = %x %x %x %x %x %x %x, byteCount = %d, headerCount = %d", *ps, *(ps+1), *(ps+2), *(ps+3), *(ps+4), *(ps+5), *(ps+6), length-len, m_ADTSheaderCount);
+                }
+                else // m_ADTSheaderCount>=4, 'locked' state
+                {
+                  if (m_currentADTSheader != (*(INT32 *)ps & 0xF0FFFFFF))  //compare first 28 bits only
+                  {
+                    m_ADTSheaderCount--; //invalid (or changing) header sequence
+                  }  
+                  else //good header sequence
+                  {
+                    foundADTSheader = true;
+                    lastADTSheaderPosn = len;
+                    if (m_ADTSheaderCount<8)
+                    {
+                      m_ADTSheaderCount++;
+                    }
+                    // LogDebug("ADTS good sync = %x %x %x %x %x %x %x, byteCount = %d, headerCount = %d", *ps, *(ps+1), *(ps+2), *(ps+3), *(ps+4), *(ps+5), *(ps+6), length-len, m_ADTSheaderCount);
+                  }
+                }                  
+              }
+              
+              if (foundADTSheader)
+              {
+                copyLen++;
+                *p++ = *ps;   // memcpy could be not safe.
+              }
+              ps++;
+              len--;            
+            } 
+                         
+            // LogDebug("ADTS end-of-loop, lastADTSheaderPosn = %d, copyPointer = %d", lastADTSheaderPosn, (ps-lastADTSheaderPosn));
+            
+            Cbuf->SetLength(copyLen - lastADTSheaderPosn); //Adjust length to discard 'remainder' incomplete ADTS frame data
+            
+            if (lastADTSheaderPosn > 0) //Add the 'remainder' incomplete ADTS frame data to the next (current incoming) PES buffer - the PES header data is already there.
+            {
+              m_pCurrentAudioBuffer->Add((byte *)(p-lastADTSheaderPosn),lastADTSheaderPosn);
+            }
+          }
+          else //not ADTS AAC audio
+          {
+            while(len--) 
+            {
+              copyLen++;
+              *p++ = *ps++;   // memcpy could be not safe.
+            }
+            
+            Cbuf->SetLength(copyLen);
+          }         
         }
         else
         {
@@ -1507,12 +1592,19 @@ void CDeMultiplexer::FillAudio(CTsHeader& header, byte* tsPacket, int bufferOffs
   if (m_AudioValidPES)
   {
     int pos=header.PayLoadStart;
+    if (header.PayloadUnitStart)
+    {
+      //skip over pes header data (already written into buffer)
+      int headerLen=9+tsPacket[pos+8] ;
+      pos += headerLen;
+    }
+    
     //packet contains rest of a pes packet
     //does the entire data in this tspacket fit in the current buffer ?
-    if (m_pCurrentAudioBuffer->Length()+(188-pos)>=0x2000)
+    if (m_pCurrentAudioBuffer->Length()+(188-pos)>=MAX_BUFFER_SIZE)
     {
       //no, then determine how many bytes do fit
-      int copyLen=0x2000-m_pCurrentAudioBuffer->Length();
+      int copyLen=MAX_BUFFER_SIZE-m_pCurrentAudioBuffer->Length();
       //copy those bytes
       m_pCurrentAudioBuffer->Add(&tsPacket[pos],copyLen);
       pos+=copyLen;
@@ -1599,19 +1691,6 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
   if (headerlen < 188)
   {            
     int dataLen = 188-headerlen;
-
-	m_byteRead = m_byteRead + dataLen;
-	m_sampleTime = GET_TIME_NOW();
-	DWORD elapsedTime = m_sampleTime - m_sampleTimePrev;
-
-	if (elapsedTime >= 5000)
-	{
-      m_bitRate = (float)m_byteRead*8*1000/elapsedTime;
-	  m_filter.OnBitRateChanged(m_bitRate);
-	  m_sampleTimePrev = m_sampleTime;
-	  m_byteRead = 0;
-    }
-
     p->SetCount(dataLen);
     p->SetData(&tsPacket[headerlen],dataLen);
 
@@ -1785,7 +1864,6 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
 
     MOVE_TO_H264_START_CODE(start, end);
 
- 	
     while(start <= end-4)
     {
       BYTE* next = start+1;
@@ -2049,16 +2127,11 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
           if (Gop)
           {
             if (m_lastVidResX!=m_mpegPesParser->basicVideoInfo.width || m_lastVidResY!=m_mpegPesParser->basicVideoInfo.height
-              || (m_mpegParserTriggerFormatChange && m_videoChanged && !IsAudioChanging()))
+                || (m_mpegParserTriggerFormatChange && m_videoChanged && !IsAudioChanging()))
             {
               LogDebug("DeMultiplexer: triggering OnVideoFormatChanged");
-              m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,m_bitRate,m_mpegPesParser->basicVideoInfo.isInterlaced);
+              m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,15000000,m_mpegPesParser->basicVideoInfo.isInterlaced);
               m_filter.GetVideoPin()->SetAddPMT();
-            }
-            else if (m_lastARX!=m_mpegPesParser->basicVideoInfo.arx || m_lastARY!=m_mpegPesParser->basicVideoInfo.ary)
-            {
-              LogDebug("DeMultiplexer: triggering OnVideoFormatChanged");
-              m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,m_bitRate,m_mpegPesParser->basicVideoInfo.isInterlaced);
             }
             
             if ((m_lastVidResX!=m_mpegPesParser->basicVideoInfo.width || m_lastVidResY!=m_mpegPesParser->basicVideoInfo.height) && !m_filter.m_bDisableVidSizeRebuildH264)
@@ -2105,9 +2178,6 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
             }
             m_lastVidResX=m_mpegPesParser->basicVideoInfo.width;
             m_lastVidResY=m_mpegPesParser->basicVideoInfo.height;
-	        m_lastARX=m_mpegPesParser->basicVideoInfo.arx;
-			m_lastARY=m_mpegPesParser->basicVideoInfo.ary;
-
           }
         }
         else
@@ -2184,19 +2254,6 @@ void CDeMultiplexer::FillVideoMPEG2(CTsHeader& header, byte* tsPacket)
   if (headerlen < 188)
   {
     int dataLen = 188-headerlen;
-
-	m_byteRead = m_byteRead + dataLen;
-	m_sampleTime = GET_TIME_NOW();
-	DWORD elapsedTime = m_sampleTime - m_sampleTimePrev;
-
-	if (elapsedTime >= 5000)
-	{
-      m_bitRate = (float)m_byteRead*8*1000/elapsedTime;
-	  m_filter.OnBitRateChanged(m_bitRate);
-	  m_sampleTimePrev = m_sampleTime;
-	  m_byteRead = 0;
-    }
-
     p->SetCount(dataLen);
     p->SetData(&tsPacket[headerlen],dataLen);
 
@@ -2545,11 +2602,10 @@ void CDeMultiplexer::FillVideoMPEG2(CTsHeader& header, byte* tsPacket)
             if (Gop)
             {
               if (m_lastVidResX!=m_mpegPesParser->basicVideoInfo.width || m_lastVidResY!=m_mpegPesParser->basicVideoInfo.height
-                  || (m_mpegParserTriggerFormatChange && m_videoChanged && !IsAudioChanging())
-				  || m_lastARX!=m_mpegPesParser->basicVideoInfo.arx || m_lastARY!=m_mpegPesParser->basicVideoInfo.ary)
+                  || (m_mpegParserTriggerFormatChange && m_videoChanged && !IsAudioChanging()))
               {
                 LogDebug("DeMultiplexer: triggering OnVideoFormatChanged");
-                m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,m_bitRate,m_mpegPesParser->basicVideoInfo.isInterlaced);
+                m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,15000000,m_mpegPesParser->basicVideoInfo.isInterlaced);
                 m_filter.GetVideoPin()->SetAddPMT();
               }
               
@@ -2597,8 +2653,6 @@ void CDeMultiplexer::FillVideoMPEG2(CTsHeader& header, byte* tsPacket)
               }
               m_lastVidResX=m_mpegPesParser->basicVideoInfo.width;
               m_lastVidResY=m_mpegPesParser->basicVideoInfo.height;
-			  m_lastARX=m_mpegPesParser->basicVideoInfo.arx;
-			  m_lastARY=m_mpegPesParser->basicVideoInfo.ary;
             }
           }
           else
@@ -3052,7 +3106,7 @@ void CDeMultiplexer::OnNewChannel(CChannelInfo& info)
   else
     m_AudioStreamType = newAudioStreamType;
 
-  LogDebug("OnNewChannel: New Audio %d", m_AudioStreamType);
+  LogDebug("OnNewChannel: New Audio stream type = 0x%x", m_AudioStreamType);
 
   if( pSubUpdateCallback != NULL)
   {

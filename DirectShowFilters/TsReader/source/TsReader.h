@@ -116,7 +116,6 @@ DECLARE_INTERFACE_(ITSReaderCallback, IUnknown)
 {
 	STDMETHOD(OnMediaTypeChanged) (int mediaTypes)PURE;	
 	STDMETHOD(OnVideoFormatChanged) (int streamType,int width,int height,int aspectRatioX,int aspectRatioY,int bitrate,int isInterlaced)PURE;	
-	STDMETHOD(OnBitRateChanged) (int bitrate)PURE;	
 };
 
 DECLARE_INTERFACE_(ITSReaderAudioChange, IUnknown)
@@ -238,7 +237,6 @@ public:
   void            OnMediaTypeChanged(int mediaTypes);
   void            OnRequestAudioChange();
   void            OnVideoFormatChanged(int streamType,int width,int height,int aspectRatioX,int aspectRatioY,int bitrate,int isInterlaced);
-  void            OnBitRateChanged(int bitrate);
   bool            IsStreaming();
 
   bool            IsSeeking();

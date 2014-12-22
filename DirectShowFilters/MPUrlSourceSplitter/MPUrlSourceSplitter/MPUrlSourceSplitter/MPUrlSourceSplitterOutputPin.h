@@ -30,7 +30,6 @@
 #include "CacheFile.h"
 #include "DumpFile.h"
 #include "Flags.h"
-#include "StreamCollection.h"
 
 #include <streams.h>
 
@@ -171,24 +170,6 @@ public:
   // @return : true if successful, false otherwise
   virtual bool SetNewMediaTypes(CMediaTypeCollection *mediaTypes);
 
-  // sets video streams to muxer
-  // @param demuxerId : the demuxer ID with streams
-  // @param streams : the collection of video streams
-  // @return : S_OK if successful, error code otherwise
-  virtual HRESULT SetVideoStreams(unsigned int demuxerId, CStreamCollection *streams);
-
-  // sets audio streams to muxer
-  // @param demuxerId : the demuxer ID with streams
-  // @param streams : the collection of audio streams
-  // @return : S_OK if successful, error code otherwise
-  virtual HRESULT SetAudioStreams(unsigned int demuxerId, CStreamCollection *streams);
-
-  // sets subtitle streams to muxer
-  // @param demuxerId : the demuxer ID with streams
-  // @param streams : the collection of subtitles streams
-  // @return : S_OK if successful, error code otherwise
-  virtual HRESULT SetSubtitleStreams(unsigned int demuxerId, CStreamCollection *streams);
-
   /* other methods */
 
   // requests thread with CMD_PLAY command
@@ -211,11 +192,11 @@ public:
 protected:
   enum { CMD_EXIT, CMD_BEGIN_FLUSH, CMD_END_FLUSH, CMD_PLAY, CMD_PAUSE };
 
-  // lock mutex for access to output pin packets
-  HANDLE outputPinPacketsLock;
+  // lock mutex for access to media packets
+  HANDLE mediaPacketsLock;
 
-  // holds output pin packets ready to send through pin
-  COutputPinPacketCollection *outputPinPackets;
+  // holds media packets ready to send through pin
+  COutputPinPacketCollection *mediaPackets;
 
   // holds media types associated with output pin
   CMediaTypeCollection *mediaTypes;
@@ -254,8 +235,8 @@ protected:
   // holds dump file
   CDumpFile *dumpFile;
 
-  // holds output pin packet processed from last store time
-  unsigned int outputPinPacketProcessed;
+  // holds media packet processed from last store time
+  unsigned int mediaPacketProcessed;
 
   /* methods */
 

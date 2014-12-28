@@ -51,6 +51,7 @@ CAudioPin::CAudioPin(LPUNKNOWN pUnk, CBDReaderFilter* pFilter, HRESULT* phr, CCr
   m_pCachedBuffer(NULL),
   m_bFlushing(false),
   m_bSeekDone(true),
+  m_bResetToLibSeek(false),
   m_bDiscontinuity(false),
   m_bUsePCM(false),
   m_bZeroTimeStream(false),
@@ -243,7 +244,8 @@ HRESULT CAudioPin::DoBufferProcessingLoop()
         if (hr != S_OK)
         {
           DbgLog((LOG_TRACE, 2, TEXT("Deliver() returned %08x; stopping"), hr));
-          return S_OK;
+          // Delivery thread will be stalled instead of stopping
+          //return S_OK;
         }
       }
       else if (hr == ERROR_NO_DATA)
@@ -343,21 +345,27 @@ HRESULT CAudioPin::FillBuffer(IMediaSample *pSample)
             m_bZeroTimeStream = true;
           }
 
-          if ((buffer->nNewSegment & NS_NEW_CLIP) == NS_NEW_CLIP)
+          if (buffer->nNewSegment & NS_NEW_CLIP)
           {
             LogDebug("aud: Playlist changed to %d - nNewSegment: %d offset: %6.3f rtStart: %6.3f rtPlaylistTime: %6.3f", 
               buffer->nPlaylist, buffer->nNewSegment, buffer->rtOffset / 10000000.0, buffer->rtStart / 10000000.0, buffer->rtPlaylistTime / 10000000.0);
 
             checkPlaybackState = true;
-
             m_demux.m_eAudioClipSeen->Set();
+          }
+
+          if (m_bResetToLibSeek)
+          {
+            m_demux.m_eAudioClipSeen->Set();
+            checkPlaybackState = true;
+            m_bResetToLibSeek = false;
           }
 
           // Do not convert LPCM to PCM if audio decoder supports LPCM (LAV audio decoder style)
           if (!m_bUsePCM && buffer->pmt && buffer->pmt->subtype == MEDIASUBTYPE_PCM)
             buffer->pmt->subtype = MEDIASUBTYPE_BD_LPCM_AUDIO;
 
-          if (buffer->pmt && m_mt != *buffer->pmt && !((buffer->nNewSegment & NS_NEW_CLIP)==NS_NEW_CLIP))
+          if (buffer->pmt && m_mt != *buffer->pmt && !(buffer->nNewSegment & NS_NEW_CLIP))
           {
             HRESULT hrAccept = S_FALSE;
             LogMediaType(buffer->pmt);
@@ -416,7 +424,7 @@ HRESULT CAudioPin::FillBuffer(IMediaSample *pSample)
           
           if (checkPlaybackState)
           {
-            if (buffer->pmt && m_mt != *buffer->pmt && !((buffer->nNewSegment & NS_NEW_CLIP)==NS_NEW_CLIP))
+            if (buffer->pmt && m_mt != *buffer->pmt && !(buffer->nNewSegment & NS_NEW_CLIP))
             {
               CMediaType mt(*buffer->pmt);
               SetMediaType(&mt);
@@ -465,7 +473,7 @@ HRESULT CAudioPin::FillBuffer(IMediaSample *pSample)
 
             if (rtCorrectedStartTime < 0)
             {
-              LogDebug("aud: dropping negative %6.3f corr %6.3f Playlist time %6.3f clip: %d playlist: %d", 
+              LogDebug("aud: dropping negative %6.3f corr %6.3f playlist time %6.3f clip: %d playlist: %d", 
                 buffer->rtStart / 10000000.0, rtCorrectedStartTime / 10000000.0,
                 buffer->rtPlaylistTime / 10000000.0, buffer->nClipNumber, buffer->nPlaylist);
 
@@ -530,52 +538,6 @@ HRESULT CAudioPin::FillBuffer(IMediaSample *pSample)
   return NOERROR;
 }
 
-void CAudioPin::JoinAudioBuffers(Packet* pBuffer, CDeMultiplexer* pDemuxer)
-{
-  if (pBuffer->pmt)
-  {
-    // Currently only uncompressed PCM audio is supported
-    if (pBuffer->pmt->subtype == MEDIASUBTYPE_PCM)
-    {
-      //LogDebug("aud: Joinig Audio Buffers");
-      WAVEFORMATEXTENSIBLE* wfe = (WAVEFORMATEXTENSIBLE*)pBuffer->pmt->pbFormat;
-      WAVEFORMATEX* wf = (WAVEFORMATEX*)wfe;
-
-      // Assuming all packets in the stream are the same size
-      int packetSize = pBuffer->GetDataSize();
-
-      int maxDurationInBytes = wf->nAvgBytesPerSec / 10; // max 100 ms buffer
-
-      while (true)
-      {
-        if ((MAX_BUFFER_SIZE - pBuffer->GetDataSize() >= packetSize ) && 
-            (maxDurationInBytes >= pBuffer->GetDataSize() + packetSize))
-        {
-          Packet* buf = pDemuxer->GetAudio(pBuffer->nPlaylist,pBuffer->nClipNumber);
-          if (buf)
-          {
-            byte* data = buf->GetData();
-            // Skip LPCM header when copying the next buffer
-            pBuffer->SetCount(pBuffer->GetDataSize() + buf->GetDataSize() - LPCM_HEADER_SIZE);
-            memcpy(pBuffer->GetData()+pBuffer->GetDataSize() - (buf->GetDataSize() - LPCM_HEADER_SIZE), &data[LPCM_HEADER_SIZE], buf->GetDataSize() - LPCM_HEADER_SIZE);
-            delete buf;
-          }
-          else
-          {
-            // No new buffer was available in the demuxer
-            break;
-          }
-        }
-        else
-        {
-          // buffer limit reached
-          break;
-        }
-      }
-    }
-  }
-}
-
 bool CAudioPin::IsConnected()
 {
   return m_bConnected;
@@ -633,7 +595,7 @@ HRESULT CAudioPin::DeliverEndFlush()
   return hr;
 }
 
-HRESULT CAudioPin::DeliverNewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate)
+HRESULT CAudioPin::DeliverNewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate, bool doFakeSeek)
 {
   if (m_bFlushing || !ThreadExists())
   {
@@ -649,6 +611,7 @@ HRESULT CAudioPin::DeliverNewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop
     LogDebug("aud: DeliverNewSegment - error: %08lX", hr);
 
   m_bSeekDone = true;
+  m_bResetToLibSeek = doFakeSeek;
 
   return hr;
 }

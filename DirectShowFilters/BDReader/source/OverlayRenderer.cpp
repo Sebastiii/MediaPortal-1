@@ -263,11 +263,13 @@ void COverlayRenderer::ScheduleOverlays()
     LARGE_INTEGER liDueTime;
     liDueTime.QuadPart = -rtDue;
 
+#ifdef LOG_DRAWING
     LogDebug("           liDueTime: %6.3f", liDueTime.QuadPart / 10000000.0);
+#endif
 
     if (SetWaitableTimer(m_hOverlayTimerIG, &liDueTime, 0, NULL, NULL, 0) == 0)
     {
-#ifdef LOG_DRAWING      
+#ifdef LOG_DRAWING
       DWORD error = GetLastError();
       LogDebug("COverlayRenderer::ScheduleOverlay - SetWaitableTimer failed: %d", error);
 #endif
@@ -279,7 +281,9 @@ void COverlayRenderer::ScheduleOverlays()
     LARGE_INTEGER liDueTime;
     liDueTime.QuadPart = -rtDue;
 
+#ifdef LOG_DRAWING
     LogDebug("           liDueTime: %6.3f", liDueTime.QuadPart / 10000000.0);
+#endif
 
     if (SetWaitableTimer(m_hOverlayTimerPG, &liDueTime, 0, NULL, NULL, 0) == 0)
     {
@@ -305,6 +309,12 @@ void COverlayRenderer::SetScr(INT64 pts, INT64 offset)
 
 bool COverlayRenderer:: CreateARGBBuffers(bd_argb_buffer_s** pBuffer)
 {
+  if (!m_pD3DDevice)
+  {
+    LogDebug("COverlayRenderer::CreateARGBBuffers - m_pD3DDevice is NULL");
+    return false;
+  }
+
   // only BD_OVERLAY_IG layer is used at the moment, 
   // so no texture is created for BD_OVERLAY_PG layer
   

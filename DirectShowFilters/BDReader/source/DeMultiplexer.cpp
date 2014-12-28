@@ -84,6 +84,8 @@ CDeMultiplexer::CDeMultiplexer(CBDReaderFilter& filter) : m_filter(filter)
   m_videoServiceType = NO_STREAM;
   m_nVideoPid = -1;
 
+  m_bLibRequestedFlush = false;
+
   m_nClip = -1;
   m_nTitle = -1;
   m_nPlaylist = -1;
@@ -292,6 +294,11 @@ void CDeMultiplexer::GetVideoStreamPMT(CMediaType &pmt)
     pmt = m_videoParser->pmt;
 }
 
+REFERENCE_TIME CDeMultiplexer::TitleDuration()
+{
+  return m_rtTitleDuration;
+}
+
 void CDeMultiplexer::FlushVideo()
 {
   LogDebug("demux:flush video");
@@ -323,53 +330,17 @@ void CDeMultiplexer::FlushAudio()
   m_pCurrentAudioBuffer = new Packet();
 }
 
-HRESULT CDeMultiplexer::FlushToChapter(UINT32 nChapter)
-{
-  LogDebug("demux:ChangingChapter");
-
-  HRESULT hr = S_FALSE;
-
-  SetHoldAudio(true);
-  SetHoldVideo(true);
-
-  // Make sure data isn't being processed
-  CAutoLock lockRead(&m_sectionRead);
-
-  CAutoLock lockVid(&m_sectionVideo);
-  CAutoLock lockAud(&m_sectionAudio);
-
-  m_playlistManager->ClearAllButCurrentClip();
-
-  if (m_filter.lib.SetChapter(nChapter))
-  {
-    FlushPESBuffers(true, false);
-    FlushAudio();
-    FlushVideo();
-    hr = S_OK;
-  }
-
-  SetHoldAudio(false);
-  SetHoldVideo(false);
-
-  return hr;
-}
-
-void CDeMultiplexer::Flush(bool pSeeking, REFERENCE_TIME rtSeekTime)
+void CDeMultiplexer::Flush(bool bClearclips)
 {
   LogDebug("demux:flushing");
 
   SetHoldAudio(true);
   SetHoldVideo(true);
 
-  // Make sure data isn't being processed
-  CAutoLock lockRead(&m_sectionRead);
-
   FlushPESBuffers(true, false);
 
-  CAutoLock lockVid(&m_sectionVideo);
-  CAutoLock lockAud(&m_sectionAudio);
-
-  m_playlistManager->ClearAllButCurrentClip();
+  if (bClearclips)
+    m_playlistManager->ClearClips();
 
   FlushAudio();
   FlushVideo();
@@ -391,24 +362,6 @@ Packet* CDeMultiplexer::GetVideo()
   Packet * ret = m_playlistManager->GetNextVideoPacket();
 
   return ret;
-}
-
-Packet* CDeMultiplexer::GetAudio(int playlist, int clip)
-{
-  if (HoldAudio())
-    return NULL;
-
-  while (!m_playlistManager->HasAudio())
-  {
-    if (m_filter.IsStopping() || m_bEndOfFile || ReadFromFile() <= 0)
-      return NULL;
-  }
-
-  Packet* packet = m_playlistManager->GetNextAudioPacket(playlist, clip);
-  if (packet->rtTitleDuration == 0)
-    packet->rtTitleDuration = m_rtTitleDuration; // for fake audio
-
-  return packet;
 }
 
 ///
@@ -447,7 +400,7 @@ HRESULT CDeMultiplexer::Start()
   const DWORD readTimeout = 25000;
 
   if (m_playlistManager)
-    m_playlistManager->ClearAllButCurrentClip();
+    m_playlistManager->ClearClips(false);
 
   while ((GetTickCount() - m_Time) < readTimeout && !m_bReadFailed)
   {
@@ -564,8 +517,13 @@ void CDeMultiplexer::HandleBDEvent(BD_EVENT& pEv)
       m_filter.NotifyEvent(EC_ERRORABORT, STG_E_STATUS_COPY_PROTECTION_FAILURE, 0);
       break;
 
+    case BD_EVENT_FLUSH:
+      Flush(true);
+      m_bLibRequestedFlush = true;
+      break;
+
     case BD_EVENT_SEEK:
-      Flush(true, 0LL);
+      Flush(true);
       break;
 
     case BD_EVENT_STILL_TIME:
@@ -624,23 +582,18 @@ void CDeMultiplexer::HandleBDEvent(BD_EVENT& pEv)
         m_filter.lib.CurrentPosition(position, (UINT64&)m_rtTitleDuration);
         m_rtTitleDuration = CONVERT_90KHz_DS(m_rtTitleDuration);
 
-        bool interrupted = false;
-
         //if (!m_bStarting)
         {
           REFERENCE_TIME clipOffset = m_rtOffset * -1;
 
           FlushPESBuffers(false, false);
-          interrupted = m_playlistManager->CreateNewPlaylistClip(m_nPlaylist, m_nClip, AudioStreamsAvailable(clip), 
-            CONVERT_90KHz_DS(clipIn), CONVERT_90KHz_DS(clipOffset), CONVERT_90KHz_DS(duration));
+          m_playlistManager->CreateNewPlaylistClip(m_nPlaylist, m_nClip, AudioStreamsAvailable(clip), 
+            CONVERT_90KHz_DS(clipIn), CONVERT_90KHz_DS(clipOffset), CONVERT_90KHz_DS(duration), CONVERT_90KHz_DS(position), m_bLibRequestedFlush);
 
-          if (interrupted)
-          {
-            LogDebug("demux: current clip was interrupted - triggering flush");
-            //TODO get clipstart relative to clip start
-            REFERENCE_TIME rtClipStart = 0LL;
-            Flush(true, rtClipStart);
-          }
+          if (m_bLibRequestedFlush)
+            m_playlistManager->ClearClips();
+
+          m_bLibRequestedFlush = false;
         }
 
         m_bVideoFormatParsed = false;
@@ -731,7 +684,7 @@ void CDeMultiplexer::FillAudio(CTsHeader& header, byte* tsPacket)
       if (CPcr::DecodeFromPesHeader(p, 0, pts, dts))
       {
 #ifdef LOG_DEMUXER_AUDIO_SAMPLES
-        LogDebug("demux: aud pts %6.3f clip: %d playlist: %d", pts.ToClock(), m_nClip, m_nPlaylist);
+        LogDebug("demux: aud pts: %6.3f clip: %d playlist: %d", pts.ToClock(), m_nClip, m_nPlaylist);
 #endif
         m_bAC3Substream = false;
 
@@ -845,6 +798,10 @@ void CDeMultiplexer::FillAudio(CTsHeader& header, byte* tsPacket)
 void CDeMultiplexer::FlushPESBuffers(bool bDiscardData, bool bSetCurrentClipFilled)
 {
   LogDebug("Demux::Flushing PES %d", bDiscardData);
+
+  CAutoLock lockVid(&m_sectionVideo);
+  CAutoLock lockAud(&m_sectionAudio);
+
   if (m_videoServiceType != NO_STREAM && !bDiscardData)
   {
     if (m_videoServiceType == BLURAY_STREAM_TYPE_VIDEO_MPEG1 ||

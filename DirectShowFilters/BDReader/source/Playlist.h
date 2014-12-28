@@ -36,9 +36,8 @@ public:
   CPlaylist(int playlistNumber, REFERENCE_TIME firstPacketTime);
   ~CPlaylist(void);
   Packet* ReturnNextAudioPacket();
-  Packet* ReturnNextAudioPacket(int clip);
   Packet* ReturnNextVideoPacket();
-  bool CreateNewClip(int clipNumber, REFERENCE_TIME clipStart, REFERENCE_TIME clipOffset, bool audioPresent, REFERENCE_TIME duration, REFERENCE_TIME playlistClipOffset, bool seekTarget, bool interrupted);
+  bool CreateNewClip(int clipNumber, REFERENCE_TIME clipStart, REFERENCE_TIME clipOffset, bool audioPresent, REFERENCE_TIME duration, REFERENCE_TIME playlistClipOffset, REFERENCE_TIME streamStartOffset, bool interrupted);
   bool RemoveRedundantClips(); // returns true if no clips left;
   bool AcceptAudioPacket(Packet*  packet);
   bool AcceptVideoPacket(Packet*  packet);
@@ -55,10 +54,9 @@ public:
   void SetFilledAudio();
   int  nPlaylist;
   REFERENCE_TIME playlistFirstPacketTime;
-  REFERENCE_TIME ClearAllButCurrentClip(REFERENCE_TIME totalStreamOffset);
+  void ClearClips(REFERENCE_TIME totalStreamOffset, bool skipCurrentClip);
   bool HasAudio();
   bool HasVideo();
-  REFERENCE_TIME Incomplete();
   REFERENCE_TIME PlayedDuration();
   void SetVideoPMT(AM_MEDIA_TYPE * pmt, int nClip);
   vector<CClip*> Superceed();
@@ -86,8 +84,6 @@ protected:
 
   bool firstAudioPESPacketSeen;
   bool firstVideoPESPacketSeen;
-  REFERENCE_TIME firstAudioPESTimeStamp;
-  REFERENCE_TIME firstVideoPESTimeStamp;
 
   CCritSec m_sectionVector;
 

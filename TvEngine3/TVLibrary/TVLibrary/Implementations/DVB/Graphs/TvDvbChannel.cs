@@ -840,7 +840,7 @@ namespace TvLibrary.Implementations.DVB
             }
             else if (info.IsHEVCVideo)
             {
-              stream.StreamType = VideoStreamType.H265;
+              stream.StreamType = VideoStreamType.HEVC;
             }
             else
             {

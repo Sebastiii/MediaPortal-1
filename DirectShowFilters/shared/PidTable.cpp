@@ -182,7 +182,9 @@ LPCTSTR CPidTable::StreamFormatAsString(int streamType)
 	case 0x1B:
 		return _T("H264");
   case 0x24:
-    return _T("H265");
+    return _T("HEVC");
+  case 0x27:
+    return _T("HEVC2");
 	case 0xEA:
 		return _T("VC1");
 	case 0x80:

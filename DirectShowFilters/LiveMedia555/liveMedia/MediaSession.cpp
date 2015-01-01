@@ -814,7 +814,7 @@ Boolean MediaSubsession::initiate(int useSpecialRTPoffset) {
 					  fRTPPayloadFormat,
 					  fRTPTimestampFrequency);
       }
-      else if (strcmp(fCodecName, "H265") == 0) {
+      else if (strcmp(fCodecName, "HEVC") == 0) {
         fReadSource = fRTPSource
           = H264VideoRTPSource::createNew(env(), fRTPSocket,
           fRTPPayloadFormat,

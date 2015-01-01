@@ -112,7 +112,8 @@ void CPmtParser::OnNewSection(CSection& section)
         || stream_type==SERVICE_TYPE_VIDEO_MPEG2
         || stream_type==SERVICE_TYPE_VIDEO_MPEG4
         || stream_type==SERVICE_TYPE_VIDEO_H264
-        || stream_type==SERVICE_TYPE_VIDEO_H265)
+        || stream_type==SERVICE_TYPE_VIDEO_HEVC1
+        || stream_type==SERVICE_TYPE_VIDEO_HEVC2 )
       {
         VideoPid pid;
         pid.Pid=elementary_PID;

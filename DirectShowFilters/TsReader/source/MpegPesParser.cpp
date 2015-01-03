@@ -139,6 +139,23 @@ bool CMpegPesParser::ParseAudio(byte* audioPacket, int streamType, bool reset)
   {
     switch (streamType)
     {
+      case SERVICE_TYPE_AUDIO_MPEG1:
+      case SERVICE_TYPE_AUDIO_MPEG2:
+      {
+        mpahdr mpa;
+    	  __int64 framesize=hdrParser.GetSize();
+      	if (hdrParser.Read(mpa,framesize,false,&audPmt)) //Don't allow v2.5
+      	{
+          basicAudioInfo.sampleRate=mpa.nSamplesPerSec;
+          basicAudioInfo.channels = (mpa.channels == 3) ? 1 : 2;
+          basicAudioInfo.aacObjectType=0;
+          basicAudioInfo.streamType = streamType;
+      	  basicAudioInfo.pmtValid = true;	
+          basicAudioInfo.isValid = true;
+      	  parsed=true;
+      	}
+      }
+      break;
       case SERVICE_TYPE_AUDIO_AAC:
       {
         aachdr aac;
@@ -202,6 +219,7 @@ bool CMpegPesParser::ParseAudio(byte* audioPacket, int streamType, bool reset)
           basicAudioInfo.streamType = streamType;
       	  basicAudioInfo.pmtValid = true;	
           basicAudioInfo.isValid = true;
+          //LogDebug("hdrParser: E-AC3 frmsiz = %d, sampleRate = %d", eac3.frmsiz, basicAudioInfo.sampleRate);
       	  parsed=true;
       	}
       }

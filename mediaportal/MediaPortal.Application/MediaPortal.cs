@@ -1681,9 +1681,7 @@ public class MediaPortalApp : D3D, IRender
             Log.Debug("Main: PBT_APMSUSPEND force restoring start screen to Bounds {0}", Bounds);
           }
 
-          // Suspending when we are on minimize (otherwise MP can stay freezed if notification windows show up while minimize)
-          WindowState = FormWindowState.Minimized;
-
+          // Suspending GUIGraphicsContext when going to S3
           if (GUIGraphicsContext.CurrentState == GUIGraphicsContext.State.RUNNING)
           {
             GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.SUSPENDING;
@@ -2708,12 +2706,6 @@ public class MediaPortalApp : D3D, IRender
     }
 
     _lastOnresume = DateTime.Now;
-
-    WindowState = FormWindowState.Normal;
-
-    // Force restore DirectX (workaround to avoid GPU Crash)
-    // Disabled for testing
-    //RecreateSwapChain(true);
 
     // Restore GUIGraphicsContext.State when we recover from minimize
     if (GUIGraphicsContext.CurrentState == GUIGraphicsContext.State.SUSPENDING)

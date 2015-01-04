@@ -55,53 +55,55 @@ namespace MediaPortal.Player
 
     public VolumeHandler(int[] volumeTable)
     {
-      bool isDigital;
-
-      using (Settings reader = new MPSettings())
+      if (GUIGraphicsContext.DeviceAudioConnected)
       {
-        int levelStyle = reader.GetValueAsInt("volume", "startupstyle", 0);
+        bool isDigital;
 
-        if (levelStyle == 0)
+        using (Settings reader = new MPSettings())
         {
-          _startupVolume = Math.Max(0, Math.Min(65535, reader.GetValueAsInt("volume", "lastknown", 52428)));
+          int levelStyle = reader.GetValueAsInt("volume", "startupstyle", 0);
+
+          if (levelStyle == 0)
+          {
+            _startupVolume = Math.Max(0, Math.Min(65535, reader.GetValueAsInt("volume", "lastknown", 52428)));
+          }
+
+          if (levelStyle == 1)
+          {
+          }
+
+          if (levelStyle == 2)
+          {
+            _startupVolume = Math.Max(0, Math.Min(65535, reader.GetValueAsInt("volume", "startuplevel", 52428)));
+          }
+
+          isDigital = reader.GetValueAsBool("volume", "digital", false);
+
+          _showVolumeOSD = reader.GetValueAsBool("volume", "defaultVolumeOSD", true);
         }
 
-        if (levelStyle == 1)
+        try
         {
+          _mixer = new Mixer.Mixer();
+          _mixer.Open(0, isDigital);
+          _volumeTable = volumeTable;
+          _mixer.ControlChanged += mixer_ControlChanged;
         }
-
-        if (levelStyle == 2)
+        catch (Exception ex)
         {
-          _startupVolume = Math.Max(0, Math.Min(65535, reader.GetValueAsInt("volume", "startuplevel", 52428)));
+          Log.Error("VolumeHandler: Mixer exception when init {0}", ex);
+          int pdnDevInst = 0;
+
+          if (Win32Api.CM_Locate_DevNodeA(ref pdnDevInst, null, Win32Api.CM_LOCATE_DEVNODE_NORMAL) != Win32Api.CR_SUCCESS)
+          {
+            throw new Exception("something...");
+          }
+
+          if (Win32Api.CM_Reenumerate_DevNode(pdnDevInst, Win32Api.CM_REENUMERATE_NORMAL) != Win32Api.CR_SUCCESS)
+          {
+            Log.Error("VolumeHandler: Audio device not refreshed when init {0}", ex);
+          }
         }
-
-        isDigital = reader.GetValueAsBool("volume", "digital", false);
-
-        _showVolumeOSD = reader.GetValueAsBool("volume", "defaultVolumeOSD", true);
-      }
-
-      try
-      {
-        _mixer = new Mixer.Mixer();
-        _mixer.Open(0, isDigital);
-        _volumeTable = volumeTable;
-        _mixer.ControlChanged += mixer_ControlChanged;
-      }
-      catch (Exception ex)
-      {
-        Log.Error("VolumeHandler: Mixer exception when init {0}", ex);
-        int pdnDevInst = 0;
-
-        if (Win32Api.CM_Locate_DevNodeA(ref pdnDevInst, null, Win32Api.CM_LOCATE_DEVNODE_NORMAL) != Win32Api.CR_SUCCESS)
-        {
-          throw new Exception("something...");
-        }
-
-        if (Win32Api.CM_Reenumerate_DevNode(pdnDevInst, Win32Api.CM_REENUMERATE_NORMAL) != Win32Api.CR_SUCCESS)
-        {
-          Log.Error("VolumeHandler: Audio device not refreshed when init {0}", ex);
-        }
-
       }
     }
 
@@ -215,16 +217,22 @@ namespace MediaPortal.Player
 
     protected virtual void SetVolume(int volume)
     {
-      if (_mixer.IsMuted)
+      if (_mixer != null)
       {
-        _mixer.IsMuted = false;
+        if (_mixer.IsMuted)
+        {
+          _mixer.IsMuted = false;
+        }
+        _mixer.Volume = volume;
       }
-      _mixer.Volume = volume;
     }
 
     protected virtual void SetVolume(bool isMuted)
     {
-      _mixer.IsMuted = isMuted;
+      if (_mixer != null)
+      {
+        _mixer.IsMuted = isMuted;
+      }
     }
 
     private void HandleGUIOnControlChange()
@@ -271,13 +279,27 @@ namespace MediaPortal.Player
 
     public virtual int Volume
     {
-      get { return _mixer.Volume; }
+      get
+      {
+        if (_mixer != null)
+        {
+          return _mixer.Volume;
+        }
+        return 0;
+      }
       set { SetVolume(value); }
     }
 
     public virtual bool IsMuted
     {
-      get { return _mixer.IsMuted; }
+      get
+      {
+        if (_mixer != null)
+        {
+          return _mixer.IsMuted;
+        }
+        return false;
+      }
       set { SetVolume(value); }
     }
 
@@ -291,12 +313,16 @@ namespace MediaPortal.Player
     {
       get
       {
-        lock (_volumeTable)
-          foreach (int vol in _volumeTable.Where(vol => Volume < vol))
-          {
-            return vol;
-          }
-        return Maximum;
+        if (_volumeTable != null)
+        {
+          lock (_volumeTable)
+            foreach (int vol in _volumeTable.Where(vol => Volume < vol))
+            {
+              return vol;
+            }
+          return Maximum;
+        }
+        return 0;
       }
     }
 
@@ -335,15 +361,19 @@ namespace MediaPortal.Player
     {
       get
       {
-        lock (_volumeTable)
-          for (int index = _volumeTable.Length - 1; index >= 0; --index)
-          {
-            if (Volume > _volumeTable[index])
+        if (_volumeTable != null)
+        {
+          lock (_volumeTable)
+            for (int index = _volumeTable.Length - 1; index >= 0; --index)
             {
-              return _volumeTable[index];
+              if (Volume > _volumeTable[index])
+              {
+                return _volumeTable[index];
+              }
             }
-          }
-        return Minimum;
+          return Minimum;
+        }
+        return 0;
       }
     }
 

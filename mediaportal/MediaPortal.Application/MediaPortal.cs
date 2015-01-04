@@ -132,6 +132,7 @@ public class MediaPortalApp : D3D, IRender
   private bool                  _resumedSuspended;
   private bool                  _delayedResume;
   private readonly Object       _delayedResumeLock = new Object();
+  private bool                  _keepstartfullscreen;
 
   // ReSharper disable InconsistentNaming
   private const int WM_SYSCOMMAND            = 0x0112; // http://msdn.microsoft.com/en-us/library/windows/desktop/ms646360(v=vs.85).aspx
@@ -1155,6 +1156,7 @@ public class MediaPortalApp : D3D, IRender
     {
       var startFullscreen = !WindowedOverride && (FullscreenOverride || xmlreader.GetValueAsBool("general", "startfullscreen", false));
       Windowed = !startFullscreen;
+      _keepstartfullscreen = xmlreader.GetValueAsBool("general", "keepstartfullscreen", false);
     }
 
     DoStartupJobs();
@@ -1439,10 +1441,13 @@ public class MediaPortalApp : D3D, IRender
 
         // set maximum and minimum form size in windowed mode
         case WM_GETMINMAXINFO:
-          if (!_suspended && GUIGraphicsContext.DeviceVideoConnected)
+          if (!_keepstartfullscreen)
           {
-            OnGetMinMaxInfo(ref msg);
-            PluginManager.WndProc(ref msg);
+            if (!_suspended)
+            {
+              OnGetMinMaxInfo(ref msg);
+              PluginManager.WndProc(ref msg);
+            }
           }
           break;
 
@@ -1464,20 +1469,29 @@ public class MediaPortalApp : D3D, IRender
 
         // verify window size in case it was not resized by the user
         case WM_SIZE:
-          OnSize(ref msg);
-          PluginManager.WndProc(ref msg);
+          if (!_keepstartfullscreen)
+          {
+            OnSize(ref msg);
+            PluginManager.WndProc(ref msg);
+          }
           break;
 
         // aspect ratio save window resizing
         case WM_SIZING:
-          OnSizing(ref msg);
-          PluginManager.WndProc(ref msg);
+          if (!_keepstartfullscreen)
+          {
+            OnSizing(ref msg);
+            PluginManager.WndProc(ref msg);
+          }
           break;
 
         // handle display changes
         case WM_DISPLAYCHANGE:
-          OnDisplayChange(ref msg);
-          PluginManager.WndProc(ref msg);
+          if (!_keepstartfullscreen)
+          {
+            OnDisplayChange(ref msg);
+            PluginManager.WndProc(ref msg);
+          }
           break;
 
         // handle device changes
@@ -2003,6 +2017,42 @@ public class MediaPortalApp : D3D, IRender
               try
               {
                 GUIGraphicsContext.DeviceVideoConnected = true;
+                if (!_keepstartfullscreen)
+                {
+                  OnDisplayChange(ref msg);
+                }
+                else
+                {
+                  // Restore original Start Screen in case of change from RDP Session
+                  Screen screen = Screen.FromControl(this);
+                  if (!Equals(screen, GUIGraphicsContext.currentStartScreen))
+                  {
+                    foreach (GraphicsAdapterInfo adapterInfo in _enumerationSettings.AdapterInfoList)
+                    {
+                      var hMon = Manager.GetAdapterMonitor(adapterInfo.AdapterOrdinal);
+                      var info = new MonitorInformation();
+                      info.Size = (uint) Marshal.SizeOf(info);
+                      GetMonitorInfo(hMon, ref info);
+                      var rect = Screen.FromRectangle(info.MonitorRectangle).Bounds;
+                      if (
+                        Equals(
+                          Manager.Adapters[GUIGraphicsContext.DX9Device.DeviceCaps.AdapterOrdinal].Information
+                            .DeviceName,
+                          GetCleanDisplayName(GUIGraphicsContext.currentStartScreen)) && rect.Equals(screen.Bounds))
+                      {
+                        GUIGraphicsContext.currentScreen = GUIGraphicsContext.currentStartScreen;
+                        break;
+                      }
+                      GUIGraphicsContext.currentScreen = screen;
+                      Log.Debug("Main: Video Device or Screen restore screen");
+                    }
+                  }
+                  if (!Windowed)
+                  {
+                    SetBounds(GUIGraphicsContext.currentScreen.Bounds.X, GUIGraphicsContext.currentScreen.Bounds.Y,
+                      GUIGraphicsContext.currentScreen.Bounds.Width, GUIGraphicsContext.currentScreen.Bounds.Height);
+                  }
+                }
               }
               catch (Exception exception)
               {
@@ -2079,7 +2129,7 @@ public class MediaPortalApp : D3D, IRender
   private void OnDisplayChange(ref Message msg)
   {
     Screen screen = Screen.FromControl(this);
-    if (!_suspended && GUIGraphicsContext.DeviceVideoConnected)
+    if (!_suspended)
     {
       // force form dimensions to screen size to compensate for HDMI hot plug problems (e.g. WM_DiSPLAYCHANGE reported 1920x1080 but system is still in 1024x768 mode).
       if (screen.Bounds.Width == 1024 &&
@@ -2090,7 +2140,7 @@ public class MediaPortalApp : D3D, IRender
       }
     }
 
-    if (!_suspended && GUIGraphicsContext.DeviceVideoConnected)
+    if (!_suspended)
     {
       // disable event handlers
       if (GUIGraphicsContext.DX9Device != null)
@@ -2105,7 +2155,7 @@ public class MediaPortalApp : D3D, IRender
       }
       Rectangle currentBounds = GUIGraphicsContext.currentScreen.Bounds;
       Rectangle newBounds = screen.Bounds;
-      if (Created && !Equals(screen, GUIGraphicsContext.currentScreen) || !Equals(currentBounds.Size, newBounds.Size))
+      if (Created && !Equals(screen, GUIGraphicsContext.currentScreen) || !Equals(currentBounds.Size, newBounds.Size) || !Equals(screen, GUIGraphicsContext.currentStartScreen))
       {
         Log.Info("Main: Screen MP OnDisplayChange is displayed on changed from {0} to {1}", GetCleanDisplayName(GUIGraphicsContext.currentScreen), GetCleanDisplayName(screen));
         if (screen.Bounds != GUIGraphicsContext.currentScreen.Bounds)
@@ -2173,7 +2223,7 @@ public class MediaPortalApp : D3D, IRender
   /// <param name="msg"></param>
   private void OnGetMinMaxInfo(ref Message msg)
   {
-    if (!_suspended && GUIGraphicsContext.DeviceVideoConnected)
+    if (!_suspended)
     {
       Screen screen = Screen.FromControl(this);
       // force form dimensions to screen size to compensate for HDMI hot plug problems (e.g. WM_DiSPLAYCHANGE reported 1920x1080 but system is still in 1024x768 mode).
@@ -2185,7 +2235,7 @@ public class MediaPortalApp : D3D, IRender
       }
     }
 
-    if (!_suspended && GUIGraphicsContext.DeviceVideoConnected)
+    if (!_suspended)
     {
       // disable event handlers
       if (GUIGraphicsContext.DX9Device != null)

@@ -131,6 +131,7 @@ namespace MediaPortal.GUI.Library
     private static long _lasttime;
     private static bool _blankScreen;
     private static bool _deviceAudioConnected;
+    private static VolumeHandler _initVolumeHandler;
     private static bool _deviceVideoConnected;
     private static bool _idleTimePowerSaving;
     private static bool _turnOffMonitor;
@@ -226,6 +227,25 @@ namespace MediaPortal.GUI.Library
             }
           }
         }
+      }
+    }
+
+
+    public static object InitVolumeHandlerLock = new Object();
+
+    /// <summary>
+    /// Set/get init volume handler
+    /// </summary>
+    public static VolumeHandler VolumeHandler
+    {
+      get { return _initVolumeHandler; }
+      set
+      {
+        lock (InitVolumeHandlerLock)
+        {
+          _initVolumeHandler = value;
+        }
+        Log.Debug("GraphicContext: init volume handler");
       }
     }
 

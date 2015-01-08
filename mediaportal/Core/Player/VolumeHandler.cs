@@ -169,6 +169,7 @@ namespace MediaPortal.Player
         _instance._mixer = null;
       }
       _instance = null;
+      GUIGraphicsContext.VolumeHandler = null;
     }
 
     public virtual void UnMute()

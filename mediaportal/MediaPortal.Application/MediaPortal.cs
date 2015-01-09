@@ -2075,19 +2075,18 @@ public class MediaPortalApp : D3D, IRender
               try
               {
                 GUIGraphicsContext.DeviceAudioConnected = false;
-              if (_stopOnLostAudioRenderer)
-              {
-                g_Player.Stop();
-                while (GUIGraphicsContext.IsPlaying)
+                if (_stopOnLostAudioRenderer)
                 {
-                  Thread.Sleep(100);
+                  g_Player.Stop();
+                  while (GUIGraphicsContext.IsPlaying)
+                  {
+                    Thread.Sleep(100);
+                  }
                 }
-              }
-                VolumeHandler.Dispose();
               }
               catch (Exception exception)
               {
-                Log.Warn("Main: Exception on removal Audio Renderer {0} exception: {1} ",deviceName, exception.Message);
+                Log.Warn("Main: Exception on removal Audio Renderer {0} exception: {1} ", deviceName, exception.Message);
               }
               break;
 
@@ -2095,32 +2094,20 @@ public class MediaPortalApp : D3D, IRender
               Log.Info("Main: Audio Renderer {0} connected", deviceName);
               try
               {
-                if (!GUIGraphicsContext.DeviceAudioConnected)
+                GUIGraphicsContext.DeviceAudioConnected = true;
+                if (_stopOnLostAudioRenderer)
                 {
-                  GUIGraphicsContext.DeviceAudioConnected = true;
-                  if (_stopOnLostAudioRenderer)
+                  g_Player.Stop();
+                  while (GUIGraphicsContext.IsPlaying)
                   {
-                    g_Player.Stop();
-                    while (GUIGraphicsContext.IsPlaying)
-                    {
-                      Thread.Sleep(100);
-                    }
+                    Thread.Sleep(100);
                   }
-                  #pragma warning disable 168
-                  if (GUIGraphicsContext.VolumeHandler == null)
-                  {
-                    VolumeHandler.Dispose();
-                    GUIGraphicsContext.VolumeHandler = VolumeHandler.Instance;
-                    BassMusicPlayer.FreeBass();
-
-                    Log.Debug("Main: Audio Renderer {0} connected and dispose and create a new instance of VolumeHandler", deviceName);
-                    // Asynchronously pre-initialize the music engine if we're using the BassMusicPlayer
-                    if (!BassMusicPlayer.Initialized && BassMusicPlayer.IsDefaultMusicPlayer)
-                    {
-                      BassMusicPlayer.CreatePlayerAsync();
-                    }
-                  }
-                  #pragma warning restore 168
+                }
+                // Asynchronously pre-initialize the music engine if we're using the BassMusicPlayer
+                if (BassMusicPlayer.IsDefaultMusicPlayer)
+                {
+                  BassMusicPlayer.FreeBass();
+                  BassMusicPlayer.CreatePlayerAsync();
                 }
               }
               catch (Exception exception)

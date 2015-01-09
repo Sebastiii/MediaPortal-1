@@ -173,34 +173,78 @@ namespace MediaPortal.Mixer
     }
 
     private MixerNativeMethods.MixerControlDetails GetControl(MixerComponentType componentType,
-                                                              MixerControlType controlType)
+      MixerControlType controlType)
     {
-      MixerNativeMethods.MixerLine mixerLine = new MixerNativeMethods.MixerLine(componentType);
-
-      if (MixerNativeMethods.mixerGetLineInfoA(_handle, ref mixerLine, MixerLineFlags.ComponentType) != MixerError.None)
+      try
       {
-        int pdnDevInst = 0;
-        if (
-          VolumeHandler.Win32Api.CM_Locate_DevNodeA(ref pdnDevInst, null,
-            VolumeHandler.Win32Api.CM_LOCATE_DEVNODE_NORMAL) != VolumeHandler.Win32Api.CR_SUCCESS)
+        MixerNativeMethods.MixerLine mixerLine = new MixerNativeMethods.MixerLine(componentType);
+
+        if (MixerNativeMethods.mixerGetLineInfoA(_handle, ref mixerLine, MixerLineFlags.ComponentType) !=
+            MixerError.None)
         {
-         // throw new Exception("something...");
-          throw new InvalidOperationException("Mixer.GetControl.1");
+          int pdnDevInst = 0;
+          if (
+            VolumeHandler.Win32Api.CM_Locate_DevNodeA(ref pdnDevInst, null,
+              VolumeHandler.Win32Api.CM_LOCATE_DEVNODE_NORMAL) != VolumeHandler.Win32Api.CR_SUCCESS)
+          {
+            // throw new Exception("something...");
+            throw new InvalidOperationException("Mixer.GetControl.1");
+          }
+
+          if (VolumeHandler.Win32Api.CM_Reenumerate_DevNode(pdnDevInst, VolumeHandler.Win32Api.CM_REENUMERATE_NORMAL) !=
+              VolumeHandler.Win32Api.CR_SUCCESS)
+          {
+            //throw new Exception("something else...");
+            throw new InvalidOperationException("Mixer.GetControl.1");
+          }
         }
 
-        if (VolumeHandler.Win32Api.CM_Reenumerate_DevNode(pdnDevInst, VolumeHandler.Win32Api.CM_REENUMERATE_NORMAL) !=
-            VolumeHandler.Win32Api.CR_SUCCESS)
+        using (
+          MixerNativeMethods.MixerLineControls mixerLineControls =
+            new MixerNativeMethods.MixerLineControls(mixerLine.LineId, controlType))
         {
-          //throw new Exception("something else...");
-          throw new InvalidOperationException("Mixer.GetControl.1");
+          if (MixerNativeMethods.mixerGetLineControlsA(_handle, mixerLineControls, MixerLineControlFlags.OneByType) !=
+              MixerError.None)
+          {
+            int pdnDevInst = 0;
+            if (
+              VolumeHandler.Win32Api.CM_Locate_DevNodeA(ref pdnDevInst, null,
+                VolumeHandler.Win32Api.CM_LOCATE_DEVNODE_NORMAL) != VolumeHandler.Win32Api.CR_SUCCESS)
+            {
+              //throw new Exception("something...");
+              throw new InvalidOperationException("Mixer.GetControl.2");
+            }
+
+            if (
+              VolumeHandler.Win32Api.CM_Reenumerate_DevNode(pdnDevInst, VolumeHandler.Win32Api.CM_REENUMERATE_NORMAL) !=
+              VolumeHandler.Win32Api.CR_SUCCESS)
+            {
+              //throw new Exception("something else...");
+              throw new InvalidOperationException("Mixer.GetControl.2");
+            }
+          }
+
+          MixerNativeMethods.MixerControl mixerControl =
+            (MixerNativeMethods.MixerControl)
+              Marshal.PtrToStructure(mixerLineControls.Data, typeof (MixerNativeMethods.MixerControl));
+
+          return new MixerNativeMethods.MixerControlDetails(mixerControl.ControlId);
         }
       }
-
-      using (
-        MixerNativeMethods.MixerLineControls mixerLineControls =
-          new MixerNativeMethods.MixerLineControls(mixerLine.LineId, controlType))
+      catch (Exception)
       {
-        if (MixerNativeMethods.mixerGetLineControlsA(_handle, mixerLineControls, MixerLineControlFlags.OneByType) !=
+        // Catch exception when audio device is disconnected
+      }
+      return null;
+    }
+
+    private object GetValue(MixerComponentType componentType, MixerControlType controlType)
+    {
+      try
+      {
+        MixerNativeMethods.MixerLine mixerLine = new MixerNativeMethods.MixerLine(componentType);
+
+        if (MixerNativeMethods.mixerGetLineInfoA(_handle, ref mixerLine, MixerLineFlags.ComponentType) !=
             MixerError.None)
         {
           int pdnDevInst = 0;
@@ -209,66 +253,42 @@ namespace MediaPortal.Mixer
               VolumeHandler.Win32Api.CM_LOCATE_DEVNODE_NORMAL) != VolumeHandler.Win32Api.CR_SUCCESS)
           {
             //throw new Exception("something...");
-            throw new InvalidOperationException("Mixer.GetControl.2");
+            throw new InvalidOperationException("Mixer.OpenControl.1");
           }
 
           if (VolumeHandler.Win32Api.CM_Reenumerate_DevNode(pdnDevInst, VolumeHandler.Win32Api.CM_REENUMERATE_NORMAL) !=
               VolumeHandler.Win32Api.CR_SUCCESS)
           {
             //throw new Exception("something else...");
-            throw new InvalidOperationException("Mixer.GetControl.2");
+            throw new InvalidOperationException("Mixer.OpenControl.1");
           }
         }
 
-        MixerNativeMethods.MixerControl mixerControl =
-          (MixerNativeMethods.MixerControl)
-          Marshal.PtrToStructure(mixerLineControls.Data, typeof (MixerNativeMethods.MixerControl));
-
-        return new MixerNativeMethods.MixerControlDetails(mixerControl.ControlId);
-      }
-    }
-
-    private object GetValue(MixerComponentType componentType, MixerControlType controlType)
-    {
-      MixerNativeMethods.MixerLine mixerLine = new MixerNativeMethods.MixerLine(componentType);
-
-      if (MixerNativeMethods.mixerGetLineInfoA(_handle, ref mixerLine, MixerLineFlags.ComponentType) != MixerError.None)
-      {
-        int pdnDevInst = 0;
-        if (
-          VolumeHandler.Win32Api.CM_Locate_DevNodeA(ref pdnDevInst, null,
-            VolumeHandler.Win32Api.CM_LOCATE_DEVNODE_NORMAL) != VolumeHandler.Win32Api.CR_SUCCESS)
-        {
-          //throw new Exception("something...");
-          throw new InvalidOperationException("Mixer.OpenControl.1");
-        }
-
-        if (VolumeHandler.Win32Api.CM_Reenumerate_DevNode(pdnDevInst, VolumeHandler.Win32Api.CM_REENUMERATE_NORMAL) !=
-            VolumeHandler.Win32Api.CR_SUCCESS)
-        {
-          //throw new Exception("something else...");
-          throw new InvalidOperationException("Mixer.OpenControl.1");
-        }
-      }
-
-      using (
-        MixerNativeMethods.MixerLineControls mixerLineControls =
-          new MixerNativeMethods.MixerLineControls(mixerLine.LineId, controlType))
-      {
-        MixerNativeMethods.mixerGetLineControlsA(_handle, mixerLineControls, MixerLineControlFlags.OneByType);
-        MixerNativeMethods.MixerControl mixerControl =
-          (MixerNativeMethods.MixerControl)
-          Marshal.PtrToStructure(mixerLineControls.Data, typeof (MixerNativeMethods.MixerControl));
-
         using (
-          MixerNativeMethods.MixerControlDetails mixerControlDetails =
-            new MixerNativeMethods.MixerControlDetails(mixerControl.ControlId))
+          MixerNativeMethods.MixerLineControls mixerLineControls =
+            new MixerNativeMethods.MixerLineControls(mixerLine.LineId, controlType))
         {
-          MixerNativeMethods.mixerGetControlDetailsA(_handle, mixerControlDetails, 0);
+          MixerNativeMethods.mixerGetLineControlsA(_handle, mixerLineControls, MixerLineControlFlags.OneByType);
+          MixerNativeMethods.MixerControl mixerControl =
+            (MixerNativeMethods.MixerControl)
+              Marshal.PtrToStructure(mixerLineControls.Data, typeof (MixerNativeMethods.MixerControl));
 
-          return Marshal.ReadInt32(mixerControlDetails.Data);
+          using (
+            MixerNativeMethods.MixerControlDetails mixerControlDetails =
+              new MixerNativeMethods.MixerControlDetails(mixerControl.ControlId))
+          {
+            MixerNativeMethods.mixerGetControlDetailsA(_handle, mixerControlDetails, 0);
+
+            return Marshal.ReadInt32(mixerControlDetails.Data);
+          }
         }
       }
+      catch (Exception)
+      {
+        // Catch exception when audio device is disconnected
+      }
+      // Set Volume to 30000 when audio recover
+      return 30000;
     }
 
     private void SetValue(MixerComponentType componentType, MixerControlType controlType, bool controlValue)

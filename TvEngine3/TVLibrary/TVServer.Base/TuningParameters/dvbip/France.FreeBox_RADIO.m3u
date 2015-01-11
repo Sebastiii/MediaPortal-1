@@ -138,7 +138,7 @@ rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100012
 #EXTINF:0,Radio Star
 rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100009
 #EXTINF:0,SUN
-#rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100007
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100007
 #EXTINF:0,Radio Soleil
 rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100009
 #EXTINF:0,RFO Guadeloupe

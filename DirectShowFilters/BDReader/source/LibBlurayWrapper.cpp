@@ -91,7 +91,8 @@ CLibBlurayWrapper::CLibBlurayWrapper() :
   _bd_get_clip_infos(NULL),
   _bd_register_argb_overlay_proc(NULL),
   _bd_refcnt_inc(NULL),
-  _bd_refcnt_dec(NULL)
+  _bd_refcnt_dec(NULL),
+  _bd_select_stream(NULL)
 {
   m_pOverlayRenderer = new COverlayRenderer(this);
   ZeroMemory((void*)&m_playerSettings, sizeof(bd_player_settings));
@@ -215,6 +216,7 @@ bool CLibBlurayWrapper::Initialize()
   _bd_register_argb_overlay_proc = (API_bd_register_argb_overlay_proc)GetProcAddress(m_hDLL, "bd_register_argb_overlay_proc");
   _bd_refcnt_inc = (API_bd_refcnt_inc)GetProcAddress(m_hDLL, "bd_refcnt_inc");
   _bd_refcnt_dec = (API_bd_refcnt_dec)GetProcAddress(m_hDLL, "bd_refcnt_dec");
+  _bd_select_stream = (API_bd_select_stream)GetProcAddress(m_hDLL, "bd_select_stream");
 
   // This method is not available in the vanilla libbluray 
   _bd_get_clip_infos = (API_bd_get_clip_infos)GetProcAddress(m_hDLL, "bd_get_clip_infos");
@@ -260,7 +262,8 @@ bool CLibBlurayWrapper::Initialize()
       !_bd_get_clip_infos ||
       !_bd_register_argb_overlay_proc ||
       !_bd_refcnt_inc ||
-      !_bd_refcnt_dec)
+      !_bd_refcnt_dec ||
+      !_bd_select_stream)
   {
     LogDebug("CLibBlurayWrapper - failed to load method from lib - a version mismatch?");
     return false;
@@ -377,14 +380,15 @@ bool CLibBlurayWrapper::CloseBluray()
 
   _bd_close(m_pBd);
   m_pBd = NULL;
-  
+
   return true;
 }
 
 void CLibBlurayWrapper::SetBDPlayerSettings(bd_player_settings pSettings)
 {
   LogDebug("CLibBlurayWrapper - Settings: Audio(%s), Menu(%s), Sub(%s), Ctry(%s), Reg(%i), Prtl(%i)", pSettings.audioLang,
-		pSettings.menuLang, pSettings.subtitleLang, pSettings.countryCode, pSettings.regionCode, pSettings.parentalControl);
+    pSettings.menuLang, pSettings.subtitleLang, pSettings.countryCode, pSettings.regionCode, pSettings.parentalControl);
+
   memcpy(&m_playerSettings, &pSettings, sizeof(bd_player_settings));
 }
 
@@ -428,6 +432,22 @@ void CLibBlurayWrapper::SetTitle(UINT32 pTitle)
     m_currentTitle = pTitle;
 }
 
+bool CLibBlurayWrapper::SetSubtitleStream(UINT32 streamId, bool enabled)
+{
+  if (streamId < 0)
+    return false;
+
+  CAutoLock cLibLock(&m_csLibLock);
+  if (m_pBd)
+  {
+    // lib uses 1 based stream indices
+    _bd_select_stream(m_pBd, BLURAY_PG_TEXTST_STREAM, streamId + 1, enabled);
+    return true;
+  }
+
+  return false;
+}
+
 bool CLibBlurayWrapper::GetAngle(UINT8* pAngle)
 {
   CAutoLock cLibLock(&m_csLibLock);
@@ -455,17 +475,15 @@ BLURAY_TITLE_INFO* CLibBlurayWrapper::GetTitleInfo(UINT32 pIndex)
   CAutoLock cLibLock(&m_csLibLock);
 
   BLURAY_TITLE_INFO* info = NULL;
-  
+
   if (pIndex == BLURAY_TITLE_CURRENT)
   {
     UINT32 index = _bd_get_current_title(m_pBd);
     info = _bd_get_title_info(m_pBd, index, 0); // TODO - provide angle!
   }
   else
-  {
     info = _bd_get_title_info(m_pBd, pIndex, 0); // TODO - provide angle!
-  }
-  
+
   return info;
 }
 
@@ -478,9 +496,7 @@ void CLibBlurayWrapper::MouseMove(UINT64 pPos, UINT16 pX, UINT16 pY)
 {
   CAutoLock cLibLock(&m_csLibLock);
   if (m_pBd)
-  {		
     _bd_mouse_select(m_pBd, pPos, pX, pY); // TODO check return value
-  }    
 }
 
 bool CLibBlurayWrapper::Play()
@@ -521,9 +537,7 @@ bool CLibBlurayWrapper::Play()
   }
 
   if (!ret)
-  {
     LogDebug("CLibBlurayWrapper - Play failed!");
-  }
 
   return ret;
 }
@@ -581,7 +595,7 @@ bool CLibBlurayWrapper::ProcessEvents()
 bool CLibBlurayWrapper::SkipStillTime()
 {
   CAutoLock cLibLock(&m_csLibLock);
-  
+
   bool ret = false;
   if (m_pBd)
     ret = _bd_read_skip_still(m_pBd) ? true : false;
@@ -592,7 +606,7 @@ bool CLibBlurayWrapper::SkipStillTime()
 void CLibBlurayWrapper::Seek(UINT64 pPos)
 {
   CAutoLock cLibLock(&m_csLibLock);
-  
+
   if (m_pBd)
     (void)_bd_seek_time(m_pBd, pPos);
 }
@@ -636,7 +650,7 @@ void CLibBlurayWrapper::RemoveEventObserver(BDEventObserver* pObserver)
       m_eventObservers.erase(it);
       break;
     }
-    ++it;  
+    ++it;
   }
 }
 
@@ -737,7 +751,7 @@ void CLibBlurayWrapper::UpdateTitleInfo()
     LogTitleInfo(m_currentTitleIdx);
   }
 
-  if (!m_pTitleInfo) 
+  if (!m_pTitleInfo)
     LogDebug("UpdateTitleInfo (%d) failed", m_currentTitleIdx);
 }
 
@@ -830,7 +844,7 @@ bool CLibBlurayWrapper::OpenMenu(INT64 pPts)
 
 void CLibBlurayWrapper::StillMode(unsigned pSeconds)
 {
-  if (m_nStillEndTime > 0) 
+  if (m_nStillEndTime > 0)
   {
     if (GetTickCount() / 1000 >= m_nStillEndTime) 
     {
@@ -1110,7 +1124,7 @@ void CLibBlurayWrapper::LogTitleInfo(int pIndex, bool ignoreShort)
 
 void CLibBlurayWrapper::HandleOSDUpdate(OSDTexture& texture)
 {
-   ivecObservers it = m_eventObservers.begin();
+  ivecObservers it = m_eventObservers.begin();
   while (it != m_eventObservers.end())
   {
     (*it)->HandleOSDUpdate(texture);

@@ -19,6 +19,7 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Collections;
 using System.Globalization;
 using Gentle.Framework;
@@ -465,8 +466,73 @@ namespace TvPlugin
             m_delayIntervalAudio = PostProcessingEngine.GetInstance().AudioDelayInterval;
             if (m_delayIntervalAudio > 0)
               m_audioDelay = PostProcessingEngine.GetInstance().AudioDelay / m_delayIntervalAudio;
-            return true;
+
+            g_Player.UpdateMediaInfoProperties();
+            GUIPropertyManager.SetProperty("#TV.View.HasTeletext", TVHome.Card.HasTeletext.ToString());
+
+            MediaPortal.Player.VideoStreamFormat videoFormat = g_Player.GetVideoFormat();
+
+            GUIPropertyManager.SetProperty("#Play.Current.TSBitRate",
+             ((float)MediaPortal.Player.g_Player.GetVideoFormat().bitrate / 1024 / 1024).ToString("0.00", CultureInfo.InvariantCulture));
+
+            GUIPropertyManager.SetProperty("#Play.Current.VideoFormat.RawResolution",
+              videoFormat.width.ToString() + "x" + videoFormat.height.ToString());
+
+            GUIPropertyManager.SetProperty("#TV.TuningDetails.FreeToAir", string.Empty);
+
+            Channel chan = TVHome.Navigator.Channel;
+            if (chan != null)
+            {
+              IList<TuningDetail> details = chan.ReferringTuningDetail();
+              if (details.Count > 0)
+              {
+                TuningDetail detail = null;
+                switch (TVHome.Card.Type)
+                {
+                  case TvLibrary.Interfaces.CardType.Analog:
+                    foreach (TuningDetail t in details)
+                    {
+                      if (t.ChannelType == 0)
+                        detail = t;
+                    }
+                    break;
+                  case TvLibrary.Interfaces.CardType.Atsc:
+                    foreach (TuningDetail t in details)
+                    {
+                      if (t.ChannelType == 1)
+                        detail = t;
+                    }
+                    break;
+                  case TvLibrary.Interfaces.CardType.DvbC:
+                    foreach (TuningDetail t in details)
+                    {
+                      if (t.ChannelType == 2)
+                        detail = t;
+                    }
+                    break;
+                  case TvLibrary.Interfaces.CardType.DvbS:
+                    foreach (TuningDetail t in details)
+                    {
+                      if (t.ChannelType == 3)
+                        detail = t;
+                    }
+                    break;
+                  case TvLibrary.Interfaces.CardType.DvbT:
+                    foreach (TuningDetail t in details)
+                    {
+                      if (t.ChannelType == 4)
+                        detail = t;
+                    }
+                    break;
+                  default:
+                    detail = details[0];
+                    break;
+                }
+                GUIPropertyManager.SetProperty("#TV.TuningDetails.FreeToAir", detail.FreeToAir.ToString());
+              }
+            }
           }
+          break;
 
         case GUIMessage.MessageType.GUI_MSG_SETFOCUS:
           goto case GUIMessage.MessageType.GUI_MSG_LOSTFOCUS;
@@ -1954,6 +2020,8 @@ namespace TvPlugin
 
       else
       {
+        GUIPropertyManager.SetProperty("#Play.Current.TSBitRate",
+         ((float)MediaPortal.Player.g_Player.GetVideoFormat().bitrate / 1024 / 1024).ToString("0.00", CultureInfo.InvariantCulture));        
         Recording rec = null;
         string startTime = "";
         string endTime = "";

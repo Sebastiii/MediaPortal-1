@@ -21,7 +21,7 @@ namespace MediaPortal.Configuration.Sections
         {
           components.Dispose();
         }
-      }
+        }
 
       base.Dispose(disposing);
     }
@@ -104,6 +104,7 @@ namespace MediaPortal.Configuration.Sections
       this.chkDisableSimilarTrackLookups = new MediaPortal.UserInterface.Controls.MPCheckBox();
       this.PlaylistTabPg = new System.Windows.Forms.TabPage();
       this.groupBox1 = new MediaPortal.UserInterface.Controls.MPGroupBox();
+      this.PlayListUTF8CheckBox = new MediaPortal.UserInterface.Controls.MPCheckBox();
       this.PlaylistCurrentCheckBox = new MediaPortal.UserInterface.Controls.MPCheckBox();
       this.autoShuffleCheckBox = new MediaPortal.UserInterface.Controls.MPCheckBox();
       this.ResumePlaylistChkBox = new MediaPortal.UserInterface.Controls.MPCheckBox();
@@ -902,6 +903,7 @@ namespace MediaPortal.Configuration.Sections
       // 
       this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+      this.groupBox1.Controls.Add(this.PlayListUTF8CheckBox);
       this.groupBox1.Controls.Add(this.PlaylistCurrentCheckBox);
       this.groupBox1.Controls.Add(this.autoShuffleCheckBox);
       this.groupBox1.Controls.Add(this.ResumePlaylistChkBox);
@@ -917,6 +919,17 @@ namespace MediaPortal.Configuration.Sections
       this.groupBox1.TabIndex = 0;
       this.groupBox1.TabStop = false;
       this.groupBox1.Text = "Playlist settings";
+      // 
+      // PlayListUTF8CheckBox
+      // 
+      this.PlayListUTF8CheckBox.AutoSize = true;
+      this.PlayListUTF8CheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+      this.PlayListUTF8CheckBox.Location = new System.Drawing.Point(91, 176);
+      this.PlayListUTF8CheckBox.Name = "PlayListUTF8CheckBox";
+      this.PlayListUTF8CheckBox.Size = new System.Drawing.Size(324, 17);
+      this.PlayListUTF8CheckBox.TabIndex = 8;
+      this.PlayListUTF8CheckBox.Text = "Save Playlist in UTF8 Format (not compatible with some players)";
+      this.PlayListUTF8CheckBox.UseVisualStyleBackColor = true;
       // 
       // PlaylistCurrentCheckBox
       // 
@@ -1143,5 +1156,6 @@ namespace MediaPortal.Configuration.Sections
     private MPComboBox WasApiSpeakersCombo;
     private MPLabel mpLabel14;
     private MPLabel mpLabel15;
+    private MPCheckBox PlayListUTF8CheckBox;
   }
 }

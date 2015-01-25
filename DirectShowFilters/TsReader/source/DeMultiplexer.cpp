@@ -125,9 +125,15 @@ CDeMultiplexer::CDeMultiplexer(CTsDuration& duration,CTsReaderFilter& filter)
   m_bFirstGopParsed = false;
   m_lastVidResX=-1 ;
   m_lastVidResY=-1 ;
+  m_lastARX=-1;
+  m_lastARY=-1;
   m_FirstVideoSample = 0x7FFFFFFF00000000LL;
   m_LastVideoSample = 0;
   
+  m_sampleTime = GET_TIME_NOW();
+  m_sampleTimePrev = GET_TIME_NOW();
+  m_byteRead = 0;
+  m_bitRate = 0;
   m_LastDataFromRtsp = GET_TIME_NOW();
   m_targetAVready = m_LastDataFromRtsp;
   m_tWaitForMediaChange=m_LastDataFromRtsp ;
@@ -1319,7 +1325,7 @@ void CDeMultiplexer::OnTsPacket(byte* tsPacket, int bufferOffset, int bufferLeng
   {
   	return;
   }
-
+  
   //process the ts packet further
   FillVideo(header,tsPacket, bufferOffset, bufferLength);
   FillAudio(header,tsPacket, bufferOffset, bufferLength);
@@ -2174,6 +2180,19 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
   if (headerlen < 188)
   {            
     int dataLen = 188-headerlen;
+
+	m_byteRead = m_byteRead + dataLen;
+	m_sampleTime = GET_TIME_NOW();
+	DWORD elapsedTime = m_sampleTime - m_sampleTimePrev;
+
+	if (elapsedTime >= 5000)
+	{
+      m_bitRate = (float)m_byteRead*8*1000/elapsedTime;
+	  m_filter.OnBitRateChanged(m_bitRate);
+	  m_sampleTimePrev = m_sampleTime;
+	  m_byteRead = 0;
+    }
+
     p->SetCount(dataLen);
     p->SetData(&tsPacket[headerlen],dataLen);
 
@@ -2355,6 +2374,7 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
 
     MOVE_TO_H264_START_CODE(start, end);
 
+ 	
     while(start <= end-4)
     {
       BYTE* next = start+1;
@@ -2618,11 +2638,16 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
           if (Gop)
           {
             if (m_lastVidResX!=m_mpegPesParser->basicVideoInfo.width || m_lastVidResY!=m_mpegPesParser->basicVideoInfo.height
-                || (m_mpegParserTriggerFormatChange && m_videoChanged && !IsAudioChanging()))
+              || (m_mpegParserTriggerFormatChange && m_videoChanged && !IsAudioChanging()))
             {
               LogDebug("DeMultiplexer: triggering OnVideoFormatChanged");
-              m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,15000000,m_mpegPesParser->basicVideoInfo.isInterlaced);
+              m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,m_bitRate,m_mpegPesParser->basicVideoInfo.isInterlaced);
               m_filter.GetVideoPin()->SetAddPMT();
+            }
+            else if (m_lastARX!=m_mpegPesParser->basicVideoInfo.arx || m_lastARY!=m_mpegPesParser->basicVideoInfo.ary)
+            {
+              LogDebug("DeMultiplexer: triggering OnVideoFormatChanged");
+              m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,m_bitRate,m_mpegPesParser->basicVideoInfo.isInterlaced);
             }
             
             if ((m_lastVidResX!=m_mpegPesParser->basicVideoInfo.width || m_lastVidResY!=m_mpegPesParser->basicVideoInfo.height) && !m_filter.m_bDisableVidSizeRebuildH264)
@@ -2669,6 +2694,9 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
             }
             m_lastVidResX=m_mpegPesParser->basicVideoInfo.width;
             m_lastVidResY=m_mpegPesParser->basicVideoInfo.height;
+	        m_lastARX=m_mpegPesParser->basicVideoInfo.arx;
+			m_lastARY=m_mpegPesParser->basicVideoInfo.ary;
+
           }
         }
         else
@@ -2745,6 +2773,19 @@ void CDeMultiplexer::FillVideoMPEG2(CTsHeader& header, byte* tsPacket)
   if (headerlen < 188)
   {
     int dataLen = 188-headerlen;
+
+	m_byteRead = m_byteRead + dataLen;
+	m_sampleTime = GET_TIME_NOW();
+	DWORD elapsedTime = m_sampleTime - m_sampleTimePrev;
+
+	if (elapsedTime >= 5000)
+	{
+      m_bitRate = (float)m_byteRead*8*1000/elapsedTime;
+	  m_filter.OnBitRateChanged(m_bitRate);
+	  m_sampleTimePrev = m_sampleTime;
+	  m_byteRead = 0;
+    }
+
     p->SetCount(dataLen);
     p->SetData(&tsPacket[headerlen],dataLen);
 
@@ -3101,10 +3142,11 @@ void CDeMultiplexer::FillVideoMPEG2(CTsHeader& header, byte* tsPacket)
             if (Gop)
             {
               if (m_lastVidResX!=m_mpegPesParser->basicVideoInfo.width || m_lastVidResY!=m_mpegPesParser->basicVideoInfo.height
-                  || (m_mpegParserTriggerFormatChange && m_videoChanged && !IsAudioChanging()))
+                  || (m_mpegParserTriggerFormatChange && m_videoChanged && !IsAudioChanging())
+				  || m_lastARX!=m_mpegPesParser->basicVideoInfo.arx || m_lastARY!=m_mpegPesParser->basicVideoInfo.ary)
               {
                 LogDebug("DeMultiplexer: triggering OnVideoFormatChanged");
-                m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,15000000,m_mpegPesParser->basicVideoInfo.isInterlaced);
+                m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,m_bitRate,m_mpegPesParser->basicVideoInfo.isInterlaced);
                 m_filter.GetVideoPin()->SetAddPMT();
               }
               
@@ -3152,6 +3194,8 @@ void CDeMultiplexer::FillVideoMPEG2(CTsHeader& header, byte* tsPacket)
               }
               m_lastVidResX=m_mpegPesParser->basicVideoInfo.width;
               m_lastVidResY=m_mpegPesParser->basicVideoInfo.height;
+			  m_lastARX=m_mpegPesParser->basicVideoInfo.arx;
+			  m_lastARY=m_mpegPesParser->basicVideoInfo.ary;
             }
           }
           else

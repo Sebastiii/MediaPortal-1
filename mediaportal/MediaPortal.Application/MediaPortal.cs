@@ -1822,7 +1822,7 @@ public class MediaPortalApp : D3D, IRender
           if (ps.PowerSetting == GUID_SYSTEM_AWAYMODE && ps.DataLength == Marshal.SizeOf(typeof(Int32)))
           {
             // focus MP
-            ForceMPFocus();
+            //ForceMPFocus();
 
             switch (ps.Data)
             {
@@ -1840,7 +1840,7 @@ public class MediaPortalApp : D3D, IRender
           else if ((ps.PowerSetting == GUID_MONITOR_POWER_ON || ps.PowerSetting == GUID_SESSION_DISPLAY_STATUS) && ps.DataLength == Marshal.SizeOf(typeof(Int32)))
           {
             // focus MP
-            ForceMPFocus();
+            //ForceMPFocus();
 
             switch (ps.Data)
             {
@@ -1863,7 +1863,7 @@ public class MediaPortalApp : D3D, IRender
           else if (ps.PowerSetting == GUID_SESSION_USER_PRESENCE && ps.DataLength == Marshal.SizeOf(typeof(Int32)))
           {
             // focus MP
-            ForceMPFocus();
+            //ForceMPFocus();
 
             switch (ps.Data)
             {
@@ -2760,7 +2760,7 @@ public class MediaPortalApp : D3D, IRender
     RestoreFromTray();
 
     // Force Focus after resume done (really weird sequence)
-    ForceMPFocus();
+    //ForceMPFocus();
 
     Log.Info("Main: OnResumeSuspend - Done");
   }

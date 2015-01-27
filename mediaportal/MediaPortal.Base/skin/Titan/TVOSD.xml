@@ -1011,6 +1011,6 @@
       <spinPosY>600</spinPosY>
       <visible>no</visible>
     </control>
-<include>videoOSD.mediainfo.xml</include>
+<import>tvOSD.mediainfo.xml</import>
 </controls>
 </window>

@@ -532,7 +532,7 @@ namespace TvPlugin
               }
             }
           }
-          break;
+          return true;
 
         case GUIMessage.MessageType.GUI_MSG_SETFOCUS:
           goto case GUIMessage.MessageType.GUI_MSG_LOSTFOCUS;
@@ -1963,6 +1963,12 @@ namespace TvPlugin
 
     private void UpdateProgressBar()
     {
+      if (g_Player.IsTimeShifting)
+      {
+        GUIPropertyManager.SetProperty("#Play.Current.TSBitRate",
+         ((float)MediaPortal.Player.g_Player.GetVideoFormat().bitrate / 1024 / 1024).ToString("0.00", CultureInfo.InvariantCulture));    
+      }
+      
       if (!g_Player.IsTVRecording)
       {
         double fPercent;

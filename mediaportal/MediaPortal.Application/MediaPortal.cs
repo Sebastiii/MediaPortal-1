@@ -4016,7 +4016,8 @@ public class MediaPortalApp : D3D, IRender
                   _restartOptions = RestartOptions.PowerOff;
                   _useRestartOptions = true;
                   GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.STOPPING;
-                  ShuttingDown = true;
+                  GUIGraphicsContext.StoppingToPowerOff = true;
+                  ShuttingDown = true;                  
                   break;
 
                 case 1031:

@@ -166,9 +166,9 @@ namespace MediaPortal.InputDevices
     /// <returns>Command handled</returns>
     public bool WndProc(Message msg)
     {
-      if (controlEnabled && (msg.Msg == Win32API.WM_APPCOMMAND))
+      if (controlEnabled && (msg.Msg == Win32.Const.WM_APPCOMMAND))
       {
-        int command = Win32API.GET_APPCOMMAND_LPARAM(msg.LParam);
+        int command = Win32.Macro.GET_APPCOMMAND_LPARAM(msg.LParam);
         InputDevices.LastHidRequest = (AppCommands)command;
 
         RemoteButton button = RemoteButton.None;

@@ -2,21 +2,21 @@
 
 // Copyright (C) 2005-2013 Team MediaPortal
 // http://www.team-mediaportal.com
-//
+// 
 // MediaPortal is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 2 of the License, or
 // (at your option) any later version.
-//
+// 
 // MediaPortal is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-//
+// 
 // You should have received a copy of the GNU General Public License
 // along with MediaPortal. If not, see <http://www.gnu.org/licenses/>.
 
-#endregion Copyright (C) 2005-2013 Team MediaPortal
+#endregion
 
 using System;
 using System.Collections.Generic;
@@ -38,42 +38,10 @@ namespace MediaPortal.Util
     {
     #region Interop declarations
 
-    #region MACROS
-    /// <summary>
-    /// Retrieves the application command from the specified LPARAM value.
-    /// </summary>
-    /// <param name="lParam"></param>
-    /// <returns></returns>
-    public static short GET_APPCOMMAND_LPARAM(IntPtr lParam)
-    {
-        return (short)(lParam.ToInt32() >> 16 & ~0xf000);
-    }
-
-    /// <summary>
-    /// Retrieves the input code from wParam in WM_INPUT.
-    /// </summary>
-    /// <param name="wParam"></param>
-    /// <returns></returns>
-    public static int GET_RAWINPUT_CODE_WPARAM(IntPtr wParam)
-    {
-        return (wParam.ToInt32() & 0xff);
-    }
-
-    #endregion MACROS
-
     #region Constants
 
     private const int WPF_RESTORETOMAXIMIZED = 2;
     public const int WM_SHOWWINDOW = 0x0018;
-
-    /// <summary>
-    /// Notifies a window that the user generated an application command event, for example, by clicking an application command button using the mouse or typing an application command key on the keyboard.
-    /// </summary>
-    public const int WM_APPCOMMAND = 0x0319;
-    /// <summary>
-    /// Sent to the window that is getting raw input.
-    /// </summary>
-    public const int WM_INPUT = 0x00FF;
 
     //
     private const int WM_ACTIVATE = 0x0006; // http://msdn.microsoft.com/en-us/library/windows/desktop/ms646274(v=vs.85).aspx
@@ -86,28 +54,7 @@ namespace MediaPortal.Util
     public const int CSIDL_MYPICTURES = 0x0027; // "My Pictures" folder
 
 
-    /// <summary>
-    /// Get the raw data from the RAWINPUT structure.
-    /// </summary>
-    public const uint RID_INPUT = 0x10000003;
-    /// <summary>
-    /// Get the header information from the RAWINPUT structure.
-    /// /// </summary>
-    public const uint RID_HEADER = 0x10000005;
-    /// <summary>
-    /// Possible value taken by wParam for WM_INPUT.
-    /// <para />
-    /// Input occurred while the application was in the foreground. The application must call DefWindowProc so the system can perform cleanup.
-    /// </summary>
-    public const int RIM_INPUT = 0;
-    /// <summary>
-    /// Possible value taken by wParam for WM_INPUT.
-    /// <para />
-    /// Input occurred while the application was not in the foreground. The application must call DefWindowProc so the system can perform the cleanup.
-    /// </summary>
-    public const int RIM_INPUTSINK = 0;
-
-    #endregion Constants
+    #endregion
 
     #region Methods
 
@@ -128,28 +75,6 @@ namespace MediaPortal.Util
     /// <returns></returns>
     [DllImport("User32.dll", EntryPoint = "RegisterRawInputDevices", SetLastError = true)]
     public static extern bool RegisterRawInputDevices([In] RAWINPUTDEVICE[] pRawInputDevices, [In] uint uiNumDevices, [In] uint cbSize);
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="hRawInput"></param>
-    /// <param name="uiCommand"></param>
-    /// <param name="pData"></param>
-    /// <param name="pcbSize"></param>
-    /// <param name="cbSizeHeader"></param>
-    /// <returns></returns>
-    [DllImport("user32.dll", EntryPoint = "GetRawInputData", SetLastError = true)]
-    public static extern int GetRawInputData(IntPtr hRawInput, uint uiCommand, out RAWINPUT pData, ref uint pcbSize, uint cbSizeHeader);
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="hRawInput"></param>
-    /// <param name="command"></param>
-    /// <param name="pData"></param>
-    /// <param name="size"></param>
-    /// <param name="sizeHeader"></param>
-    /// <returns></returns>
-    [DllImport("user32.dll", EntryPoint = "GetRawInputData", SetLastError = true)]
-    public static extern int GetRawInputData(IntPtr hRawInput, uint uiCommand, IntPtr pData, ref uint pcbSize, uint cbSizeHeader);
 
     /// <summary>
     /// Sends the specified message to one or more windows.
@@ -272,7 +197,7 @@ namespace MediaPortal.Util
       Int32 nFolder, // A CSIDL value that identifies the folder whose path is to be retrieved.
       IntPtr hToken, // An access token that can be used to represent a particular user.
       UInt32 dwFlags,
-      // Flags to specify which path is to be returned. It is used for cases where the folder associated with a CSIDL may be moved or renamed by the user.
+      // Flags to specify which path is to be returned. It is used for cases where the folder associated with a CSIDL may be moved or renamed by the user. 
       StringBuilder pszPath);
 
     // Pointer to a null-terminated string which will receive the path.
@@ -317,7 +242,7 @@ namespace MediaPortal.Util
       [In, MarshalAs(UnmanagedType.LPWStr)] string lpLCData, int cchData
       );
 
-    #endregion Methods
+    #endregion
 
     #region Structures
 
@@ -408,6 +333,8 @@ namespace MediaPortal.Util
 
     /// <summary>
     /// Defines information for the raw input devices.
+    /// <para />
+    /// See: http://msdn.microsoft.com/en-us/library/windows/desktop/ms645565%28v=vs.85%29.aspx
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct RAWINPUTDEVICE
@@ -417,103 +344,38 @@ namespace MediaPortal.Util
         public uint dwFlags;
         public IntPtr hwndTarget;
     }
-    /// <summary>
-    /// Union of mouse, keyboard and hid
-    /// </summary>
-    [StructLayout(LayoutKind.Explicit)]
-    public struct RAWDATA
-    {
-        [FieldOffset(0)]
-        internal RAWMOUSE mouse;
-        [FieldOffset(0)]
-        internal RAWKEYBOARD keyboard;
-        [FieldOffset(0)]
-        internal RAWHID hid;
-    }
-    /// <summary>
-    /// Contains the raw input from a device.
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
-    public struct RAWINPUT
-    {
-        public RAWINPUTHEADER header;           // 64 bit header size is 24  32 bit the header size is 16
-        public RAWDATA data;                    // Creating the rest in a struct allows the header size to align correctly for 32 or 64 bit
-    }
-    /// <summary>
-    /// Contains the header information that is part of the raw input data.
-    /// </summary>
+
     [StructLayout(LayoutKind.Sequential)]
     public struct RAWINPUTHEADER
     {
-        public uint dwType;                     // Type of raw input (RIM_TYPEHID 2, RIM_TYPEKEYBOARD 1, RIM_TYPEMOUSE 0)
-        public uint dwSize;                     // Size in bytes of the entire input packet of data. This includes RAWINPUT plus possible extra input reports in the RAWHID variable length array.
-        public IntPtr hDevice;                  // A handle to the device generating the raw input data.
-        public IntPtr wParam;                   // RIM_INPUT 0 if input occurred while application was in the foreground else RIM_INPUTSINK 1 if it was not.
-
-        public override string ToString()
-        {
-            return string.Format("RawInputHeader\n dwType : {0}\n dwSize : {1}\n hDevice : {2}\n wParam : {3}", dwType, dwSize, hDevice, wParam);
-        }
+        public uint dwType;
+        public uint dwSize;
+        public IntPtr Device;
+        public IntPtr wParam;
     }
-    /// <summary>
-    /// Describes the format of the raw input from a Human Interface Device (HID).
-    /// </summary>
+
     [StructLayout(LayoutKind.Sequential)]
-    internal struct RAWHID
+    public struct RAWKEYBOARD
     {
-        public uint dwSizeHid;
-        public uint dwCount;
-        public byte bRawData;
-
-        public override string ToString()
-        {
-            return string.Format("Rawhib\n dwSizeHid : {0}\n dwCount : {1}\n bRawData : {2}\n", dwSizeHid, dwCount, bRawData);
-        }
+        public ushort MakeCode;
+        public ushort Flags;
+        public ushort Reserved;
+        public ushort VirtualKey;
+        public int Message;
+        public int ExtraInformation;
     }
-    /// <summary>
-    /// Contains information about the state of the mouse.
-    /// </summary>
+
     [StructLayout(LayoutKind.Explicit)]
-    internal struct RAWMOUSE
+    public struct RAWINPUT
     {
         [FieldOffset(0)]
-        public ushort usFlags;
-        [FieldOffset(4)]
-        public uint ulButtons;
-        [FieldOffset(4)]
-        public ushort usButtonFlags;
-        [FieldOffset(6)]
-        public ushort usButtonData;
-        [FieldOffset(8)]
-        public uint ulRawButtons;
-        [FieldOffset(12)]
-        public int lLastX;
+        public RAWINPUTHEADER Header;
         [FieldOffset(16)]
-        public int lLastY;
-        [FieldOffset(20)]
-        public uint ulExtraInformation;
-    }
-    /// <summary>
-    /// Contains information about the state of the keyboard.
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct RAWKEYBOARD
-    {
-        public ushort Makecode;                 // Scan code from the key depression
-        public ushort Flags;                    // One or more of RI_KEY_MAKE, RI_KEY_BREAK, RI_KEY_E0, RI_KEY_E1
-        public ushort Reserved;                 // Always 0
-        public ushort VKey;                     // Virtual Key Code
-        public uint Message;                    // Corresponding Windows message for exmaple (WM_KEYDOWN, WM_SYASKEYDOWN etc)
-        public uint ExtraInformation;           // The device-specific addition information for the event (seems to always be zero for keyboards)
-
-        public override string ToString()
-        {
-            return string.Format("Rawkeyboard\n Makecode: {0}\n Makecode(hex) : {0:X}\n Flags: {1}\n Reserved: {2}\n VKeyName: {3}\n Message: {4}\n ExtraInformation {5}\n",
-                                                Makecode, Flags, Reserved, VKey, Message, ExtraInformation);
-        }
+        public RAWKEYBOARD Keyboard;
+        //mouse and HID parts omitted
     }
 
-    #endregion Structures
+    #endregion
 
     #region Enums
 
@@ -552,11 +414,11 @@ namespace MediaPortal.Util
       WH_MOUSE_LL = 14
     }
 
-    #endregion Enums
+    #endregion
 
     public delegate int HookDelegate(int code, int wParam, IntPtr lParam);
 
-    #endregion Interop declarations
+    #endregion
 
     #region Power Saving
 
@@ -583,7 +445,7 @@ namespace MediaPortal.Util
       SetThreadExecutionState(EXECUTION_STATE.ES_CONTINUOUS);
     }
 
-    #endregion Power Saving
+    #endregion
 
     #region x64
 
@@ -606,7 +468,7 @@ namespace MediaPortal.Util
       return isWow64;
     }
 
-    #endregion x64
+    #endregion
 
 
     //Checks if the computer is connected to the internet...
@@ -688,11 +550,11 @@ namespace MediaPortal.Util
     }
 
 
-    /// <summary>
-    /// Finds the specified window by its Process ID. Then brings it to
-    /// the foreground.
-    /// </summary>
-    /// <param name="_hWnd">Handle to the window to find and activate.</param>
+    /// <summary> 
+    /// Finds the specified window by its Process ID. Then brings it to 
+    /// the foreground. 
+    /// </summary> 
+    /// <param name="_hWnd">Handle to the window to find and activate.</param> 
     public static void ActivateWindowByHandle(uint _hWnd)
     {
       WindowPlacement windowPlacement;
@@ -704,17 +566,17 @@ namespace MediaPortal.Util
           ShowWindow((IntPtr)_hWnd, ShowWindowFlags.Restore);
           break;
         case ShowWindowFlags.ShowMinimized: //Window is minimized
-          // if the window is minimized, then we need to restore it to its
-          // previous size. we also take into account whether it was
-          // previously maximized.
+          // if the window is minimized, then we need to restore it to its 
+          // previous size. we also take into account whether it was 
+          // previously maximized. 
           ShowWindowFlags showCmd = (windowPlacement.flags == WPF_RESTORETOMAXIMIZED)
                                       ? ShowWindowFlags.ShowMaximized
                                       : ShowWindowFlags.ShowNormal;
           ShowWindow((IntPtr)_hWnd, showCmd);
           break;
         default:
-          // if it's not minimized, then we just call SetForegroundWindow to
-          // bring it to the front.
+          // if it's not minimized, then we just call SetForegroundWindow to 
+          // bring it to the front. 
           SetForegroundWindow((IntPtr)_hWnd);
           break;
       }
@@ -722,7 +584,7 @@ namespace MediaPortal.Util
 
 
     /// <summary>
-    ///
+    /// 
     /// </summary>
     public static void ActivatePreviousInstance()
     {
@@ -743,7 +605,7 @@ namespace MediaPortal.Util
         {
           continue;
         }
-        // Instructs the process to go to the foreground
+        // Instructs the process to go to the foreground 
         SetForeGround(process);
         Environment.Exit(0);
       }
@@ -820,7 +682,7 @@ namespace MediaPortal.Util
 
 
     /// <summary>
-    ///
+    /// 
     /// </summary>
     /// <param name="csidl"></param>
     /// <returns></returns>

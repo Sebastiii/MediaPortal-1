@@ -123,7 +123,7 @@ namespace MediaPortal.InputDevices
     {
       if (_remoteActive)
       {
-        if (msg.Msg == WM_KEYDOWN || msg.Msg == WM_SYSKEYDOWN || msg.Msg == Win32API.WM_APPCOMMAND || msg.Msg == WM_LBUTTONDOWN ||
+        if (msg.Msg == WM_KEYDOWN || msg.Msg == WM_SYSKEYDOWN || msg.Msg == Win32.Const.WM_APPCOMMAND || msg.Msg == WM_LBUTTONDOWN ||
             msg.Msg == WM_RBUTTONDOWN || msg.Msg == WM_MOUSEMOVE)
         {
           switch ((Keys)msg.WParam)
@@ -137,7 +137,7 @@ namespace MediaPortal.InputDevices
             default:
               int keycode = (int)msg.WParam;
 
-              AppCommands appCommand = (AppCommands)Win32API.GET_APPCOMMAND_LPARAM(msg.LParam);
+              AppCommands appCommand = (AppCommands)Win32.Macro.GET_APPCOMMAND_LPARAM(msg.LParam);
               // find out which request the MCE remote handled last
               if ((appCommand == InputDevices.LastHidRequest) && (appCommand != AppCommands.VolumeDown) &&
                   (appCommand != AppCommands.VolumeUp))

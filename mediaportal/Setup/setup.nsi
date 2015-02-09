@@ -546,7 +546,8 @@ Section "MediaPortal core files (required)" SecCore
   ; libbluray
   SetOutPath "$MPdir.Base"
   File /oname=bluray.dll "${git_DirectShowFilters}\bin_Win32\libbluray\libbluray.dll"
-  File /oname=libbluray.jar "${git_Libbluray}\src\.libs\libbluray-.jar"
+  ;File /oname=libbluray.jar "${git_Libbluray}\src\.libs\libbluray-.jar"
+  File /oname=libbluray-j2se-0.6.2.jar "${git_Libbluray}\src\.libs\libbluray-.jar"
   ; TvLibrary for Genre
   File "${git_TVServer}\TvLibrary.Interfaces\bin\${BUILD_TYPE}\TvLibrary.Interfaces.dll"
   File "${git_MP}\LastFMLibrary\bin\${BUILD_TYPE}\LastFMLibrary.dll"

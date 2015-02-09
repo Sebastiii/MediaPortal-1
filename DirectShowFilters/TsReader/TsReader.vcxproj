@@ -76,7 +76,7 @@
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>$(SolutionDir)baseclasses;$(WINDOWS_SDK)Include\;..\LiveMedia555\BasicUsageEnvironment/include;..\LiveMedia555\groupsock/include;..\LiveMedia555\liveMedia;..\LiveMedia555\liveMedia/include;..\LiveMedia555\UsageEnvironment/include;../LiveMedia555/MediaPortal;..\shared;..\streamingserver\Source;..\dxerr;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32; _WIN32; NDEBUG; _CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32; _WIN32; NDEBUG; _CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions);_USING_V110_SDK71_;</PreprocessorDefinitions>
       <StringPooling>false</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>false</FunctionLevelLinking>
@@ -137,7 +137,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)baseclasses;$(WINDOWS_SDK)Include\;..\LiveMedia555\BasicUsageEnvironment/include;..\LiveMedia555\groupsock/include;../LiveMedia555/liveMedia;..\LiveMedia555\liveMedia/include;..\LiveMedia555\UsageEnvironment/include;../LiveMedia555/MediaPortal;..\shared;..\streamingserver\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DBG=1;DEBUG;_DEBUG;INC_OLE2;STRICT;_MT;_DLL;_X86_=1;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DBG=1;DEBUG;_DEBUG;INC_OLE2;STRICT;_MT;_DLL;_X86_=1;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions);_USING_V110_SDK71_;</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeaderOutputFile>.\obj\Debug/FileWriter.pch</PrecompiledHeaderOutputFile>

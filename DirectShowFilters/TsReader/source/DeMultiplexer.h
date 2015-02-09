@@ -40,6 +40,7 @@
 #include <dvdmedia.h>
 #include "MpegPesParser.h"
 #include "FrameHeaderParser.h"
+#include "CcParseH264.h"
 
 using namespace std;
 class CTsReaderFilter;
@@ -98,7 +99,7 @@ public:
   bool       GetAudioStream(__int32 &stream);
 
   void       GetAudioStreamInfo(int stream,char* szName);
-  void       GetAudioStreamType(int stream,CMediaType&  pmt, int iPosition);
+  bool       GetAudioStreamType(int stream,CMediaType&  pmt, int iPosition);
   bool       GetVideoStreamType(CMediaType &pmt);
   int        GetAudioStreamCount();
 
@@ -209,6 +210,7 @@ private:
   FileReader* m_reader;
   CPatParser m_patParser;
   CMpegPesParser *m_mpegPesParser;
+  CcParseH264 *m_CcParserH264;
   CPidTable m_pids;
   vector<CBuffer*> m_vecSubtitleBuffers;
   vector<CBuffer*> m_vecVideoBuffers;

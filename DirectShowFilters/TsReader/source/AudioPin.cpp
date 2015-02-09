@@ -151,12 +151,7 @@ HRESULT CAudioPin::GetMediaType(int iPosition, CMediaType *pmt)
 
   CDeMultiplexer& demux=m_pTsReaderFilter->GetDemultiplexer();
 
-  for (int i=0; (i < 200 && !demux.AudPidGood()); i++) //Wait up to 1 sec for pmt to be valid
-  {
-    Sleep(5);
-  }
-
-  for (int i=0; i < 200; i++) //Wait up to 1 sec for pmt to be valid
+  for (int i=0; i < 400; i++) //Wait up to 2 sec for pmt to be valid
   {
     if (demux.PatParsed())
     {
@@ -168,17 +163,20 @@ HRESULT CAudioPin::GetMediaType(int iPosition, CMediaType *pmt)
       }
       else
       {
-        //LogDebug("audPin:GetMediaType() - good pid");
         int audioIndex = 0;
         demux.GetAudioStream(audioIndex);
-        demux.GetAudioStreamType(audioIndex, *pmt, iPosition);
-        return S_OK;
+        if(demux.GetAudioStreamType(audioIndex, *pmt, iPosition))
+        {
+          //LogDebug("audPin:GetMediaType() - good pid");
+          return S_OK;
+        }
       }
     }
     Sleep(5);
   }
 
   //Return a null media type
+  LogDebug("audPin:GetMediaType() - Timeout");
   pmt->InitMediaType();
   return S_OK;
 }
@@ -207,8 +205,8 @@ HRESULT CAudioPin::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES 
   CheckPointer(pAlloc, E_POINTER);
   CheckPointer(pRequest, E_POINTER);
 
-  pRequest->cBuffers = max(30, pRequest->cBuffers);
-  pRequest->cbBuffer = max(8192, (ULONG)pRequest->cbBuffer);
+  pRequest->cBuffers = max(AUD_PIN_BUFFERS, pRequest->cBuffers);
+  pRequest->cbBuffer = max(MAX_BUFFER_SIZE, (ULONG)pRequest->cbBuffer);
 
   ALLOCATOR_PROPERTIES Actual;
   hr = pAlloc->SetProperties(pRequest, &Actual);
@@ -219,6 +217,7 @@ HRESULT CAudioPin::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES 
 
   if (Actual.cbBuffer < pRequest->cbBuffer)
   {
+    LogDebug("audPin:DecideBufferSize - failed to get buffer");
     return E_FAIL;
   }
 

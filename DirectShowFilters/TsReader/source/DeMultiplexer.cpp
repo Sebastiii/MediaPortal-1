@@ -36,15 +36,15 @@
 #include "subtitlePin.h"
 //#include "..\..\DVBSubtitle2\Source\IDVBSub.h"
 #include "mediaFormats.h"
-#include "h264nalu.h"
+//#include "h264nalu.h"
 #include <cassert>
 
 // For more details for memory leak detection see the alloctracing.h header
 #include "..\..\alloctracing.h"
 
 
-//Macro borrowed from MPC-HC/LAV splitter...
-#define MOVE_TO_H264_START_CODE(b, e) while(b <= e-4 && !((*(DWORD *)b == 0x01000000) || ((*(DWORD *)b & 0x00FFFFFF) == 0x00010000))) b++; if((b <= e-4) && *(DWORD *)b == 0x01000000) b++;
+//Macro derived from from MPC-HC/LAV splitter...
+#define MOVE_TO_H264_START_CODE(b, e, fb) fb=false; while(b <= e-4 && !((*(DWORD *)b == 0x01000000) || ((*(DWORD *)b & 0x00FFFFFF) == 0x00010000))) b++; if((b <= e-4) && *(DWORD *)b == 0x01000000) {b++; fb=true;}
 
 // uncomment the //LogDebug to enable extra logging
 #define LOG_SAMPLES //LogDebug
@@ -147,6 +147,7 @@ CDeMultiplexer::CDeMultiplexer(CTsDuration& duration,CTsReaderFilter& filter)
   m_prefetchLoopDelay = PF_LOOP_DELAY_MIN;
 
   m_mpegPesParser = new CMpegPesParser();
+  m_CcParserH264 = new CcParseH264();
 
   m_pFileReadBuffer = NULL;
   m_pFileReadBuffer = new byte[READ_SIZE]; //~130ms of data @ 8Mbit/s
@@ -178,6 +179,8 @@ CDeMultiplexer::~CDeMultiplexer()
   delete m_pCurrentAudioBuffer;
   delete m_pCurrentSubtitleBuffer;
   delete m_mpegPesParser;
+  delete m_CcParserH264;
+
 
   m_subtitleStreams.clear();
   m_audioStreams.clear();
@@ -304,7 +307,7 @@ int CDeMultiplexer::GetAudioStreamCount()
   return m_audioStreams.size();
 }
 
-void CDeMultiplexer::GetAudioStreamType(int stream,CMediaType& pmt, int iPosition)
+bool CDeMultiplexer::GetAudioStreamType(int stream,CMediaType& pmt, int iPosition)
 {
   if (stream < 0 || stream >= m_audioStreams.size() || m_mpegPesParser == NULL )
   {
@@ -316,7 +319,7 @@ void CDeMultiplexer::GetAudioStreamType(int stream,CMediaType& pmt, int iPositio
     pmt.SetVariableSize();
     pmt.SetFormatType(&FORMAT_WaveFormatEx);
     pmt.SetFormat(MPEG2AudioFormat,sizeof(MPEG2AudioFormat));
-    return;
+    return false;
   }
 
   CAutoLock lock (&m_mpegPesParser->m_sectionAudioPmt);
@@ -400,6 +403,8 @@ void CDeMultiplexer::GetAudioStreamType(int stream,CMediaType& pmt, int iPositio
     wfe->nChannels = m_mpegPesParser->basicAudioInfo.channels;
     wfe->nSamplesPerSec = m_mpegPesParser->basicAudioInfo.sampleRate;
   }
+  
+  return m_mpegPesParser->basicAudioInfo.isValid;
 }
 
 // This methods selects the subtitle stream specified
@@ -1343,8 +1348,8 @@ bool CDeMultiplexer::CheckContinuity(int prevCC, CTsHeader& header)
   return true;
 }
 
-/// This method will check if the tspacket is an audio packet
-/// ifso, it decodes the PES audio packet and stores it in the audio buffers
+// This method will check if the tspacket is an audio packet
+// ifso, it decodes the PES audio packet and stores it in the audio buffers
 void CDeMultiplexer::FillAudio(CTsHeader& header, byte* tsPacket, int bufferOffset, int bufferLength)
 {
   //LogDebug("FillAudio - audio PID %d", m_audioPid );
@@ -1367,6 +1372,8 @@ void CDeMultiplexer::FillAudio(CTsHeader& header, byte* tsPacket, int bufferOffs
   }
 
   m_AudioPrevCC = header.ContinuityCounter;
+
+  //LogDebug("FillAudio() process TS packet");
 
   //CAutoLock lock (&m_sectionAudio);
   //does tspacket contain the start of a pes packet?
@@ -2092,7 +2099,7 @@ void CDeMultiplexer::FillAudio(CTsHeader& header, byte* tsPacket, int bufferOffs
     }
     
     //packet contains rest of a pes packet
-    //does the entire data in this tspacket fit in the current buffer ?
+    //does the entire data in this tspacket fit in the current buffer ?    
     if (m_pCurrentAudioBuffer->Length()+(188-pos)>=MAX_BUFFER_SIZE)
     {
       //Discard this new/current PES packet due to overflow
@@ -2102,12 +2109,15 @@ void CDeMultiplexer::FillAudio(CTsHeader& header, byte* tsPacket, int bufferOffs
       LogDebug("PES audio buffer overflow error");
       return;
     }
+
     //copy the data into the current buffer
     if (pos>0 && pos < 188)
     {
       m_pCurrentAudioBuffer->Add(&tsPacket[pos],188-pos);
     }
   }
+  
+  //LogDebug("FillAudio() end");
 }
 
 
@@ -2371,8 +2381,9 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
   {
     BYTE* start = m_p->GetData();
     BYTE* end = start + m_p->GetCount();
+    bool fourByte;
 
-    MOVE_TO_H264_START_CODE(start, end);
+    MOVE_TO_H264_START_CODE(start, end, fourByte);
 
  	
     while(start <= end-4)
@@ -2383,7 +2394,7 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
         next = m_p->GetData() + m_lastStart;
       }
 
-      MOVE_TO_H264_START_CODE(next, end);
+      MOVE_TO_H264_START_CODE(next, end, fourByte);
 
       if(next >= end-4)
       {
@@ -2399,7 +2410,7 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
       
       //Copy complete NALU into p2 buffer
           
-      size -= 3; //Adjust to allow for start code
+      size -= (fourByte ? 4 : 3); //Adjust to allow for start code
       
       if ((size <= 0) || (size > 4194303)) //Sanity check
       {
@@ -2414,12 +2425,8 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
         LogDebug("DeMux: H264 NALU size out-of-bounds %d", size);
         return;
       }
-      
-      DWORD dwNalLength = 
-        ((size >> 24) & 0x000000ff) |
-        ((size >>  8) & 0x0000ff00) |
-        ((size <<  8) & 0x00ff0000) |
-        ((size << 24) & 0xff000000);
+              
+      DWORD dwNalLength = _byteswap_ulong(size);  //dwNalLength is big-endian format
 
       //LogDebug("DeMux: NALU size %d", size);
 
@@ -2448,6 +2455,14 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
       {
         m_fHasAccessUnitDelimiters = true;
       }
+
+//      if(*(p2->GetData()+4) == 0x06 && *(p2->GetData()+5) == 0x04) 
+//      {
+//        LogDebug("demux: p2 H264 SEI CC 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x", 
+//                                                                                      *(p2->GetData()+6), *(p2->GetData()+7), *(p2->GetData()+8), *(p2->GetData()+9), 
+//                                                                                      *(p2->GetData()+10), *(p2->GetData()+11), *(p2->GetData()+12), *(p2->GetData()+13),
+//                                                                                      *(p2->GetData()+14), *(p2->GetData()+15), *(p2->GetData()+16), *(p2->GetData()+17));
+//      }
         
       if(((*(p2->GetData()+4)&0x1f) == 0x09) || (!m_fHasAccessUnitDelimiters && m_isNewNALUTimestamp))
       {
@@ -2466,12 +2481,8 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
           {
             //Add fake AUD....
             DWORD size = 2;
-            WORD data9 = 0xF009;
-            DWORD dwNalLength = 
-              ((size >> 24) & 0x000000ff) |
-              ((size >>  8) & 0x0000ff00) |
-              ((size <<  8) & 0x00ff0000) |
-              ((size << 24) & 0xff000000);
+            WORD data9 = 0xF009;            
+            DWORD dwNalLength = _byteswap_ulong(size);  //dwNalLength is big-endian format
               
             p->SetCount (size+sizeof(dwNalLength));
             
@@ -2488,6 +2499,24 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
             //if (!iFrameScanner.SeenEnough())
             //  iFrameScanner.ProcessNALU(p2);
             LOG_OUTSAMPLES("Output p4 NALU Type: %d (%d), rtStart: %d", p4->GetAt(4)&0x1f, p4->GetCount(), (int)p->rtStart);
+
+            //if(p4->GetAt(4) == 0x06 && p4->GetAt(5) == 0x04) //SEI with Closed Caption data
+            if(p4->GetAt(4) == 0x06) //SEI data
+            {
+              if (p4->GetAt(5) == 0x04) //Closed Caption data payload
+              {
+                //LogDebug("demux: p4 H264 SEI NALU 0x%x 0x%x",p4->GetAt(6), p4->GetAt(7));
+                LogDebug("demux: p4 H264 SEI CC start - 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x - end 0x%x, 0x%x, 0x%x, 0x%x", 
+                                   p4->GetAt(6 ), p4->GetAt(7 ), p4->GetAt(8 ), p4->GetAt(9 ), 
+                                   p4->GetAt(10), p4->GetAt(11), p4->GetAt(12), p4->GetAt(13),
+                                   p4->GetAt(14), p4->GetAt(15), p4->GetAt(16), p4->GetAt(17),
+                                   p4->GetAt(p4->GetCount()-4), p4->GetAt(p4->GetCount()-3), p4->GetAt(p4->GetCount()-2), p4->GetAt(p4->GetCount()-1)
+                                   );
+              }
+              
+              // m_CcParserH264->sei_rbsp(p4->GetData()+5, p4->GetCount()-6);
+            }
+            m_CcParserH264->do_NAL(p4->GetData()+4, p4->GetCount()-4);
             
             nalID = p4->GetAt(4);
             if ((((nalID & 0x9f) == 0x07) || ((nalID & 0x9f) == 0x08)) && ((nalID & 0x60) != 0)) //Process SPS & PPS data
@@ -2495,7 +2524,7 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
               Gop = m_mpegPesParser->OnTsPacket(p4->GetData(), p4->GetCount(), false, m_mpegParserReset);
               m_mpegParserReset = false;
             }
-                                        
+                                                   
             if (p->rtStart == Packet::INVALID_TIME)
             {
               p->rtStart = p4->rtStart;
@@ -3747,8 +3776,7 @@ bool CDeMultiplexer::VidPidGood(void)
 
 bool CDeMultiplexer::AudPidGood(void)
 {
-  if (m_mpegPesParser == NULL) return false;
-  return ((m_pids.audioPids.size() > 0) && m_mpegPesParser->basicAudioInfo.isValid);
+  return (m_pids.audioPids.size() > 0);
 }
 
 bool CDeMultiplexer::SubPidGood(void)

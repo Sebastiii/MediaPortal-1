@@ -1,4 +1,4 @@
-#include "..\ax\StdAfx.h"
+#include "StdAfx.h"
 
 #include "CCParser.h"
 

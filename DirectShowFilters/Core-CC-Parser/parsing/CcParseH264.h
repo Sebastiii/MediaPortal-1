@@ -63,15 +63,15 @@ BYTE* get_cc_buffer_pointer();
 
 private :
 
-int           ccblocks_in_avc_total = 0;
-int           ccblocks_in_avc_lost = 0;
-long          num_unexpected_sei_length = 0;
-WORD          cc_count = 0;
-DWORD         cc_bytes_in_buffer = 0; //Max buffer size is 65536
+int           ccblocks_in_avc_total;
+int           ccblocks_in_avc_lost;
+long          num_unexpected_sei_length;
+WORD          cc_count;
+DWORD         cc_bytes_in_buffer; //Max buffer size is 65536
 
 // buffer to hold cc data
 unsigned char *cc_data = NULL;
-DWORD         cc_databufsize = 1024;
+DWORD         cc_databufsize;
 
 // local functions
 unsigned char   *sei_message (unsigned char *seibuf, unsigned char *seiend);

@@ -38,7 +38,7 @@
 //  - Anshul Maheshwari
 //  -----------------------------------------------
 
-#include "..\ax\StdAfx.h"
+#include "StdAfx.h"
 
 #include "CcParseH264.h"
 

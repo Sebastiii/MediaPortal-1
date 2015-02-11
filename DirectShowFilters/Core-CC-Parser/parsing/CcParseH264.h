@@ -70,7 +70,7 @@ WORD          cc_count;
 DWORD         cc_bytes_in_buffer; //Max buffer size is 65536
 
 // buffer to hold cc data
-unsigned char *cc_data = NULL;
+unsigned char *cc_data;
 DWORD         cc_databufsize;
 
 // local functions

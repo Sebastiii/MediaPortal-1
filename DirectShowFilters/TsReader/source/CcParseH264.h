@@ -62,15 +62,15 @@ void  parseAVC1sample (const BYTE* pData, DWORD sampleLength, DWORD dwFlags);
 
 private :
 
-int           ccblocks_in_avc_total=0;
-int           ccblocks_in_avc_lost=0;
-long          num_unexpected_sei_length=0;
+int           ccblocks_in_avc_total;
+int           ccblocks_in_avc_lost;
+long          num_unexpected_sei_length;
 unsigned char           cc_count;
 
 // buffer to hold cc data
-unsigned char *cc_data = NULL;
-long          cc_databufsize = 1024;
-int           cc_buffer_saved=1; // Was the CC buffer saved after it was last updated?
+unsigned char *cc_data;
+long          cc_databufsize;
+int           cc_buffer_saved; // Was the CC buffer saved after it was last updated?
 
 // local functions
 unsigned char   *sei_message (unsigned char *seibuf, unsigned char *seiend);

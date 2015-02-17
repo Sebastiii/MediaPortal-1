@@ -2670,6 +2670,13 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
 
           if (Gop)
           {
+            if ((m_lastARX != m_mpegPesParser->basicVideoInfo.arx || m_lastARY != m_mpegPesParser->basicVideoInfo.ary)
+                  && m_lastVidResX==m_mpegPesParser->basicVideoInfo.width && m_lastVidResY==m_mpegPesParser->basicVideoInfo.height)
+            {
+              LogDebug("DeMultiplexer: Video aspect ratio change to %d:%d", m_mpegPesParser->basicVideoInfo.arx, m_mpegPesParser->basicVideoInfo.ary);
+              m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType, m_mpegPesParser->basicVideoInfo.width, m_mpegPesParser->basicVideoInfo.height, m_mpegPesParser->basicVideoInfo.arx, m_mpegPesParser->basicVideoInfo.ary, m_bitRate, m_mpegPesParser->basicVideoInfo.isInterlaced);
+            }
+            
             if (m_lastVidResX!=m_mpegPesParser->basicVideoInfo.width || m_lastVidResY!=m_mpegPesParser->basicVideoInfo.height)
             {
               LogDebug("DeMultiplexer: %x video format changed, %dx%d @ %d:%d, %.3fHz %s",header.Pid,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,(float)m_mpegPesParser->basicVideoInfo.fps,m_mpegPesParser->basicVideoInfo.isInterlaced ? "interlaced":"progressive");
@@ -2689,11 +2696,6 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
                 m_videoChanged = true;
               }
               m_filter.GetVideoPin()->SetAddPMT();
-            }
-            else if (m_lastARX != m_mpegPesParser->basicVideoInfo.arx || m_lastARY != m_mpegPesParser->basicVideoInfo.ary)
-            {
-              LogDebug("DeMultiplexer: triggering OnVideoFormatChanged");
-              m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType, m_mpegPesParser->basicVideoInfo.width, m_mpegPesParser->basicVideoInfo.height, m_mpegPesParser->basicVideoInfo.arx, m_mpegPesParser->basicVideoInfo.ary, m_bitRate, m_mpegPesParser->basicVideoInfo.isInterlaced);
             }
             else //video resolution is unchanged, but there may be other format changes
             {
@@ -2720,9 +2722,8 @@ void CDeMultiplexer::FillVideoH264(CTsHeader& header, byte* tsPacket)
             }
             m_lastVidResX=m_mpegPesParser->basicVideoInfo.width;
             m_lastVidResY=m_mpegPesParser->basicVideoInfo.height;
-	        m_lastARX=m_mpegPesParser->basicVideoInfo.arx;
-			m_lastARY=m_mpegPesParser->basicVideoInfo.ary;
-
+	          m_lastARX=m_mpegPesParser->basicVideoInfo.arx;
+			      m_lastARY=m_mpegPesParser->basicVideoInfo.ary;
           }
         }
         else
@@ -3167,8 +3168,14 @@ void CDeMultiplexer::FillVideoMPEG2(CTsHeader& header, byte* tsPacket)
             
             if (Gop)
             {              
-              if (m_lastVidResX!=m_mpegPesParser->basicVideoInfo.width || m_lastVidResY!=m_mpegPesParser->basicVideoInfo.height
-                || m_lastARX != m_mpegPesParser->basicVideoInfo.arx || m_lastARY != m_mpegPesParser->basicVideoInfo.ary)
+              if ((m_lastARX != m_mpegPesParser->basicVideoInfo.arx || m_lastARY != m_mpegPesParser->basicVideoInfo.ary)
+                    && m_lastVidResX==m_mpegPesParser->basicVideoInfo.width && m_lastVidResY==m_mpegPesParser->basicVideoInfo.height)
+              {
+                LogDebug("DeMultiplexer: Video aspect ratio change to %d:%d", m_mpegPesParser->basicVideoInfo.arx, m_mpegPesParser->basicVideoInfo.ary);
+                m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType, m_mpegPesParser->basicVideoInfo.width, m_mpegPesParser->basicVideoInfo.height, m_mpegPesParser->basicVideoInfo.arx, m_mpegPesParser->basicVideoInfo.ary, m_bitRate, m_mpegPesParser->basicVideoInfo.isInterlaced);
+              }
+              
+              if (m_lastVidResX!=m_mpegPesParser->basicVideoInfo.width || m_lastVidResY!=m_mpegPesParser->basicVideoInfo.height)
               {
                 LogDebug("DeMultiplexer: %x video format changed, %dx%d @ %d:%d, %.3fHz %s",header.Pid,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,(float)m_mpegPesParser->basicVideoInfo.fps,m_mpegPesParser->basicVideoInfo.isInterlaced ? "interlaced":"progressive");
                 m_filter.OnVideoFormatChanged(m_mpegPesParser->basicVideoInfo.streamType,m_mpegPesParser->basicVideoInfo.width,m_mpegPesParser->basicVideoInfo.height,m_mpegPesParser->basicVideoInfo.arx,m_mpegPesParser->basicVideoInfo.ary,15000000,m_mpegPesParser->basicVideoInfo.isInterlaced);
@@ -3213,8 +3220,8 @@ void CDeMultiplexer::FillVideoMPEG2(CTsHeader& header, byte* tsPacket)
               }
               m_lastVidResX=m_mpegPesParser->basicVideoInfo.width;
               m_lastVidResY=m_mpegPesParser->basicVideoInfo.height;
-			  m_lastARX=m_mpegPesParser->basicVideoInfo.arx;
-			  m_lastARY=m_mpegPesParser->basicVideoInfo.ary;
+      			  m_lastARX=m_mpegPesParser->basicVideoInfo.arx;
+      			  m_lastARY=m_mpegPesParser->basicVideoInfo.ary;
             }
           }
           else

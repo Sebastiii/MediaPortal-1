@@ -124,8 +124,9 @@ void CPmtGrabber::OnNewSection(CSection& section)
       LogDebug("pmtgrabber: trying to use new detected serviceid %x", serviceId);
       SetPmtPid(GetPid(), serviceId);
       SetPid(GetPid());
-      if (GetPid() == 0) // PID 0 is the PAT, so look for matching PMT
+      if (GetPid() == 0 || serviceId != m_iServiceId) // PID 0 is the PAT, so look for matching PMT
       {
+        LogDebug("pmtgrabber: new detected serviceid %x failed", serviceId);
         return;
       }
     }

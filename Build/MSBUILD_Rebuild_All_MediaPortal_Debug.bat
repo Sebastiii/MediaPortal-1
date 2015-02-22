@@ -16,6 +16,7 @@ call ant -f %LibblurayJAR% -Dsrc_awt=:java-j2se
 
 echo.
 echo Building native components...
+call VS_Rebuild_Release_DirectShowFilters.bat
 call VS_Rebuild_Debug_DirectShowFilters.bat
 
 echo.
@@ -23,6 +24,10 @@ echo Building MediaPortal...
 set xml=Build_Report_%BUILD_TYPE%_MediaPortal.xml
 set html=Build_Report_%BUILD_TYPE%_MediaPortal.html
 set logger=/l:XmlFileLogger,"BuildReport\MSBuild.ExtensionPack.Loggers.dll";logfile=%xml%
+
+@ECHO OFF
+
+call "MSBUILD_Rebuild_Release_MediaPortal.bat" Release
 
 "%WINDIR%\Microsoft.NET\Framework\v4.0.30319\MSBUILD.exe" %logger% /target:Rebuild /property:Configuration=%BUILD_TYPE%;Platform=x86 "%MediaPortal%\MediaPortal.sln" >> %log%
 BuildReport\msxsl %xml% _BuildReport_Files\BuildReport.xslt -o %html%

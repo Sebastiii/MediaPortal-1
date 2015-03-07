@@ -1136,6 +1136,7 @@ namespace MediaPortal.GUI.Music
       }
 
       Log.Debug("GUIMusicPlayingNow: Number of similar tracks returned from Last.FM: {0}", tracks.Count);
+
       var dbTracks = GetSimilarTracksInDatabase(tracks);
 
       for (var i = 0; i < 3; i++)
@@ -1180,7 +1181,7 @@ namespace MediaPortal.GUI.Music
       var dbTrackListing = new List<Song>();
 
       //identify which are available in users collection (ie. we can use they for auto DJ mode)
-      foreach (var strSql in tracks.Select(track => String.Format("select * from tracks where strartist like '%| {0} |%' and strTitle = '{1}'",
+      foreach (var strSql in tracks.Select(track => String.Format("select * from tracks where strartist like '%| {0} |%' and strTitle like '{1}'",
                                                                   DatabaseUtility.RemoveInvalidChars(track.ArtistName),
                                                                   DatabaseUtility.RemoveInvalidChars(track.TrackTitle))))
       {

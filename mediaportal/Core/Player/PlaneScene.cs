@@ -1065,9 +1065,9 @@ namespace MediaPortal.Player
 
                     if (GUIGraphicsContext.IsTabWithBlackBars)
                     {
-                        _sourceRect.Height -= _cropSettings.Top;
-                        _sourceRect.X += _cropSettings.Left;
-                        _sourceRect.Width -= (_cropSettings.Left + _cropSettings.Right);
+                      _sourceRect.Height -= _cropSettings.Top;
+                      _sourceRect.X += _cropSettings.Left;
+                      _sourceRect.Width -= (_cropSettings.Left + _cropSettings.Right);
                     }
                   }
                   break;
@@ -1087,10 +1087,10 @@ namespace MediaPortal.Player
 
                     if (GUIGraphicsContext.IsTabWithBlackBars)
                     {
-                        _sourceRect.Y -= _cropSettings.Top;
-                        _sourceRect.Height -= _cropSettings.Bottom;
-                        _sourceRect.X += _cropSettings.Left;
-                        _sourceRect.Width -= (_cropSettings.Left + _cropSettings.Right);
+                      _sourceRect.Y -= _cropSettings.Top;
+                      _sourceRect.Height -= _cropSettings.Bottom;
+                      _sourceRect.X += _cropSettings.Left;
+                      _sourceRect.Width -= (_cropSettings.Left + _cropSettings.Right);
                     }
                   }
                   break;

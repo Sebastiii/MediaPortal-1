@@ -827,8 +827,8 @@ namespace MediaPortal.GUI.Library
 
     public static bool IsTabWithBlackBars
     {
-        get { return _tabWithBlackBars; }
-        set { _tabWithBlackBars = value; }
+      get { return _tabWithBlackBars; }
+      set { _tabWithBlackBars = value; }
     }
 
     /// <summary>

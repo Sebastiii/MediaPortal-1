@@ -80,7 +80,6 @@ namespace TvPlugin
 
     #region variables
 
-    private static readonly SynchronizationContext _mainThreadContext = SynchronizationContext.Current;
     private static int _currentChannelIdForTune = 0;
     private static int _currentChannelIdPendingTune = 0;
 
@@ -98,8 +97,9 @@ namespace TvPlugin
       CardChange = 2,
       SeekToEnd = 4,
       SeekToEndAfterPlayback = 8
-    }    
-    
+    }
+
+    private static readonly SynchronizationContext _mainThreadContext = SynchronizationContext.Current;
     private Channel _resumeChannel = null;
     private Thread heartBeatTransmitterThread = null;
     private static DateTime _updateProgressTimer = DateTime.MinValue;

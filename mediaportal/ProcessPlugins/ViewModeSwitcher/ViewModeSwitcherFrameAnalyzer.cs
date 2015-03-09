@@ -311,8 +311,8 @@ namespace ProcessPlugins.ViewModeSwitcher
     /// <returns>True if analysis succeeded(ie is trustworthy) and false otherwise</returns>
     public bool CheckFor3DTabBlackBar(Bitmap frame)
     {
-        ScanLine(frame.Height / 2, 0, frame.Width - 1, true);        
-        return !IsContent(0, frame.Width - 1);        
+      ScanLine(frame.Height / 2, 0, frame.Width - 1, true);
+      return !IsContent(0, frame.Width - 1);
     }
 
     /// <summary>

@@ -67,7 +67,7 @@ public:
   void Reset(REFERENCE_TIME totalStreamOffset);
   bool HasAudio();
   bool HasVideo();
-
+  REFERENCE_TIME Incomplete();
   REFERENCE_TIME PlayedDuration();
   void SetVideoPMT(AM_MEDIA_TYPE *pmt);
 

@@ -30,8 +30,8 @@
 #include "LibBlurayWrapper.h"
 #include "BDEventObserver.h"
 
-//#define LOG_VIDEO_PIN_SAMPLES
-//#define LOG_AUDIO_PIN_SAMPLES
+#define LOG_VIDEO_PIN_SAMPLES
+#define LOG_AUDIO_PIN_SAMPLES
 //#define LOG_DEMUXER_AUDIO_SAMPLES
 //#define LOG_DEMUXER_VIDEO_SAMPLES
 

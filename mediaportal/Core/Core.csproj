@@ -564,7 +564,6 @@
     <Compile Include="Util\FolderThumbCreator.cs" />
     <Compile Include="Util\HResult.cs" />
     <Compile Include="Util\HTMLParser.cs" />
-    <Compile Include="Util\HumanInterfaceDevice.cs" />
     <Compile Include="Util\IMDBSearch.cs" />
     <Compile Include="Util\IMPawardsSearch.cs" />
     <Compile Include="Util\InternalCSScriptGrabbersLoader.cs" />

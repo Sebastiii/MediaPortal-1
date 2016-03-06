@@ -4451,7 +4451,8 @@ public class MediaPortalApp : D3D, IRender
               {
                 g_Player.Pause();
 
-                if (g_Player._mediaInfo != null && g_Player._mediaInfo.Framerate == 24)
+                var videoStream = g_Player.CurrentVideo;
+                if (videoStream != null && videoStream.FrameRate == 24)
                 {
                   g_Player.RealSpeed = 0.25;
                 }
@@ -4478,7 +4479,8 @@ public class MediaPortalApp : D3D, IRender
                 }
                 if (g_Player.RealSpeed < 0 || g_Player.RealSpeed >= 1)
                 {
-                  if (g_Player._mediaInfo != null && g_Player._mediaInfo.Framerate == 24)
+                  var videoStream = g_Player.CurrentVideo;
+                  if (videoStream != null && videoStream.FrameRate == 24)
                   {
                     g_Player.RealSpeed = 0.25;
                   }

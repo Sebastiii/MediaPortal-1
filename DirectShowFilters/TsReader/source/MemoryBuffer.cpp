@@ -25,6 +25,7 @@ CMemoryBuffer::~CMemoryBuffer()
 {
   LogDebug("CMemoryBuffer::dtor");
   Clear();
+  m_bRunning=false;
 }
 
 bool CMemoryBuffer::IsRunning()
@@ -33,6 +34,7 @@ bool CMemoryBuffer::IsRunning()
 }
 void CMemoryBuffer::Clear()
 {
+  if (!m_bRunning) return;
   LogDebug("memorybuffer: Clear() %d",m_Array.size());
 	CAutoLock BufferLock(&m_BufferLock);
 	ivecBuffers it = m_Array.begin();

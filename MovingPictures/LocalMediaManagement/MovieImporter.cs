@@ -673,36 +673,40 @@ namespace MediaPortal.Plugins.MovingPictures.LocalMediaManagement {
             List<DBImportPath> paths = DBImportPath.GetAll();
 
             // clear out old watchers, if any
+          if (fileSystemWatchers != null)
+          {
             foreach (FileSystemWatcher currWatcher in fileSystemWatchers) {
-                currWatcher.EnableRaisingEvents = false;
-                currWatcher.Dispose();
+              currWatcher.EnableRaisingEvents = false;
+              currWatcher.Dispose();
             }
-            fileSystemWatchers.Clear();           
-            
-            // fill the watcher queue with import paths
-            foreach (DBImportPath currPath in paths)
-                watcherQueue.Add(currPath);
+            fileSystemWatchers.Clear();
+          }
 
-            // Actually add the file system watchers
+          // fill the watcher queue with import paths
+          if (paths != null)
+            foreach (DBImportPath currPath in paths)
+              watcherQueue.Add(currPath);
+
+          // Actually add the file system watchers
             UpdateFileSystemWatchers();
         }
 
         private void UpdateFileSystemWatchers() {
-            if (watcherQueue.Count > 0) {
+            if (watcherQueue != null && watcherQueue.Count > 0) {
                 foreach (DBImportPath importPath in watcherQueue.ToArray()) {
                     FileSystemWatcher watcher = new FileSystemWatcher();
                     bool success = false;
                     try {
                         // nothing will change on CD/DVD so skip these
                         // else try to create a watcher
-                        if (importPath.GetDriveType() != DriveType.CDRom)
+                        if (importPath != null && importPath.GetDriveType() != DriveType.CDRom)
                             WatchImportPath(watcher, importPath);
 
                         success = true;
                     }
                     catch (Exception e) {
                         // if the path is not available
-                        if (!importPath.IsAvailable) {
+                        if (importPath != null && !importPath.IsAvailable) {
                             if (importPath.IsRemovable) {
                                 if (!rescanQueue.Contains(importPath))
                                 {
@@ -731,7 +735,7 @@ namespace MediaPortal.Plugins.MovingPictures.LocalMediaManagement {
                         if (rescanQueue.Contains(importPath)) {
                             // initiate a rescan of the import path only when it's an UNC path
                             // the drive based import paths will already be notified by the drive monitor.
-                            if (importPath.IsUnc)
+                            if (importPath != null && importPath.IsUnc)
                                 ScanPath(importPath);
 
                             // remove it from the rescan queue
@@ -743,17 +747,23 @@ namespace MediaPortal.Plugins.MovingPictures.LocalMediaManagement {
         }
 
         private void WatchImportPath(FileSystemWatcher watcher, DBImportPath importPath) {
-            watcher.Path = importPath.FullPath;
-            watcher.IncludeSubdirectories = true;
-            watcher.Error += OnWatcherError;
-            watcher.Created += OnFileAdded;
-            watcher.Deleted += OnFileDeleted;
-            watcher.Renamed += OnFileRenamed;
-            watcher.EnableRaisingEvents = true;
-            
-            fileSystemWatchers.Add(watcher);
-            pathLookup[watcher] = importPath;
-            logger.Info("Started watching '{0}' ({1}) - Path is now being monitored for changes.", importPath.FullPath, importPath.GetDriveType().ToString());
+          if (watcher != null)
+          {
+            if (importPath != null)
+            {
+              watcher.Path = importPath.FullPath;
+              watcher.IncludeSubdirectories = true;
+              watcher.Error += OnWatcherError;
+              watcher.Created += OnFileAdded;
+              watcher.Deleted += OnFileDeleted;
+              watcher.Renamed += OnFileRenamed;
+              watcher.EnableRaisingEvents = true;
+
+              fileSystemWatchers?.Add(watcher);
+              if (pathLookup != null) pathLookup[watcher] = importPath;
+            }
+          }
+          logger.Info("Started watching '{0}' ({1}) - Path is now being monitored for changes.", importPath.FullPath, importPath.GetDriveType().ToString());
         }
 
         // When a FileSystemWatcher gets corrupted this handler will add it to the queue again
@@ -1106,7 +1116,10 @@ namespace MediaPortal.Plugins.MovingPictures.LocalMediaManagement {
 
                 // Locked files are put in the files queue (to be processed later)
                 if (MovingPicturesCore.Settings.DelayLockedFiles && currFile.File.IsLocked()) {
-                    filesQueue.Add(currFile);
+                    lock (filesQueue)
+                    {
+                      filesQueue.Add(currFile);
+                    }
                     logger.Info("DELAYED: File='{0}', Reason='File is locked'", fileName);
                     continue;
                 }
@@ -1131,13 +1144,16 @@ namespace MediaPortal.Plugins.MovingPictures.LocalMediaManagement {
                             foreach (DBLocalMedia oldMedia in existingMedia)
                             {
                                 bool queued = filesDeleted.Contains(oldMedia);
-                                if (queued || oldMedia.ImportPath.Replaced || oldMedia.IsRemoved)
+                                try
                                 {
+                                    if (queued || oldMedia.ImportPath.Replaced || oldMedia.IsRemoved)
+                                    {
                                     // remove the old media object from the removal queue if it was present.
-                                    if (queued) {
-                                        filesDeleted.Remove(oldMedia);
+                                    if (queued)
+                                    {
+                                       filesDeleted.Remove(oldMedia);
                                     }
-                                    
+
                                     logger.Info("File '{0}' was moved/renamed to '{1}'. Updating existing entry.", oldMedia.FullPath, currFile.FullPath);
                                     // update our old media object with the new information
                                     oldMedia.ImportPath = currFile.ImportPath;
@@ -1146,7 +1162,12 @@ namespace MediaPortal.Plugins.MovingPictures.LocalMediaManagement {
                                     oldMedia.Commit();
                                     moved = true;
                                     break;
-                                }
+                                   }
+                               }
+                               catch (Exception e)
+                               {
+                                  logger.ErrorException("Exception while updating existing entry.", e);
+                               }
                             }
                         }
                         // if we updated a moved/renamed file we can discard it from the list

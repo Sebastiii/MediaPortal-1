@@ -1,0 +1,51 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Externals", "Externals", "{B5B961E9-1D92-4B33-B2DF-CCC5FEFEDA66}"
+	ProjectSection(SolutionItems) = preProject
+		Externals\Core.dll = Externals\Core.dll
+		Externals\DirectShowLib.dll = Externals\DirectShowLib.dll
+		Externals\Utils.dll = Externals\Utils.dll
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{6086F48F-E65E-440D-A0FF-BFB8E74D4A9D}"
+	ProjectSection(SolutionItems) = preProject
+		Tools\RevStamp.exe = Tools\RevStamp.exe
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BDHandler", "BDHandler\BDHandler.csproj", "{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
+		Release (Standalone)|Any CPU = Release (Standalone)|Any CPU
+		Release (Standalone)|x86 = Release (Standalone)|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
+		UseCaptureCardDefinitions|Any CPU = UseCaptureCardDefinitions|Any CPU
+		UseCaptureCardDefinitions|x86 = UseCaptureCardDefinitions|x86
+		UseCaptureDefintionsRelease|Any CPU = UseCaptureDefintionsRelease|Any CPU
+		UseCaptureDefintionsRelease|x86 = UseCaptureDefintionsRelease|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Release (Standalone)|Any CPU.ActiveCfg = Release|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Release (Standalone)|Any CPU.Build.0 = Release|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Release (Standalone)|x86.ActiveCfg = Release|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.Release|x86.ActiveCfg = Release|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.UseCaptureCardDefinitions|Any CPU.ActiveCfg = Release|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.UseCaptureCardDefinitions|Any CPU.Build.0 = Release|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.UseCaptureCardDefinitions|x86.ActiveCfg = Release|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.UseCaptureDefintionsRelease|Any CPU.ActiveCfg = Release|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.UseCaptureDefintionsRelease|Any CPU.Build.0 = Release|Any CPU
+		{3474F9BE-E4E1-4B8E-9A2D-B02C2E230E06}.UseCaptureDefintionsRelease|x86.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

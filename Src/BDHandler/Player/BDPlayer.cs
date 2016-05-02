@@ -117,6 +117,8 @@ namespace MediaPortal.Plugins.BDHandler.Player
             GUIMessage msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_SWITCH_FULL_WINDOWED, 0, 0, 0, 1, 0, null);
             GUIWindowManager.SendMessage(msg);
 
+            basicVideo = graphBuilder as IBasicVideo2;
+
             Vmr9 = new VMR9Util();
             Vmr9.AddVMR9(graphBuilder);
             Vmr9.Enable(false);
@@ -314,6 +316,7 @@ namespace MediaPortal.Plugins.BDHandler.Player
             mediaSeek = (IMediaSeeking)graphBuilder;
             mediaPos = (IMediaPosition)graphBuilder;
             basicAudio = (IBasicAudio)graphBuilder;
+            basicVideo = (IBasicVideo2)graphBuilder;
             videoWin = (IVideoWindow)graphBuilder;
             m_iVideoWidth = Vmr9.VideoWidth;
             m_iVideoHeight = Vmr9.VideoHeight;

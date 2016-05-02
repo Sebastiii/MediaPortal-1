@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>MediaPortal.Plugins.BDHandler</RootNamespace>
     <AssemblyName>BDHandler</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -31,6 +31,7 @@
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -52,8 +53,14 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Common.Utils">
+      <HintPath>..\Externals\Common.Utils.dll</HintPath>
+    </Reference>
     <Reference Include="Core">
       <HintPath>..\Externals\Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Dialogs">
+      <HintPath>..\Externals\Dialogs.dll</HintPath>
     </Reference>
     <Reference Include="DirectShowLib">
       <HintPath>..\Externals\DirectShowLib.dll</HintPath>
@@ -102,6 +109,7 @@
     <Compile Include="Filters\GenericFilter.cs" />
     <Compile Include="Filters\ISelectFilter.cs" />
     <Compile Include="Filters\IFilter.cs" />
+    <Compile Include="Filters\LAVFSplitter.cs" />
     <Compile Include="Filters\MpcMpegSourceFilter.cs" />
     <Compile Include="Player\BDPlayer.cs" />
     <Compile Include="Player\FactoryWrapper.cs" />
@@ -119,6 +127,7 @@
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
@@ -154,6 +163,7 @@
   -->
   <PropertyGroup>
     <PostBuildEvent>xcopy "$(TargetPath)" "%25PROGRAMFILES%25\Team MediaPortal\MediaPortal\Plugins\process" /Y /I</PostBuildEvent>
-    <PreBuildEvent>"$(SolutionDir)\Tools\RevStamp.exe" "http://mp-bdhandler.googlecode.com/svn/trunk/" "$(ProjectDir)\Resources\revision.txt"  "$(ProjectDir)\Properties\AssemblyInfo.cs"</PreBuildEvent>
+    <PreBuildEvent>
+    </PreBuildEvent>
   </PropertyGroup>
 </Project>

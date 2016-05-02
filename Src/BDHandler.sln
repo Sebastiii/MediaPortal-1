@@ -2,11 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Externals", "Externals", "{B5B961E9-1D92-4B33-B2DF-CCC5FEFEDA66}"
-	ProjectSection(SolutionItems) = preProject
-		Externals\Core.dll = Externals\Core.dll
-		Externals\DirectShowLib.dll = Externals\DirectShowLib.dll
-		Externals\Utils.dll = Externals\Utils.dll
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{6086F48F-E65E-440D-A0FF-BFB8E74D4A9D}"
 	ProjectSection(SolutionItems) = preProject

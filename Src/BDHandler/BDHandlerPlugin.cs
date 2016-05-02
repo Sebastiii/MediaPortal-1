@@ -8,6 +8,7 @@ using MediaPortal.GUI.Library;
 using MediaPortal.Player;
 using MediaPortal.Ripper;
 using MediaPortal.Profile;
+using MediaPortal.Services;
 
 namespace MediaPortal.Plugins.BDHandler {
 

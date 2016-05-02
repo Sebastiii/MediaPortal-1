@@ -4,26 +4,27 @@ using System.Text.RegularExpressions;
 namespace MediaPortal.Plugins.BDHandler.Filters
 {
     /// <summary>
-    /// MPC - Mpeg Source (Gabest) Filter Class
+    /// LAVFSplitter Filter Class
     /// </summary>
-    public class MpcMpegSourceFilter : ISelectFilter
+    public class LAVFSplitter : ISelectFilter
     {
-        static Regex audioStreamTextExpr = new Regex(@"^audio - (?<lang>[^,]+),(?<type>.+)(?<other>\(.+\))$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        static Regex subtitleStreamTextExpr = new Regex(@"^subtitle - (?<lang>[^,]+),(?<name>.+)(?<other>\(.+\))$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+      static Regex audioStreamTextExpr = new Regex(@"(?:A:\s)(?<lang>.+?)(?:\s*\[(?<lang>[^\]]*?)\])?(?:\s*\((?<type>[^\)]*?)\))?(?:\s*\[(?<Default>[^\]]*?)\])?$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+      static Regex subtitleStreamTextExpr = new Regex(@"(?:S:\s)(?<lang>.+?)(?:\s*\[(?<lang>[^\]]*?)\])?(?:\s*\((?<name>[^\)]*?)\))?(?:\s*\[(?<Default>[^\]]*?)\])?$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+      static Regex subtitleForcedStreamTextExpr = new Regex(@"(?:S:\s)(?<forced>.+?)(?:\s*\[(?<forced>[^\]]*?)\])?(?:\s*\((?<name>[^\)]*?)\))?(?:\s*\[(?<Default>[^\]]*?)\])?$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         string IFilter.Name
         {
-            get { return "MPC - Mpeg Source (Gabest)"; }
+          get { return "LAV Splitter Source"; }
         }
 
         Guid IFilter.ClassID
         {
-            get { return new Guid("{1365BE7A-C86A-473C-9A41-C0A6E82C9FA3}"); }
+          get { return new Guid("{B98D13E7-55DB-4385-A33D-09FD1BA26338}"); }
         }
 
         int IFilter.RecommendedBuildNumber
         {
-            get { return 1287; }
+            get { return 20; }
         }
 
         string ISelectFilter.ParseSubtitleLanguage(string input)
@@ -40,8 +41,8 @@ namespace MediaPortal.Plugins.BDHandler.Filters
 
         string ISelectFilter.ParseSubtitleForced(string input)
         {
-          string name = subtitleStreamTextExpr.Replace(input, "${name}");
-          return name.Trim();
+          string language = subtitleForcedStreamTextExpr.Replace(input, "${forced}");
+          return language.Trim();
         }
 
         string ISelectFilter.ParseAudioType(string input)

@@ -20,6 +20,13 @@
         string ParseSubtitleName(string input);
 
         /// <summary>
+        /// Parses the name of the subtitle forced.
+        /// </summary>
+        /// <param name="input">raw string returned by the filter</param>
+        /// <returns>name of of the subtitle forced</returns>
+        string ParseSubtitleForced(string input);
+
+        /// <summary>
         /// Parses the type of the audio.
         /// </summary>
         /// <param name="input">raw string returned by the filter</param>

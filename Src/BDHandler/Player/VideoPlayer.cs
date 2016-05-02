@@ -6,6 +6,7 @@ using DShowNET.Helper;
 using MediaPortal.Player;
 using MediaPortal.Plugins.BDHandler.Filters;
 using MediaPortal.Profile;
+using MediaPortal.Player.Subtitles;
 
 namespace MediaPortal.Plugins.BDHandler.Player
 {
@@ -20,6 +21,7 @@ namespace MediaPortal.Plugins.BDHandler.Player
         /// Dictionary that holds all available filter definitions
         /// </summary>
         protected Dictionary<Guid, ISelectFilter> filters;
+        protected  bool forcedSub = false;
 
         #endregion
 
@@ -44,7 +46,7 @@ namespace MediaPortal.Plugins.BDHandler.Player
             // load available filters
             // todo: available filters should be instantiated using reflection?
             filters = new Dictionary<Guid, ISelectFilter>();
-            ISelectFilter filter = SingletonProvider<MpcMpegSourceFilter>.GetInstance();
+            ISelectFilter filter = SingletonProvider<LAVFSplitter>.GetInstance();
             filters[filter.ClassID] = filter;
         }
 
@@ -90,8 +92,16 @@ namespace MediaPortal.Plugins.BDHandler.Player
         /// <returns>the localized subtitle language</returns>
         public override string SubtitleLanguage(int iStream)
         {
+          string forcedsubName = GetSubtitleForcedStream(iStream);
+          if (forcedsubName.Contains("Forced Subtitles"))
+          {
+            return Util.Utils.TranslateLanguageString(forcedsubName);
+          }
+          else
+          {
             string englishName = GetSubtitleLanguageFromStream(iStream);
             return Util.Utils.TranslateLanguageString(englishName);
+          }
         }
 
         /// <summary>
@@ -101,13 +111,14 @@ namespace MediaPortal.Plugins.BDHandler.Player
         /// <returns></returns>
         public override string SubtitleName(int iStream)
         {
-            FilterStreamInfos info = FStreams.GetStreamInfos(StreamType.Subtitle, iStream);
+            LAVFSplitter info = new LAVFSplitter();
+            ISelectFilter filter = info;
 
-            ISelectFilter filter = GetFilterByStreamInfo(info);
             if (filter != null)
             {
-                string name = filter.ParseSubtitleName(info.Name);
-                BDHandlerCore.LogDebug("SubtitleName() Filter: {0}, IN: {1} OUT: {2}", filter.Name, info.Name, name);
+                string subname = SubEngine.GetInstance().GetSubtitleName(iStream);
+                string name = filter.ParseSubtitleName(subname);
+                BDHandlerCore.LogDebug("SubtitleName() Filter: {0}, IN: {1} OUT: {2}", filter.Name, subname, name);
                 return name;
             }
 
@@ -119,53 +130,79 @@ namespace MediaPortal.Plugins.BDHandler.Player
         /// </summary>
         protected override void OnInitialized()
         {
-            // AUDIO
-            CultureInfo audioCulture = GetCultureInfoFromSettings("movieplayer", "audiolanguage");
-            string selectedAudioLanguage = string.Empty;
-            int audioStreams = AudioStreams;
-            for (int i = 0; i < audioStreams; i++)
+          // AUDIO
+          CultureInfo audioCulture = GetCultureInfoFromSettings("movieplayer", "audiolanguage");
+          string selectedAudioLanguage = string.Empty;
+          int audioStreams = AudioStreams;
+          for (int i = 0; i < audioStreams; i++)
+          {
+            string language = GetAudioLanguageFromStream(i);
+            if (audioCulture.Matches(language))
             {
-                string language = GetAudioLanguageFromStream(i);
-                if (audioCulture.Matches(language))
-                {
-                    CurrentAudioStream = i;
-                    selectedAudioLanguage = language;
-                    BDHandlerCore.LogInfo("Selected active audio track language: {0} ({1})", audioCulture.EnglishName, i);
-                    break;
-                }
+              CurrentAudioStream = i;
+              selectedAudioLanguage = language;
+              BDHandlerCore.LogInfo("Selected active audio track language: {0} ({1})", audioCulture.EnglishName, i);
+              break;
             }
+          }
 
-            // SUBTITLES
-            CultureInfo subtitleCulture = GetCultureInfoFromSettings("subtitles", "language");
-            int subtitleStreams = SubtitleStreams;
+          // SUBTITLES
+          CultureInfo subtitleCulture = GetCultureInfoFromSettings("subtitles", "language");
+          int subtitleStreams = SubtitleStreams;
 
+          //if (!SubEngine.GetInstance().AutoShow) // if AutoShow if disabled, try detection of forced flag
+          {
             for (int i = 0; i < subtitleStreams; i++)
             {
-                string language = GetSubtitleLanguageFromStream(i);
-                if (subtitleCulture.Matches(language))
+              string detectforcedflag = GetSubtitleForcedStream(i);
+             
+              if (detectforcedflag.Contains("Forced Subtitles"))
+              {
+                //string language = GetSubtitleLanguageFromStream(i);
+                //if (subtitleCulture.Matches(language))
                 {
-                    // set the current subtitle stream
-                    CurrentSubtitleStream = i;
-
-                    if (selectedAudioLanguage != string.Empty && subtitleCulture.Matches(selectedAudioLanguage))
-                    {
-                        // the languages of both audio and subtitles are the same so there's no need to show the subtitle
-                        // todo: evaluate through user experience
-                        EnableSubtitle = false;
-                        BDHandlerCore.LogDebug("Disabling subtitles because the audio language is the same.");
-                    }
-                    else
-                    {
-                        // enable the subtitles
-                        BDHandlerCore.LogInfo("Selected active subtitle track language: {0} ({1})", subtitleCulture.EnglishName, i);
-                        EnableSubtitle = true;
-                    }
-                    break;
+                  CurrentSubtitleStream = i;
+                  BDHandlerCore.LogInfo("Selected active forced subtitle track language: {0} ({1})", subtitleCulture.EnglishName, i);
+                  forcedSub = true;
+                  EnableSubtitle = true;
+                  break;
                 }
+              }
             }
+          }
 
-            // call the base OnInitialized method
-            base.OnInitialized();
+          // detection of CI language
+          if (!forcedSub)
+          {
+            for (int i = 0; i < subtitleStreams; i++)
+            {
+              string language = GetSubtitleLanguageFromStream(i);
+
+              if (subtitleCulture.Matches(language))
+              {
+                // set the current subtitle stream
+                CurrentSubtitleStream = i;
+
+                if (selectedAudioLanguage != string.Empty && subtitleCulture.Matches(selectedAudioLanguage))
+                {
+                  // the languages of both audio and subtitles are the same so there's no need to show the subtitle
+                  // todo: evaluate through user experience
+                  EnableSubtitle = false;
+                  BDHandlerCore.LogDebug("Disabling subtitles because the audio language is the same.");
+                }
+                else
+                {
+                  // enable the subtitles
+                  BDHandlerCore.LogInfo("Selected active subtitle track language: {0} ({1})", subtitleCulture.EnglishName, i);
+                  EnableSubtitle = true;
+                }
+                break;
+              }
+            }
+          }
+
+          // call the base OnInitialized method
+          base.OnInitialized();
         }
 
         /// <summary>
@@ -282,6 +319,7 @@ namespace MediaPortal.Plugins.BDHandler.Player
             {
                 string lang = GetEnglishNameByLCID(info.LCID);
                 BDHandlerCore.LogDebug("AudioLanguage() LCID: {0}, OUT: {1}", info.LCID, lang);
+                return lang;
             }
 
             ISelectFilter filter = GetFilterByStreamInfo(info);
@@ -303,22 +341,41 @@ namespace MediaPortal.Plugins.BDHandler.Player
         /// <returns>language string formatted as english name</returns>
         protected virtual string GetSubtitleLanguageFromStream(int iStream)
         {
-            FilterStreamInfos info = FStreams.GetStreamInfos(StreamType.Subtitle, iStream);
 
-            if (info.LCID > 0)
-            {
-                return GetEnglishNameByLCID(info.LCID);
-            }
+            LAVFSplitter info = new LAVFSplitter();
+            ISelectFilter filter = info;
 
-            ISelectFilter filter = GetFilterByStreamInfo(info);
             if (filter != null)
             {
-                string language = filter.ParseSubtitleLanguage(info.Name);
-                BDHandlerCore.LogDebug("SubtitleLanguage() Filter: {0}, IN: {1} OUT: {2}", filter.Name, info.Name, language);
+                string sublang = SubEngine.GetInstance().GetLanguage(iStream);
+                string language = filter.ParseSubtitleLanguage(sublang);
+                BDHandlerCore.LogDebug("SubtitleLanguage() Filter: {0}, IN: {1} OUT: {2}", filter.Name, sublang, language);
                 return language;
             }
 
             return base.SubtitleLanguage(iStream);
+        }
+
+        /// <summary>
+        /// Gets the subtitle stream for Forced Flag
+        /// </summary>
+        /// <param name="iStream">the stream index</param>
+        /// <returns>language string formatted as english name</returns>
+        protected virtual string GetSubtitleForcedStream(int iStream)
+        {
+
+          LAVFSplitter info = new LAVFSplitter();
+          ISelectFilter filter = info;
+
+          if (filter != null)
+          {
+            string subforcedname = SubEngine.GetInstance().GetSubtitleName(iStream);
+            string language = filter.ParseSubtitleForced(subforcedname);
+            BDHandlerCore.LogDebug("SubtitleLanguage() Filter: {0}, IN: {1} OUT: {2}", filter.Name, subforcedname, language);
+            return language;
+          }
+
+          return base.SubtitleLanguage(iStream);
         }
 
         #endregion

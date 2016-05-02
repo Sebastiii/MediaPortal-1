@@ -32,6 +32,11 @@ namespace MediaPortal.Plugins.BDHandler.Filters
             throw new NotImplementedException();
         }
 
+        string ISelectFilter.ParseSubtitleForced(string input)
+        {
+          throw new NotImplementedException();
+        }
+
         string ISelectFilter.ParseAudioType(string input)
         {
             throw new NotImplementedException();

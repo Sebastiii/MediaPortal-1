@@ -13,6 +13,9 @@ using MediaPortal.Player;
 using MediaPortal.Player.Subtitles;
 using MediaPortal.Plugins.BDHandler.Filters;
 using MediaPortal.Profile;
+using MediaPortal.Dialogs;
+using MediaPortal.Util;
+using MediaPortal.Player.PostProcessing;
 
 namespace MediaPortal.Plugins.BDHandler.Player
 {
@@ -54,7 +57,7 @@ namespace MediaPortal.Plugins.BDHandler.Player
         /// <returns></returns>
         public override bool Play(string strFile)
         {
-            string path = strFile.ToLower();
+            string path = strFile.ToLowerInvariant();
 
             if (strFile.Length < 4)
             {
@@ -83,7 +86,7 @@ namespace MediaPortal.Plugins.BDHandler.Player
         /// <returns></returns>
         protected override bool UseCustomGraph()
         {
-            return (CurrentFile.ToLower().EndsWith(".mpls"));
+            return (CurrentFile.ToLowerInvariant().EndsWith(".mpls"));
         }
 
         /// <summary>
@@ -92,128 +95,239 @@ namespace MediaPortal.Plugins.BDHandler.Player
         /// <returns></returns>
         protected override bool RenderCustomGraph()
         {
-            try
+          try
+          {
+            bool vc1Codec = false;
+
+            //Get filterCodecName
+            filterCodec = GetFilterCodec();
+            filterConfig = GetFilterConfiguration();
+
+            graphBuilder = (IGraphBuilder)new FilterGraph();
+            _rotEntry = new DsROTEntry((IFilterGraph)graphBuilder);
+            List<string> filters = new List<string>();
+
+            BDHandlerCore.LogDebug("Player is active.");
+
+            //// Ask for resume for BD
+            //GUIMessage msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_PLAY_BD, 0, 0, 0, 0, 0, null);
+            //msg.Param1 = g_Player.SetResumeBDTitleState;
+            //GUIWindowManager.SendMessage(msg);
+
+            GUIMessage msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_SWITCH_FULL_WINDOWED, 0, 0, 0, 1, 0, null);
+            GUIWindowManager.SendMessage(msg);
+
+            Vmr9 = new VMR9Util();
+            Vmr9.AddVMR9(graphBuilder);
+            Vmr9.Enable(false);
+
+            // load the source filter
+            _interfaceSourceFilter = DirectShowUtil.AddFilterToGraph(graphBuilder, this.sourceFilter.Name);
+
+            // check if it's available
+            if (_interfaceSourceFilter == null)
             {
-                graphBuilder = (IGraphBuilder)new FilterGraph();
-                _rotEntry = new DsROTEntry((IFilterGraph)graphBuilder);
-                List<string> filters = new List<string>();
+              Error.SetError("Unable to load source filter", "Please register filter: " + this.sourceFilter.Name);
+              BDHandlerCore.LogError("Unable to load DirectShowFilter: {0}", this.sourceFilter.Name);
+              return false;
+            }
 
-                BDHandlerCore.LogDebug("Player is active.");
+            // load the file
+            int result = ((IFileSourceFilter)_interfaceSourceFilter).Load(CurrentFile, null);
+            if (result != 0) return false;
 
-                GUIMessage msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_SWITCH_FULL_WINDOWED, 0, 0, 0, 1, 0, null);
-                GUIWindowManager.SendMessage(msg);
+            IPin pinOut0, pinOut1;
+            IPin pinIn0, pinIn1;
+            pinOut0 = DsFindPin.ByDirection((IBaseFilter)_interfaceSourceFilter, PinDirection.Output, 0); //video
+            pinOut1 = DsFindPin.ByDirection((IBaseFilter)_interfaceSourceFilter, PinDirection.Output, 1); //audio
 
-                Vmr9 = new VMR9Util();
-                Vmr9.AddVMR9(graphBuilder);
-                Vmr9.Enable(false);
+            if (pinOut0 == null)
+            {
+              BDHandlerCore.LogInfo("FAILED: unable to get output pins of source splitter");
+              Cleanup();
+              return false;
+            }
 
-                // load the source filter                
-                IBaseFilter source = DirectShowUtil.AddFilterToGraph(graphBuilder, this.sourceFilter.Name);
-
-                // check if it's available
-                if (source == null)
+            if (pinOut0 != null)
+            {
+              //Detection if the Video Stream is VC-1 on output pin of the splitter
+              IEnumMediaTypes enumMediaTypesVideo;
+              int hr = pinOut0.EnumMediaTypes(out enumMediaTypesVideo);
+              while (true)
+              {
+                AMMediaType[] mediaTypes = new AMMediaType[1];
+                int typesFetched;
+                hr = enumMediaTypesVideo.Next(1, mediaTypes, out typesFetched);
+                if (hr != 0 || typesFetched == 0) break;
+                if (mediaTypes[0].majorType == MediaType.Video && mediaTypes[0].subType == MediaSubType.VC1)
                 {
-                    Error.SetError("Unable to load source filter", "Please register filter: " + this.sourceFilter.Name);
-                    BDHandlerCore.LogError("Unable to load DirectShowFilter: {0}", this.sourceFilter.Name);
-                    return false;
+                  BDHandlerCore.LogInfo("found VC-1 video out pin");
+                  vc1Codec = true;
+                }
+              }
+              DirectShowUtil.ReleaseComObject(enumMediaTypesVideo);
+              enumMediaTypesVideo = null;
+            }
+
+            // add filters and audio renderer
+            using (Settings settings = new Settings(Config.GetFile(Config.Dir.Config, "MediaPortal.xml")))
+            {
+              // Get the minimal settings required
+              //bool useAutoDecoderSettings = settings.GetValueAsBool("movieplayer", "autodecodersettings", false);
+              string filterAudioRenderer = settings.GetValueAsString("bdplayer", "audiorenderer", "Default DirectSound Device");
+
+              // if "Auto Decoder Settings" is unchecked we add the filters specified in the codec configuration
+              // otherwise the DirectShow merit system is used (except for renderer and source filter)
+              //if (!useAutoDecoderSettings)
+              {
+                // Get the Video Codec configuration settings
+                string filterVideoMpeg2 = settings.GetValueAsString("bdplayer", "mpeg2videocodec", "");
+                string filterVideoH264 = settings.GetValueAsString("bdplayer", "h264videocodec", "");
+                string filterAudioMpeg2 = settings.GetValueAsString("bdplayer", "mpeg2audiocodec", "");
+                string filterVideoVC1 = settings.GetValueAsString("bdplayer", "vc1videocodec", "");
+
+                //Add Post Process Video Codec
+                PostProcessAddVideo();
+
+                if (vc1Codec)
+                {
+                  if (!string.IsNullOrEmpty(filterVideoVC1))// && filterVideoMpeg2 != filterVideoVC1)
+                  {
+                    filterCodec.VideoCodec = DirectShowUtil.AddFilterToGraph(graphBuilder, filterVideoVC1);
+                    BDHandlerCore.LogInfo("Load VC1 {0} in graph", filterVideoVC1);
+                  }
+                }
+                else
+                {
+                  if (!string.IsNullOrEmpty(filterVideoH264))// && filterVideoMpeg2 != filterVideoH264)
+                  {
+                    filterCodec.VideoCodec = DirectShowUtil.AddFilterToGraph(graphBuilder, filterVideoH264);
+                    BDHandlerCore.LogInfo("Load H264 {0} in graph", filterVideoH264);
+                  }
+                  else
+                  {
+                    filterCodec.VideoCodec = DirectShowUtil.AddFilterToGraph(graphBuilder, filterVideoMpeg2);
+                  }
+                }
+                if (!string.IsNullOrEmpty(filterAudioMpeg2))
+                {
+                  filterCodec.AudioCodec = DirectShowUtil.AddFilterToGraph(graphBuilder, filterAudioMpeg2);
+                  BDHandlerCore.LogInfo("Load AC3/DTS {0} in graph", filterAudioMpeg2);
                 }
 
-                // load the file
-                int result = ((IFileSourceFilter)source).Load(CurrentFile, null);
-                if (result != 0) return false;
-
-                // add filters and audio renderer
-                using (Settings settings = new Settings(Config.GetFile(Config.Dir.Config, "MediaPortal.xml")))
+                if (filterAudioRenderer.Length > 0)
                 {
-                    // Get the minimal settings required
-                    bool useAutoDecoderSettings = settings.GetValueAsBool("movieplayer", "autodecodersettings", false);
-                    string filterAudioRenderer = settings.GetValueAsString("movieplayer", "audiorenderer", "Default DirectSound Device");
-
-                    // if "Auto Decoder Settings" is unchecked we add the filters specified in the codec configuration
-                    // otherwise the DirectShow merit system is used (except for renderer and source filter)
-                    if (!useAutoDecoderSettings)
-                    {
-                        // Get the Video Codec configuration settings
-                        
-                        string filterVideoMpeg2 = settings.GetValueAsString("movieplayer", "mpeg2videocodec", "");
-                        string filterVideoH264 = settings.GetValueAsString("movieplayer", "h264videocodec", "");
-                        string filterAudioMpeg2 = settings.GetValueAsString("movieplayer", "mpeg2audiocodec", "");
-                        string filterAudioAAC = settings.GetValueAsString("movieplayer", "aacaudiocodec", "");
-
-                        // Get the custom filters that apply
-                        int i = 0;
-                        while (true)
-                        {
-                            string filter = settings.GetValueAsString("movieplayer", string.Format("filter{0}", i), null);
-                            if (filter == null)
-                            {
-                                break;
-                            }
-
-                            if (settings.GetValueAsBool("movieplayer", string.Format("usefilter{0}", i), false))
-                            {
-                                // we found a filter so we add it to the filter collection
-                                filters.Add(filter);
-                            }
-
-                            i++;
-                        }
-                        
-                        if (!string.IsNullOrEmpty(filterVideoH264))
-                            DirectShowUtil.AddFilterToGraph(graphBuilder, filterVideoH264);
-                        
-                        //if (!string.IsNullOrEmpty(strVideoCodec) && strVideoCodec != strH264VideoCodec)
-                        //    DirectShowUtil.AddFilterToGraph(graphBuilder, strVideoCodec);
-                        
-                        if (!string.IsNullOrEmpty(filterAudioMpeg2))
-                            DirectShowUtil.AddFilterToGraph(graphBuilder, filterAudioMpeg2);
-                        if (!string.IsNullOrEmpty(filterAudioAAC) && filterAudioMpeg2 != filterAudioAAC)
-                            DirectShowUtil.AddFilterToGraph(graphBuilder, filterAudioAAC);
-                    }
-
-                    DirectShowUtil.AddAudioRendererToGraph(graphBuilder, filterAudioRenderer, false);
-
-                    // Add custom filter collection to graph 
-                    foreach (string filter in filters)
-                    {
-                        DirectShowUtil.AddFilterToGraph(graphBuilder, filter);
-                    }                   
-
+                  filterCodec._audioRendererFilter = DirectShowUtil.AddAudioRendererToGraph(graphBuilder, filterAudioRenderer, false);
                 }
 
-                DirectShowUtil.RenderUnconnectedOutputPins(graphBuilder, source);
-                DirectShowUtil.ReleaseComObject(source); source = null;
+                //Try to connect First Selected Video Filter
+                pinIn0 = DsFindPin.ByDirection(filterCodec.VideoCodec, PinDirection.Input, 0); //video
+                pinIn1 = DsFindPin.ByDirection(filterCodec.AudioCodec, PinDirection.Input, 0); //audio
+
+                if (pinIn0 == null || pinIn1 == null)
+                {
+                  BDHandlerCore.LogInfo("FAILED: unable to get pins of video/audio codecs");
+                }
+                int hr = graphBuilder.Connect(pinOut0, pinIn0);
+                if (hr != 0)
+                {
+                  DirectShowUtil.ReleaseComObject(filterCodec.VideoCodec); filterCodec.VideoCodec = null;
+                  BDHandlerCore.LogInfo("FAILED: unable to connect video pins try next");
+                }
+
+                //Try to connect First Selected Audio Filter
+                hr = graphBuilder.Connect(pinOut1, pinIn1);
+                if (hr != 0)
+                {
+                  DirectShowUtil.ReleaseComObject(filterCodec.AudioCodec); filterCodec.AudioCodec = null;
+                  BDHandlerCore.LogInfo("FAILED: unable to connect audio pins try next");
+                }
+
+                if (filterCodec.VideoCodec != null)
+                DirectShowUtil.RenderUnconnectedOutputPins(graphBuilder, filterCodec.VideoCodec);
+                if (filterCodec.AudioCodec != null)
+                DirectShowUtil.RenderUnconnectedOutputPins(graphBuilder, filterCodec.AudioCodec);
+                if (_interfaceSourceFilter != null)
+                DirectShowUtil.RenderUnconnectedOutputPins(graphBuilder, _interfaceSourceFilter);
                 DirectShowUtil.RemoveUnusedFiltersFromGraph(graphBuilder);
-
-                SubEngine.GetInstance().LoadSubtitles(graphBuilder, m_strCurrentFile);
-
-                if (Vmr9 == null || !Vmr9.IsVMR9Connected)
-                {
-                    BDHandlerCore.LogError("Failed to render file.");
-                    mediaCtrl = null;
-                    Cleanup();
-                    return false;
-                }
-
-                mediaCtrl = (IMediaControl)graphBuilder;
-                mediaEvt = (IMediaEventEx)graphBuilder;
-                mediaSeek = (IMediaSeeking)graphBuilder;
-                mediaPos = (IMediaPosition)graphBuilder;
-                basicAudio = (IBasicAudio)graphBuilder;
-                videoWin = (IVideoWindow)graphBuilder;
-                m_iVideoWidth = Vmr9.VideoWidth;
-                m_iVideoHeight = Vmr9.VideoHeight;
-                Vmr9.SetDeinterlaceMode();
-
-                return true;
+              }
             }
-            catch (Exception e)
+
+            //Remove Line21 if present
+            disableCC();
+
+            //Detection if it's the good audio renderer connected
+            bool ResultPinAudioRenderer = false;
+            IPin PinAudioRenderer = DsFindPin.ByDirection(filterCodec._audioRendererFilter, PinDirection.Input, 0); //audio
+            DirectShowUtil.IsPinConnected(PinAudioRenderer, out ResultPinAudioRenderer);
+            if (!ResultPinAudioRenderer)
             {
-                Error.SetError("Unable to play movie", "Unable build graph for VMR9");
-                BDHandlerCore.LogError("Exception while creating DShow graph {0} {1}", e.Message, e.StackTrace);
-                Cleanup();
-                return false;
+              this.graphBuilder.RemoveFilter(filterCodec._audioRendererFilter);
+              DirectShowUtil.ReleaseComObject(filterCodec._audioRendererFilter);
+              filterCodec._audioRendererFilter = null;
             }
+
+            #region cleanup Sebastiii
+
+            if (pinOut0 != null)
+            {
+              DirectShowUtil.ReleaseComObject(pinOut0);
+              pinOut0 = null;
+            }
+
+            if (pinOut1 != null)
+            {
+              DirectShowUtil.ReleaseComObject(pinOut1);
+              pinOut1 = null;
+            }
+
+            if (pinIn0 != null)
+            {
+              DirectShowUtil.ReleaseComObject(pinIn0);
+              pinIn0 = null;
+            }
+
+            if (pinIn1 != null)
+            {
+              DirectShowUtil.ReleaseComObject(pinIn1);
+              pinIn1 = null;
+            }
+
+            if (PinAudioRenderer != null)
+            {
+              DirectShowUtil.ReleaseComObject(PinAudioRenderer);
+              PinAudioRenderer = null;
+            }
+
+            #endregion
+
+            if (Vmr9 == null || !Vmr9.IsVMR9Connected)
+            {
+              BDHandlerCore.LogError("Failed to render file.");
+              mediaCtrl = null;
+              Cleanup();
+              return false;
+            }
+
+            mediaCtrl = (IMediaControl)graphBuilder;
+            mediaEvt = (IMediaEventEx)graphBuilder;
+            mediaSeek = (IMediaSeeking)graphBuilder;
+            mediaPos = (IMediaPosition)graphBuilder;
+            basicAudio = (IBasicAudio)graphBuilder;
+            videoWin = (IVideoWindow)graphBuilder;
+            m_iVideoWidth = Vmr9.VideoWidth;
+            m_iVideoHeight = Vmr9.VideoHeight;
+            Vmr9.SetDeinterlaceMode();
+
+            return true;
+          }
+          catch (Exception e)
+          {
+            Error.SetError("Unable to play movie", "Unable build graph for VMR9");
+            BDHandlerCore.LogError("Exception while creating DShow graph {0} {1}", e.Message, e.StackTrace);
+            Cleanup();
+            return false;
+          }
         }
 
         /// <summary>
@@ -238,6 +352,7 @@ namespace MediaPortal.Plugins.BDHandler.Player
         {
             try
             {
+                bool ChecklistToPlay = false;
                 Func<string, BDInfo> scanner = scanWorker;
                 IAsyncResult result = scanner.BeginInvoke(filePath, null, scanner);
 
@@ -257,85 +372,160 @@ namespace MediaPortal.Plugins.BDHandler.Player
 
                 List<TSPlaylistFile> allPlayLists = bluray.PlaylistFiles.Values.Where(p => p.IsValid).OrderByDescending(p => p.TotalLength).Distinct().ToList();
 
+                List<TSPlaylistFile> allPlayListsFull = bluray.PlaylistFiles.Values.OrderBy(p => p.Name).Distinct().ToList();
+
                 // this will be the title of the dialog, we strip the dialog of weird characters that might wreck the font engine.
                 string heading = (bluray.Title != string.Empty) ? Regex.Replace(bluray.Title, @"[^\w\s\*\%\$\+\,\.\-\:\!\?\(\)]", "").Trim() : "Bluray: Select Feature";
 
                 GUIWaitCursor.Hide();
 
+                // Stop BDHandler if protected disk is detected
+                if (bluray.scanfailed)
+                {
+                  GUIDialogOK pDlgOK = (GUIDialogOK)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_OK);
+                  pDlgOK.SetHeading(heading);
+                  pDlgOK.SetLine(1, string.Format("Unable to play protected disk or bad disk reading"));
+                  pDlgOK.DoModal(GUIWindowManager.ActiveWindow);
+                  return false;
+                }
+
                 // Feature selection logic 
                 TSPlaylistFile listToPlay = null;
-                if (allPlayLists.Count == 0)
+                try
+                {
+                  listToPlay = allPlayListsFull[g_Player.SetResumeBDTitleState - 1100];
+                  ChecklistToPlay = true;
+                }
+                catch (Exception)
+                {
+                  // Handle index value outrange or negative, set higher value (2000) to be able to select menu if user cancel resume dialog
+                  //g_Player.SetResumeBDTitleState = 2000;
+                  ChecklistToPlay = false;
+                }
+
+                if (g_Player.ForcePlay && allPlayLists.Count != 1 && ChecklistToPlay)
+                {
+                  //try
+                  //{
+                    listToPlay = allPlayListsFull[g_Player.SetResumeBDTitleState - 1100];
+                    BDHandlerCore.LogInfo("Force to play title, bypassing dialog.", allPlayLists.Count);
+                  //}
+                  //catch (Exception)
+                  //{
+                  //  // Handle index value outrange or negative, set higher value (2000) to be able to select menu if user cancel resume dialog
+                  //  g_Player.SetResumeBDTitleState = 2000;
+                  //}
+                }
+                else if (allPlayLists.Count == 0)
                 {
                     BDHandlerCore.LogInfo("No playlists found, bypassing dialog.", allPlayLists.Count);
                     return true;
                 }
                 else if (allPlayLists.Count == 1)
                 {
-                    // if we have only one playlist to show just move on
-                    BDHandlerCore.LogInfo("Found one valid playlist, bypassing dialog.", filePath);
-                    listToPlay = allPlayLists[0];
+                  // if we have only one playlist to show just move on
+                  BDHandlerCore.LogInfo("Found one valid playlist, bypassing dialog.", filePath);
+                  listToPlay = allPlayLists[0];
+                  // Only One title
+                  g_Player.SetResumeBDTitleState = 900;
                 }
                 else
                 {
-                    // Show selection dialog
-                    BDHandlerCore.LogInfo("Found {0} playlists, showing selection dialog.", allPlayLists.Count);
+                  // Show selection dialog
+                  BDHandlerCore.LogInfo("Found {0} playlists, showing selection dialog.", allPlayLists.Count);
 
-                    // first make an educated guess about what the real features are (more than one chapter, no loops and longer than one hour)
-                    // todo: make a better filter on the playlists containing the real features
-                    List<TSPlaylistFile> playLists = allPlayLists.Where(p => (p.Chapters.Count > 1 || p.TotalLength >= MinimalFullFeatureLength) && !p.HasLoops).ToList();
+                  // first make an educated guess about what the real features are (more than one chapter, no loops and longer than one hour)
+                  // todo: make a better filter on the playlists containing the real features
+                  List<TSPlaylistFile> playLists =
+                    allPlayLists.Where(
+                      p => (p.Chapters.Count > 1 || p.TotalLength >= MinimalFullFeatureLength) && !p.HasLoops).ToList();
 
-                    // if the filter yields zero results just list all playlists 
-                    if (playLists.Count == 0)
+                  // if the filter yields zero results just list all playlists 
+                  if (playLists.Count == 0)
+                  {
+                    playLists = allPlayLists;
+                  }
+
+                  IDialogbox dialog = (IDialogbox)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
+                  int count;
+                  while (true)
+                  {
+                    dialog.Reset();
+                    dialog.SetHeading(heading);
+
+                    count = 1;
+
+                    for (int i = 0; i < playLists.Count; i++)
                     {
-                        playLists = allPlayLists;
+                      TSPlaylistFile playList = playLists[i];
+                      TimeSpan lengthSpan = new TimeSpan((long)(playList.TotalLength * 10000000));
+                      string length = string.Format("{0:D2}:{1:D2}:{2:D2}", lengthSpan.Hours, lengthSpan.Minutes,
+                                                    lengthSpan.Seconds);
+                      // todo: translation
+                      string feature = string.Format("Feature #{0}, {2} Chapter{3} ({1})", count, length,
+                                                     playList.Chapters.Count,
+                                                     (playList.Chapters.Count > 1) ? "s" : string.Empty);
+                      dialog.Add(feature);
+                      count++;
                     }
 
-                    IDialogbox dialog = (IDialogbox)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
-                    while (true)
+                    if (allPlayLists.Count > playLists.Count)
                     {
-                        dialog.Reset();
-                        dialog.SetHeading(heading);
-
-                        int count = 1;
-
-                        for (int i = 0; i < playLists.Count; i++)
-                        {
-                            TSPlaylistFile playList = playLists[i];
-                            TimeSpan lengthSpan = new TimeSpan((long)(playList.TotalLength * 10000000));
-                            string length = string.Format("{0:D2}:{1:D2}:{2:D2}", lengthSpan.Hours, lengthSpan.Minutes, lengthSpan.Seconds);
-                            // todo: translation
-                            string feature = string.Format("Feature #{0}, {2} Chapter{3} ({1})", count, length, playList.Chapters.Count, (playList.Chapters.Count > 1) ? "s" : string.Empty);
-                            dialog.Add(feature);
-                            count++;
-                        }
-
-                        if (allPlayLists.Count > playLists.Count)
-                        {
-                            // todo: translation
-                            dialog.Add("List all features...");
-                        }
-
-                        dialog.DoModal(GUIWindowManager.ActiveWindow);
-
-                        if (dialog.SelectedId == count)
-                        {
-                            // don't filter the playlists and continue to display the dialog again
-                            playLists = allPlayLists;
-                            continue;
-
-                        }
-                        else if (dialog.SelectedId < 1)
-                        {
-                            // user cancelled so we return
-                            BDHandlerCore.LogDebug("User cancelled dialog.");
-                            return false;
-                        }
-
-                        // end dialog
-                        break;
+                      // todo: translation
+                      dialog.Add("List all features...");
                     }
 
-                    listToPlay = playLists[dialog.SelectedId - 1];
+                    dialog.DoModal(GUIWindowManager.ActiveWindow);
+
+                    if (dialog.SelectedId == count)
+                    {
+                      // don't filter the playlists and continue to display the dialog again
+                      playLists = allPlayLists;
+                      continue;
+
+                    }
+                    else if (dialog.SelectedId < 1)
+                    {
+                      // user cancelled so we return
+                      BDHandlerCore.LogDebug("User cancelled dialog.");
+                      if (Util.Utils.IsISOImage(filePath))
+                      {
+                        if (!String.IsNullOrEmpty(Util.DaemonTools.GetVirtualDrive()) &&
+                            g_Player.IsBDDirectory(Util.DaemonTools.GetVirtualDrive()) ||
+                            g_Player.IsDvdDirectory(Util.DaemonTools.GetVirtualDrive()))
+                          Util.DaemonTools.UnMount();
+                      }
+                      return false;
+                    }
+
+                    // end dialog
+                    break;
+                  }
+
+                  listToPlay = playLists[dialog.SelectedId - 1];
+
+                  // Parse BD Title count
+                  int BDCount = 0;
+                  foreach (TSPlaylistFile playlistFile in allPlayListsFull)
+                  {
+                    try
+                    {
+                      {
+                        {
+                          if (playlistFile.Name == listToPlay.Name)
+                          {
+                            //Set Resume in MP MyVideo DB higher than 1100
+                            g_Player.SetResumeBDTitleState = (BDCount + 1100);
+                            break;
+                          }
+                        }
+                      }
+                      BDCount++;
+                    }
+                    catch
+                    {
+                    }
+                  }
                 }
 
                 // put the choosen playlist into our member variable for later use

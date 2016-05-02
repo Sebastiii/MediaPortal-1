@@ -19,7 +19,7 @@ namespace MediaPortal.Plugins.BDHandler
         private static string logPrefix = "BDHandler:";
 
         // todo: the source filter should be configurable in the final, currently we are hardcoding it to use MpcMpegSourceFilter
-        public static MpcMpegSourceFilter Filter = SingletonProvider<MpcMpegSourceFilter>.Instance;
+        public static LAVFSplitter Filter = SingletonProvider<LAVFSplitter>.Instance;
 
         public static bool Init() {
             try {
@@ -42,7 +42,7 @@ namespace MediaPortal.Plugins.BDHandler
                     FileVersionInfo info = FileVersionInfo.GetVersionInfo(codecFile);
 
                     LogInfo("Detected '{0}' ({1}.{2}.{3}.{4})", filter.Name, info.ProductMajorPart, info.ProductMinorPart, info.ProductBuildPart, info.ProductPrivatePart);
-                    return (info.ProductBuildPart >= filter.RecommendedBuildNumber);
+                    return (info.ProductMinorPart >= filter.RecommendedBuildNumber);
                 }
                 else {
                     LogInfo("'{0}' was not detected on the system.", filter.Name);

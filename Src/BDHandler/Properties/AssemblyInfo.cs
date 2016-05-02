@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using MediaPortal.Common.Utils;
@@ -33,6 +33,6 @@ using MediaPortal.Common.Utils;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.9.7.${revision}")]
-[assembly: AssemblyFileVersion("0.9.7.${revision}")]
-[assembly: CompatibleVersion("1.1.7.0", "1.1.6.0")]
+[assembly: AssemblyVersion("0.9.7.30")]
+[assembly: AssemblyFileVersion("0.9.7.30")]
+[assembly: CompatibleVersion("1.3.100.0", "1.1.6.27644")]

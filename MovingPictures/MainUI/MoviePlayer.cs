@@ -63,7 +63,8 @@ namespace MediaPortal.Plugins.MovingPictures.MainUI {
             g_Player.PlayBackStarted += new g_Player.StartedHandler(onPlaybackStarted);
             g_Player.PlayBackEnded += new g_Player.EndedHandler(onPlayBackEnded);
             g_Player.PlayBackStopped += new g_Player.StoppedHandler(onPlayBackStoppedOrChanged);
-            
+            MediaPortal.GUI.Video.GUIVideoOverlay.SetGuiPropertiesUpdate += new MediaPortal.GUI.Video.GUIVideoOverlay.SetGuiProperties(SetGuiPropertiesUpdate);
+
             try {
                 // This is a handler added in RC4 - if we are using an older mediaportal version
                 // this would throw an exception.
@@ -877,6 +878,14 @@ namespace MediaPortal.Plugins.MovingPictures.MainUI {
             if (CurrentMovie != null) {
                 SetPlayProperties();
             }
+        }
+
+        private void SetGuiPropertiesUpdate(g_Player.MediaType type, string filename)
+        {
+          if (CurrentMovie != null)
+          {
+            SetPlayProperties();
+          }
         }
 
         private ResumeDialogResult PromptUserToResume(DBMovieInfo movie) {

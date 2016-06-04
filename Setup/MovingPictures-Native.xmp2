@@ -1837,7 +1837,7 @@ public class Script
       <Major>1</Major>
       <Minor>8</Minor>
       <Build>1</Build>
-      <Revision>0</Revision>
+      <Revision>2</Revision>
     </Version>
     <ExtensionDescription>Moving Pictures is a movie management plug-in that focuses on ease of use and flexibility. Point it to your movies collection and Moving Pictures will automatically load media rich details about your movies as quickly as possible with as little user interaction as possible. Once imported you can browse your collection via an easy to use but highly customizable interface.</ExtensionDescription>
     <VersionDescription>* Added automatic backup and restore of corrupt databases. When a corrupt database is detected on startup it will revert to the last known good one if it exists. Corrupt databases are also backed up but never restored.

@@ -19,6 +19,8 @@
 #include "mvrInterfaces.h"
 #include "MadSubtitleProxy.h"
 #include "DeviceState.h"
+#include "smartptr.h"
+#include <tchar.h>
 
 using namespace std;
 
@@ -45,6 +47,7 @@ class MPMadPresenter : public CUnknown, public IOsdRenderCallback, public CCritS
     STDMETHODIMP ClearBackground(LPCSTR name, REFERENCE_TIME frameStart, RECT *fullOutputRect, RECT *activeVideoRect);
     STDMETHODIMP RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT *fullOutputRect, RECT *activeVideoRect);
     STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev);
+    STDMETHODIMP SetDeviceOsd(IDirect3DDevice9* pD3DDev);
 
     bool m_pShutdown = false;
     bool m_pInitOSD = false;

@@ -1184,7 +1184,14 @@ namespace MediaPortal.Player
 
     public int StartMediaCtrl(IMediaControl mediaCtrl)
     {
-      MadvrInterface.OsdSetRenderCallback(_vmr9Filter);
+      if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+        MadvrInterface.OsdSetRenderCallback(_vmr9Filter);
+      if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+      {
+        // Init put owner for madVR 3D
+        IVideoWindow _videoWindow = (IVideoWindow)_graphBuilder;
+        if (_videoWindow != null) _videoWindow.put_Owner(GUIGraphicsContext.ActiveForm);
+      }
       var hr = mediaCtrl.Run();
       Log.Debug("VMR9: StartMediaCtrl start hr: {0}", hr);
       DsError.ThrowExceptionForHR(hr);
@@ -1199,7 +1206,8 @@ namespace MediaPortal.Player
           Thread.Sleep(10);
           hr = mediaCtrl.GetState(10, out filterState);
           hr = mediaCtrl.Run();
-          MadvrInterface.OsdSetRenderCallback(_vmr9Filter);
+          if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+            MadvrInterface.OsdSetRenderCallback(_vmr9Filter);
           // check with timeout max. 10 times a second if the state changed
         } while ((hr != 0) && ((DateTime.Now - startTime).TotalSeconds <= 5));
         if (hr != 0) // S_OK

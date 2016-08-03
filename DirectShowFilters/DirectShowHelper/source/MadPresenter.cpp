@@ -28,6 +28,7 @@
 #include "..\..\alloctracing.h"
 #include "StdString.h"
 #include "../../mpc-hc_subs/src/dsutil/DSUtil.h"
+#include <afxwin.h>
 
 const DWORD D3DFVF_VID_FRAME_VERTEX = D3DFVF_XYZRHW | D3DFVF_TEX1;
 
@@ -131,18 +132,21 @@ IBaseFilter* MPMadPresenter::Initialize()
 
   m_pCommand->SendCommandBool("disableSeekbar", true);
 
-  // MPC-HC
-  CWnd* m_pVideoWnd = CWnd::FromHandle(reinterpret_cast<HWND>(m_hParent));
-  pWindow->put_Owner((OAHWND)m_pVideoWnd->m_hWnd);
-  pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-  pWindow->put_MessageDrain((OAHWND)m_pVideoWnd->m_hWnd);
+  pWindow->put_Owner(m_hParent);
   pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
 
-  for (CWnd* pWnd = m_pVideoWnd->GetWindow(GW_CHILD); pWnd; pWnd = pWnd->GetNextWindow()) {
-    // 1. lets WM_SETCURSOR through (not needed as of now)
-    // 2. allows CMouse::CursorOnWindow() to work with m_pVideoWnd
-    pWnd->EnableWindow(FALSE);
-  }
+  //// MPC-HC
+  //CWnd* m_pVideoWnd = CWnd::FromHandle(reinterpret_cast<HWND>(m_hParent));
+  //pWindow->put_Owner((OAHWND)m_pVideoWnd->m_hWnd);
+  //pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+  //pWindow->put_MessageDrain((OAHWND)m_pVideoWnd->m_hWnd);
+  //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+
+  //for (CWnd* pWnd = m_pVideoWnd->GetWindow(GW_CHILD); pWnd; pWnd = pWnd->GetNextWindow()) {
+  //  // 1. lets WM_SETCURSOR through (not needed as of now)
+  //  // 2. allows CMouse::CursorOnWindow() to work with m_pVideoWnd
+  //  pWnd->EnableWindow(FALSE);
+  //}
 
   // TODO implement IMadVRSubclassReplacement
   //pSubclassReplacement->DisableSubclassing();
@@ -508,6 +512,18 @@ HRESULT MPMadPresenter::SetupMadDeviceState()
   return hr;
 }
 
+HRESULT MPMadPresenter::SetDeviceOsd(IDirect3DDevice9* pD3DDev)
+{
+  CAutoLock cAutoLock(this);
+  if (!pD3DDev)
+  {
+    // release all resources
+    //m_pSubPicQueue = nullptr;
+    //m_pAllocator = nullptr;
+  }
+  return S_OK;
+}
+
 HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
 {
   HRESULT hr = S_FALSE;
@@ -523,14 +539,14 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
     m_deviceState.SetDevice(pD3DDev);
     m_pCallback->SetSubtitleDevice((DWORD)pD3DDev);
     Log("MPMadPresenter::SetDevice() SetSubtitleDevice for D3D : 0x:%x", m_pMadD3DDev);
-    if (m_pMediaControl)
-    {
-      OAFilterState _fs = -1;
-      if (m_pMediaControl) m_pMediaControl->GetState(1000, &_fs);
-      if (_fs == State_Paused)
-        m_pMediaControl->Run();
-      Log("MPMadPresenter::SetDevice() m_pMediaControl : 0x:%x", _fs);
-    }
+    //if (m_pMediaControl)
+    //{
+    //  OAFilterState _fs = -1;
+    //  if (m_pMediaControl) m_pMediaControl->GetState(1000, &_fs);
+    //  if (_fs == State_Paused)
+    //    m_pMediaControl->Run();
+    //  Log("MPMadPresenter::SetDevice() m_pMediaControl : 0x:%x", _fs);
+    //}
   }
 
   if (m_pMadD3DDev)

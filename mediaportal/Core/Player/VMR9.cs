@@ -1468,11 +1468,12 @@ namespace MediaPortal.Player
         else if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
         {
           Log.Debug("VMR9: Dispose MadDeinit - thread : {0}", Thread.CurrentThread.Name);
-          GC.Collect();
-          DirectShowUtil.FinalReleaseComObject(_vmr9Filter);
+          //GC.Collect();
+          //DirectShowUtil.FinalReleaseComObject(_vmr9Filter);
           GC.Collect();
           MadDeinit();
           GC.Collect();
+          DirectShowUtil.FinalReleaseComObject(_vmr9Filter);
           Thread.Sleep(200);
           Log.Debug("VMR9: Dispose 2");
         }

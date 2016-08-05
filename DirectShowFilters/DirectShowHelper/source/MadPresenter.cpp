@@ -29,6 +29,7 @@
 #include "StdString.h"
 #include "../../mpc-hc_subs/src/dsutil/DSUtil.h"
 #include <afxwin.h>
+#include "../../MPAudioRenderer/source/SharedInclude.h"
 
 const DWORD D3DFVF_VID_FRAME_VERTEX = D3DFVF_XYZRHW | D3DFVF_TEX1;
 
@@ -58,27 +59,64 @@ MPMadPresenter::MPMadPresenter(IVMR9Callback* pCallback, DWORD width, DWORD heig
 MPMadPresenter::~MPMadPresenter()
 {
   CAutoLock cAutoLock(this);
-  SAFE_DELETE(m_pMadD3DDev);
-  SAFE_DELETE(m_pCallback);
+  //SAFE_DELETE(m_pMadD3DDev);
+  //SAFE_DELETE(m_pCallback);
+
+  //if (m_pSRCB) {
+  //  // nasty, but we have to let it know about our death somehow
+  //  ((CSubRenderCallback*)(ISubRenderCallback2*)m_pSRCB)->SetDXRAP(nullptr);
+  //}
+
+  if (m_pORCB) {
+    // nasty, but we have to let it know about our death somehow
+    static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
+  }
+
+  //// Unregister madVR Exclusive Callback
+  //if (Com::SmartQIPtr<IMadVRExclusiveModeCallback> pEXL = m_pDXR)
+  //  pEXL->Unregister(m_exclusiveCallback, this);
+
+  if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+  {
+    pWindow->put_Owner(reinterpret_cast<OAHWND>(nullptr));
+    pWindow->put_Visible(false);
+    pWindow.Release();
+  }
+
+  // Let's madVR restore original display mode (when adjust refresh it's handled by madVR)
+  if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
+    pMadVrCmd->SendCommand("restoreDisplayModeNow");
+
+  //g_renderManager.UnInit();
+  //g_advancedSettings.m_guiAlgorithmDirtyRegions = m_kodiGuiDirtyAlgo;
+
+  // the order is important here
+  //CDSRendererCallback::Destroy();
+  //SAFE_DELETE(m_pMadvrShared);
+  //m_pSubPicQueue = nullptr;
+  //m_pAllocator = nullptr;
+  //m_pMad = nullptr;
+  //m_pORCB = nullptr;
+  //m_pSRCB = nullptr;
 
   Log("MPMadPresenter::Destructor() - instance 0x%x", this);
 }
 
-void MPMadPresenter::InitializeOSD()
-{
-  {
-    CAutoLock cAutoLock(this);
-
-    CComQIPtr<IMadVROsdServices> pOsdServices = m_pMad;
-
-    if (pOsdServices && !m_pInitOSD)
-    {
-      pOsdServices->OsdSetRenderCallback("MP-GUI", this, nullptr);
-      Log("MPMadPresenter::OsdSetRenderCallback InitializeOSD for device 0x:%x", m_pMadD3DDev);
-      m_pInitOSD = true;
-    }
-  }
-}
+//void MPMadPresenter::InitializeOSD()
+//{
+//  {
+//    CAutoLock cAutoLock(this);
+//
+//    CComQIPtr<IMadVROsdServices> pOsdServices = m_pMad;
+//
+//    if (pOsdServices && !m_pInitOSD)
+//    {
+//      pOsdServices->OsdSetRenderCallback("MP-GUI", this, nullptr);
+//      Log("MPMadPresenter::OsdSetRenderCallback InitializeOSD for device 0x:%x", m_pMadD3DDev);
+//      m_pInitOSD = true;
+//    }
+//  }
+//}
 
 void MPMadPresenter::InitializeOSDClear()
 {
@@ -100,7 +138,7 @@ void MPMadPresenter::SetOSDCallback()
 {
   {
     CAutoLock cAutoLock(this);
-    InitializeOSD();
+    //InitializeOSD();
   }
 }
 
@@ -108,50 +146,113 @@ IBaseFilter* MPMadPresenter::Initialize()
 {
   CAutoLock cAutoLock(this);
 
-  HRESULT hr = CoCreateInstance(CLSID_madVR, NULL, CLSCTX_INPROC_SERVER, __uuidof(IMadVRDirect3D9Manager), (void**)&m_pMad);
+  //HRESULT hr = CoCreateInstance(CLSID_madVR, NULL, CLSCTX_INPROC_SERVER, __uuidof(IMadVRDirect3D9Manager), (void**)&m_pMad);
 
-  if (FAILED(hr))
-    return NULL;
+  //if (FAILED(hr))
+  //  return NULL;
 
-  CComQIPtr<IBaseFilter> baseFilter = m_pMad;
-  CComQIPtr<IMadVROsdServices> pOsdServices = m_pMad;
-  CComQIPtr<IMadVRDirect3D9Manager> manager = m_pMad;
-  CComQIPtr<IMadVRSubclassReplacement> pSubclassReplacement = m_pMad;
-  CComQIPtr<ISubRender> pSubRender = m_pMad;
-  CComQIPtr<IVideoWindow> pWindow = m_pMad;
+  if (Com::SmartQIPtr<IBaseFilter> baseFilter = m_pMad)
+    return baseFilter;
+}
 
-  m_pMad->QueryInterface(&m_pCommand);
+STDMETHODIMP MPMadPresenter::CreateRenderer(IUnknown** ppRenderer)
+{
+  CheckPointer(ppRenderer, E_POINTER);
 
-  if (!baseFilter || !pOsdServices || !manager || !pSubclassReplacement || !pSubRender || !m_pCommand || !pWindow)
-    return NULL;
+  if (m_pMad) {
+    return E_UNEXPECTED;
+  }
 
-  //pOsdServices->OsdSetRenderCallback("MP-GUI", this); // Init OSD from later to avoid failed start on 3D (when D3D device is changed from madVR)
-  manager->ConfigureDisplayModeChanger(false, true);
+  m_pMad.CoCreateInstance(CLSID_madVR, GetOwner());
+  if (!m_pMad) {
+    return E_FAIL;
+  }
 
-  pSubRender->SetCallback(m_subProxy);
+  // Init Settings Manager
+  //m_pSettingsManager = DNew CMadvrSettingsManager(m_pMad);
 
-  m_pCommand->SendCommandBool("disableSeekbar", true);
+  Com::SmartQIPtr<ISubRender> pSR = m_pMad;
+  if (!pSR) {
+    m_pMad = nullptr;
+    return E_FAIL;
+  }
 
-  pWindow->put_Owner(m_hParent);
-  pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
-
-  //// MPC-HC
-  //CWnd* m_pVideoWnd = CWnd::FromHandle(reinterpret_cast<HWND>(m_hParent));
-  //pWindow->put_Owner((OAHWND)m_pVideoWnd->m_hWnd);
-  //pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-  //pWindow->put_MessageDrain((OAHWND)m_pVideoWnd->m_hWnd);
-  //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
-
-  //for (CWnd* pWnd = m_pVideoWnd->GetWindow(GW_CHILD); pWnd; pWnd = pWnd->GetNextWindow()) {
-  //  // 1. lets WM_SETCURSOR through (not needed as of now)
-  //  // 2. allows CMouse::CursorOnWindow() to work with m_pVideoWnd
-  //  pWnd->EnableWindow(FALSE);
+  //m_pSRCB = DNew CSubRenderCallback(this);
+  //if (FAILED(pSR->SetCallback(m_pSRCB))) {
+  //  m_pMad = nullptr;
+  //  return E_FAIL;
   //}
 
-  // TODO implement IMadVRSubclassReplacement
-  //pSubclassReplacement->DisableSubclassing();
+  // IOsdRenderCallback
+  Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+  if (!pOR) {
+    m_pMad = nullptr;
+    return E_FAIL;
+  }
 
-  return baseFilter;
+  m_pORCB = new COsdRenderCallback(this);
+  if (FAILED(pOR->OsdSetRenderCallback("Kodi.Gui", m_pORCB))) {
+    m_pMad = nullptr;
+    return E_FAIL;
+  }
+
+  // Configure initial Madvr Settings
+  ConfigureMadvr();
+
+  //CDSRendererCallback::Get()->Register(this);
+
+  (*ppRenderer = reinterpret_cast<IUnknown*>(static_cast<INonDelegatingUnknown*>(this)))->AddRef();
+
+  return S_OK;
+}
+
+void MPMadPresenter::EnableExclusive(bool bEnable)
+{
+  if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
+    pMadVrCmd->SendCommandBool("disableExclusiveMode", !bEnable);
+};
+
+void MPMadPresenter::ConfigureMadvr()
+{
+  if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
+    pMadVrCmd->SendCommandBool("disableSeekbar", true);
+
+  //CComQIPtr<IMadVROsdServices> pOsdServices = m_pMad;
+
+  if (Com::SmartQIPtr<IMadVRDirect3D9Manager> manager = m_pMad)
+    manager->ConfigureDisplayModeChanger(false, true);
+
+  //CComQIPtr<IMadVRSubclassReplacement> pSubclassReplacement = m_pMad;
+
+  if (Com::SmartQIPtr<ISubRender> pSubRender = m_pMad)
+    pSubRender->SetCallback(m_subProxy);
+
+  if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+  {
+    pWindow->put_Owner(m_hParent);
+    pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+  }
+
+  //if (!baseFilter || !pOsdServices || !manager || !pSubclassReplacement || !pSubRender || !m_pCommand || !pWindow)
+  //  return NULL;
+
+  ////pOsdServices->OsdSetRenderCallback("MP-GUI", this); // Init OSD from later to avoid failed start on 3D (when D3D device is changed from madVR)
+
+  //m_pSettingsManager->SetBool("delayPlaybackStart2", CSettings::GetInstance().GetBool(CSettings::SETTING_DSPLAYER_DELAYMADVRPLAYBACK));
+
+  //if (Com::SmartQIPtr<IMadVRExclusiveModeCallback> pEXL = m_pMad)
+  //  pEXL->Register(m_exclusiveCallback, this);
+
+  //if (CSettings::GetInstance().GetBool(CSettings::SETTING_DSPLAYER_EXCLUSIVEMODE))
+  //{
+  //  m_pSettingsManager->SetBool("exclusiveDelay", true);
+  //  m_pSettingsManager->SetBool("enableExclusive", true);
+  //}
+  //else
+  {
+    if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
+      pMadVrCmd->SendCommandBool("disableExclusiveMode", true);
+  }
 }
 
 HRESULT MPMadPresenter::Shutdown()
@@ -177,74 +278,85 @@ HRESULT MPMadPresenter::Shutdown()
 
   m_pCallback = nullptr;
 
-  if (m_pMad)
-  {
-    CComQIPtr<IVideoWindow> pWindow = m_pMad;
-    CComQIPtr<IMadVROsdServices> pOsdServices = m_pMad;
+  //if (m_pMad)
+  //{
+  //  CComQIPtr<IVideoWindow> pWindow = m_pMad;
+  //  CComQIPtr<IMadVROsdServices> pOsdServices = m_pMad;
 
-    if (pWindow)
-    {
-      pWindow->put_Owner(reinterpret_cast<OAHWND>(nullptr));
-      pWindow->put_Visible(false);
-      pWindow.Release();
-    }
+  //  if (pWindow)
+  //  {
+  //    pWindow->put_Owner(reinterpret_cast<OAHWND>(nullptr));
+  //    pWindow->put_Visible(false);
+  //    pWindow.Release();
+  //  }
 
-    if (m_pCommand)
-    {
-      m_pCommand->SendCommandBool("disableExclusiveMode", true);
-      m_pCommand->SendCommand("restoreDisplayModeNow");
-      m_pCommand->Release();
-    }
+  //  if (m_pCommand)
+  //  {
+  //    m_pCommand->SendCommandBool("disableExclusiveMode", true);
+  //    m_pCommand->SendCommand("restoreDisplayModeNow");
+  //    m_pCommand->Release();
+  //  }
 
-    if (m_pMadD3DDev) m_pMadD3DDev->Release();
-    if (m_pDevice) m_pDevice->Release();
-    if (m_pMadGuiVertexBuffer) m_pMadGuiVertexBuffer.Release();
-    if (m_pMadOsdVertexBuffer) m_pMadOsdVertexBuffer.Release();
-    if (m_pMadOsdVertexBuffer) m_pMadOsdVertexBuffer.Release();
-    if (m_pRenderTextureOsd) m_pRenderTextureOsd.Release();
-    if (m_pMPTextureGui) m_pMPTextureGui.Release();
-    if (m_pMPTextureOsd) m_pMPTextureOsd.Release();
-    if (m_pMad) m_pMad->Release();
-    if (pOsdServices) pOsdServices->OsdSetRenderCallback("MP-GUI", nullptr, nullptr);
-  }
+  //  if (m_pMadD3DDev) m_pMadD3DDev->Release();
+  //  if (m_pDevice) m_pDevice->Release();
+  //  if (m_pMadGuiVertexBuffer) m_pMadGuiVertexBuffer.Release();
+  //  if (m_pMadOsdVertexBuffer) m_pMadOsdVertexBuffer.Release();
+  //  if (m_pMadOsdVertexBuffer) m_pMadOsdVertexBuffer.Release();
+  //  if (m_pRenderTextureOsd) m_pRenderTextureOsd.Release();
+  //  if (m_pMPTextureGui) m_pMPTextureGui.Release();
+  //  if (m_pMPTextureOsd) m_pMPTextureOsd.Release();
+  //  if (m_pMad) m_pMad.Release();
+  //  if (pOsdServices) pOsdServices->OsdSetRenderCallback("MP-GUI", nullptr, nullptr);
+  //}
 
   Log("MPMadPresenter::Shutdown()");
 
   return S_OK;
 }
 
-HRESULT MPMadPresenter::NonDelegatingQueryInterface(REFIID riid, void** ppv)
-{
-  if (riid == __uuidof(IUnknown))
-    return __super::NonDelegatingQueryInterface(riid, ppv);
+//HRESULT MPMadPresenter::NonDelegatingQueryInterface(REFIID riid, void** ppv)
+//{
+//  if (riid == __uuidof(IUnknown))
+//    return __super::NonDelegatingQueryInterface(riid, ppv);
+//
+//  HRESULT hr = QueryInterface(riid, ppv);
+//  return SUCCEEDED(hr) ? hr : __super::NonDelegatingQueryInterface(riid, ppv);
+//}
 
-  HRESULT hr = QueryInterface(riid, ppv);
-  return SUCCEEDED(hr) ? hr : __super::NonDelegatingQueryInterface(riid, ppv);
-}
-
-HRESULT MPMadPresenter::QueryInterface(REFIID riid, void** ppvObject)
+STDMETHODIMP MPMadPresenter::NonDelegatingQueryInterface(REFIID riid, void** ppv)
 {
-  HRESULT hr = E_NOINTERFACE;
-  if (ppvObject == NULL)
-    hr = E_POINTER;
-  else if (riid == __uuidof(IOsdRenderCallback))
-  {
-    *ppvObject = static_cast<IOsdRenderCallback*>(this);
-    AddRef();
-    hr = S_OK;
-  }
-  else if (riid == __uuidof(ISubRender))
-  {
-    if (m_subProxy)
-    {
-      *ppvObject = static_cast<ISubRenderCallback*>(m_subProxy);
-      AddRef();
-      hr = S_OK;
+  if (riid != IID_IUnknown && m_pMad) {
+    if (SUCCEEDED(m_pMad->QueryInterface(riid, ppv))) {
+      return S_OK;
     }
   }
 
-  return hr;
+  return __super::NonDelegatingQueryInterface(riid, ppv);
 }
+
+//HRESULT MPMadPresenter::QueryInterface(REFIID riid, void** ppvObject)
+//{
+//  HRESULT hr = E_NOINTERFACE;
+//  if (ppvObject == NULL)
+//    hr = E_POINTER;
+//  else if (riid == __uuidof(IOsdRenderCallback))
+//  {
+//    *ppvObject = static_cast<IOsdRenderCallback*>(this);
+//    AddRef();
+//    hr = S_OK;
+//  }
+//  else if (riid == __uuidof(ISubRender))
+//  {
+//    if (m_subProxy)
+//    {
+//      *ppvObject = static_cast<ISubRenderCallback*>(m_subProxy);
+//      AddRef();
+//      hr = S_OK;
+//    }
+//  }
+//
+//  return hr;
+//}
 
 ULONG MPMadPresenter::AddRef()
 {

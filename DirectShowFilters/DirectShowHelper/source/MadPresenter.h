@@ -21,14 +21,54 @@
 #include "DeviceState.h"
 #include "smartptr.h"
 #include <tchar.h>
+#include "../../mpc-hc_subs/src/DSUtil/DSUtil.h"
 
 using namespace std;
 
-class MPMadPresenter : public CUnknown, public IOsdRenderCallback, public CCritSec
+class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CCritSec
 {
+  class COsdRenderCallback : public CUnknown, public IOsdRenderCallback, public CCritSec
+  {
+    MPMadPresenter* m_pDXRAP;
+
+  public: COsdRenderCallback(MPMadPresenter* pDXRAP) : CUnknown(_T("COsdRender"), NULL) , m_pDXRAP(pDXRAP) {}
+
+    DECLARE_IUNKNOWN
+    STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void** ppv) {
+      return
+        QI(IOsdRenderCallback)
+        __super::NonDelegatingQueryInterface(riid, ppv);
+    }
+
+    void SetDXRAP(MPMadPresenter* pDXRAP) {
+      //CAutoLock cAutoLock(this);
+      m_pDXRAP = pDXRAP;
+    }
+
+    // IOsdRenderCallback
+
+    STDMETHODIMP ClearBackground(LPCSTR name, REFERENCE_TIME frameStart, RECT *fullOutputRect, RECT *activeVideoRect) {
+      CAutoLock cAutoLock(this);
+      return m_pDXRAP ? m_pDXRAP->ClearBackground(name, frameStart, fullOutputRect, activeVideoRect) : E_UNEXPECTED;
+    }
+    STDMETHODIMP RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT *fullOutputRect, RECT *activeVideoRect) {
+      CAutoLock cAutoLock(this);
+      return m_pDXRAP ? m_pDXRAP->RenderOsd(name, frameStart, fullOutputRect, activeVideoRect) : E_UNEXPECTED;
+    }
+    STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev) {
+      CAutoLock cAutoLock(this);
+      return m_pDXRAP ? m_pDXRAP->SetDevice(pD3DDev) : E_UNEXPECTED;
+    }
+  };
+
   public:
+
     MPMadPresenter(IVMR9Callback* pCallback, DWORD width, DWORD height, OAHWND parent, IDirect3DDevice9* pDevice, IMediaControl* pMediaControl);
     ~MPMadPresenter();
+
+    // XBMC
+    STDMETHODIMP CreateRenderer(IUnknown** ppRenderer);
+    void ConfigureMadvr();
 
     IBaseFilter* Initialize();
     void InitializeOSD();
@@ -37,7 +77,7 @@ class MPMadPresenter : public CUnknown, public IOsdRenderCallback, public CCritS
     HRESULT Shutdown();
 
     STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void** ppv);
-    STDMETHODIMP QueryInterface(REFIID riid, void** ppvObject);
+    //STDMETHODIMP QueryInterface(REFIID riid, void** ppvObject);
 
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
@@ -48,6 +88,8 @@ class MPMadPresenter : public CUnknown, public IOsdRenderCallback, public CCritS
     STDMETHODIMP RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT *fullOutputRect, RECT *activeVideoRect);
     STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev);
     STDMETHODIMP SetDeviceOsd(IDirect3DDevice9* pD3DDev);
+
+    virtual void EnableExclusive(bool bEnable);
 
     bool m_pShutdown = false;
     bool m_pInitOSD = false;
@@ -68,7 +110,8 @@ class MPMadPresenter : public CUnknown, public IOsdRenderCallback, public CCritS
 
     IMediaControl* m_pMediaControl = nullptr;
 
-    IUnknown* m_pMad = nullptr;
+    //IUnknown* m_pMad = nullptr;
+    Com::SmartPtr<IUnknown> m_pMad;
 
     CComQIPtr<IDirect3DTexture9> m_pRenderTextureGui = nullptr;
     CComQIPtr<IDirect3DTexture9> m_pRenderTextureOsd = nullptr;
@@ -90,12 +133,14 @@ class MPMadPresenter : public CUnknown, public IOsdRenderCallback, public CCritS
 
     DeviceState m_deviceState;
 
-    IMadVRCommand* m_pCommand = nullptr;
+    //IMadVRCommand* m_pCommand = nullptr;
 
     int countFrame = 0;
     int firstFrame = 1;
     int secondFrame = 3;
     int resetFrame = -1;
     int m_pRefCount = 0;
+
+    Com::SmartPtr<IOsdRenderCallback> m_pORCB;
 };
 

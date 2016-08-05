@@ -118,21 +118,21 @@ MPMadPresenter::~MPMadPresenter()
 //  }
 //}
 
-void MPMadPresenter::InitializeOSDClear()
-{
-  {
-    CAutoLock cAutoLock(this);
-
-    CComQIPtr<IMadVROsdServices> pOsdServices = m_pMad;
-
-    if (pOsdServices && !m_pShutdown)
-    {
-      pOsdServices->OsdSetRenderCallback("MP-GUI", nullptr, nullptr);
-      AddRef();
-      Log("MPMadPresenter::OsdSetRenderCallback InitializeOSD Clearing");
-    }
-  }
-}
+//void MPMadPresenter::InitializeOSDClear()
+//{
+//  {
+//    CAutoLock cAutoLock(this);
+//
+//    CComQIPtr<IMadVROsdServices> pOsdServices = m_pMad;
+//
+//    if (pOsdServices && !m_pShutdown)
+//    {
+//      pOsdServices->OsdSetRenderCallback("MP-GUI", nullptr, nullptr);
+//      AddRef();
+//      Log("MPMadPresenter::OsdSetRenderCallback InitializeOSD Clearing");
+//    }
+//  }
+//}
 
 void MPMadPresenter::SetOSDCallback()
 {
@@ -358,25 +358,25 @@ STDMETHODIMP MPMadPresenter::NonDelegatingQueryInterface(REFIID riid, void** ppv
 //  return hr;
 //}
 
-ULONG MPMadPresenter::AddRef()
-{
-  return NonDelegatingAddRef();
-}
-
-ULONG MPMadPresenter::Release()
-{
-  return NonDelegatingRelease();
-}
-
-ULONG MPMadPresenter::NonDelegatingRelease()
-{
-  return __super::NonDelegatingRelease();
-}
-
-ULONG MPMadPresenter::NonDelegatingAddRef()
-{
-  return __super::NonDelegatingAddRef();
-}
+//ULONG MPMadPresenter::AddRef()
+//{
+//  return NonDelegatingAddRef();
+//}
+//
+//ULONG MPMadPresenter::Release()
+//{
+//  return NonDelegatingRelease();
+//}
+//
+//ULONG MPMadPresenter::NonDelegatingRelease()
+//{
+//  return __super::NonDelegatingRelease();
+//}
+//
+//ULONG MPMadPresenter::NonDelegatingAddRef()
+//{
+//  return __super::NonDelegatingAddRef();
+//}
 
 HRESULT MPMadPresenter::ClearBackground(LPCSTR name, REFERENCE_TIME frameStart, RECT* fullOutputRect, RECT* activeVideoRect)
 {

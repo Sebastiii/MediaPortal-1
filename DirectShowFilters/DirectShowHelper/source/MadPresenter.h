@@ -95,13 +95,6 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
       CAutoLock cAutoLock(this);
       return m_pDXRAP ? m_pDXRAP->Render(rtStart, left, top, right, bottom, width, height) : E_UNEXPECTED;
     }
-
-    // ISubRendererCallback2
-
-    //STDMETHODIMP RenderEx(REFERENCE_TIME rtStart, REFERENCE_TIME rtStop, REFERENCE_TIME AvgTimePerFrame, int left, int top, int right, int bottom, int width, int height) {
-    //  CAutoLock cAutoLock(this);
-    //  return m_pDXRAP ? m_pDXRAP->Render(rtStart, rtStop, AvgTimePerFrame, left, top, right, bottom, width, height) : E_UNEXPECTED;
-    //}
   };
 
   public:
@@ -120,12 +113,11 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
     HRESULT Shutdown();
 
     STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void** ppv);
-    //STDMETHODIMP QueryInterface(REFIID riid, void** ppvObject);
 
-    ULONG STDMETHODCALLTYPE AddRef();
-    ULONG STDMETHODCALLTYPE Release();
-    ULONG STDMETHODCALLTYPE NonDelegatingAddRef();
-    ULONG STDMETHODCALLTYPE NonDelegatingRelease();
+    //ULONG STDMETHODCALLTYPE AddRef();
+    //ULONG STDMETHODCALLTYPE Release();
+    //ULONG STDMETHODCALLTYPE NonDelegatingAddRef();
+    //ULONG STDMETHODCALLTYPE NonDelegatingRelease();
 
     STDMETHODIMP ClearBackground(LPCSTR name, REFERENCE_TIME frameStart, RECT *fullOutputRect, RECT *activeVideoRect);
     STDMETHODIMP RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT *fullOutputRect, RECT *activeVideoRect);

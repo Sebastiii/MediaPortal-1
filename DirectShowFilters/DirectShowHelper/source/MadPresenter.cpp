@@ -62,10 +62,10 @@ MPMadPresenter::~MPMadPresenter()
   //SAFE_DELETE(m_pMadD3DDev);
   //SAFE_DELETE(m_pCallback);
 
-  //if (m_pSRCB) {
-  //  // nasty, but we have to let it know about our death somehow
-  //  ((CSubRenderCallback*)(ISubRenderCallback2*)m_pSRCB)->SetDXRAP(nullptr);
-  //}
+  if (m_pSRCB) {
+    // nasty, but we have to let it know about our death somehow
+    ((CSubRenderCallback*)(ISubRenderCallback*)m_pSRCB)->SetDXRAP(nullptr);
+  }
 
   if (m_pORCB) {
     // nasty, but we have to let it know about our death somehow
@@ -177,11 +177,11 @@ STDMETHODIMP MPMadPresenter::CreateRenderer(IUnknown** ppRenderer)
     return E_FAIL;
   }
 
-  //m_pSRCB = DNew CSubRenderCallback(this);
-  //if (FAILED(pSR->SetCallback(m_pSRCB))) {
-  //  m_pMad = nullptr;
-  //  return E_FAIL;
-  //}
+  m_pSRCB = new CSubRenderCallback(this);
+  if (FAILED(pSR->SetCallback(m_pSRCB))) {
+    m_pMad = nullptr;
+    return E_FAIL;
+  }
 
   // IOsdRenderCallback
   Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
@@ -224,8 +224,8 @@ void MPMadPresenter::ConfigureMadvr()
 
   //CComQIPtr<IMadVRSubclassReplacement> pSubclassReplacement = m_pMad;
 
-  if (Com::SmartQIPtr<ISubRender> pSubRender = m_pMad)
-    pSubRender->SetCallback(m_subProxy);
+  //if (Com::SmartQIPtr<ISubRender> pSubRender = m_pMad)
+  //  pSubRender->SetCallback(m_subProxy);
 
   if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
   {
@@ -685,4 +685,27 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
     m_pMadD3DDev = nullptr;
 
   return hr;
+}
+
+HRESULT MPMadPresenter::Render(REFERENCE_TIME frameStart, int left, int top, int right, int bottom, int width, int height)
+{
+  if (m_pCallback)
+  {
+    CAutoLock cAutoLock(this);
+
+    //if (!m_pInitOSDRender)
+    //{
+    //  m_pInitOSDRender = true;
+    //  m_pPresenter->m_pCallback->ForceOsdUpdate(true);
+    //  Log("MadSubtitleProxy::Render() ForceOsdUpdate");
+    //}
+    m_deviceState.Store();
+    SetupMadDeviceState();
+
+    m_pCallback->RenderSubtitle(frameStart, left, top, right, bottom, width, height);
+
+    m_deviceState.Restore();
+  }
+
+  return S_OK;
 }

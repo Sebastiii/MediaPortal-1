@@ -41,7 +41,7 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
     }
 
     void SetDXRAP(MPMadPresenter* pDXRAP) {
-      //CAutoLock cAutoLock(this);
+      CAutoLock cAutoLock(this);
       m_pDXRAP = pDXRAP;
     }
 
@@ -57,8 +57,51 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
     }
     STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev) {
       CAutoLock cAutoLock(this);
+      return m_pDXRAP ? m_pDXRAP->SetDeviceOsd(pD3DDev) : E_UNEXPECTED;
+    }
+  };
+
+  class CSubRenderCallback : public CUnknown, public ISubRenderCallback, public CCritSec
+  {
+    MPMadPresenter* m_pDXRAP;
+
+  public:
+    CSubRenderCallback(MPMadPresenter* pDXRAP)
+      : CUnknown(_T("CSubRender"), NULL)
+      , m_pDXRAP(pDXRAP) {
+    }
+
+    DECLARE_IUNKNOWN
+    STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void** ppv) {
+      return
+        QI(ISubRenderCallback)
+        //QI(ISubRenderCallback2)
+        __super::NonDelegatingQueryInterface(riid, ppv);
+    }
+
+    void SetDXRAP(MPMadPresenter* pDXRAP) {
+      CAutoLock cAutoLock(this);
+      m_pDXRAP = pDXRAP;
+    }
+
+    // ISubRenderCallback
+
+    STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev) {
+      CAutoLock cAutoLock(this);
       return m_pDXRAP ? m_pDXRAP->SetDevice(pD3DDev) : E_UNEXPECTED;
     }
+
+    STDMETHODIMP Render(REFERENCE_TIME rtStart, int left, int top, int right, int bottom, int width, int height) {
+      CAutoLock cAutoLock(this);
+      return m_pDXRAP ? m_pDXRAP->Render(rtStart, left, top, right, bottom, width, height) : E_UNEXPECTED;
+    }
+
+    // ISubRendererCallback2
+
+    //STDMETHODIMP RenderEx(REFERENCE_TIME rtStart, REFERENCE_TIME rtStop, REFERENCE_TIME AvgTimePerFrame, int left, int top, int right, int bottom, int width, int height) {
+    //  CAutoLock cAutoLock(this);
+    //  return m_pDXRAP ? m_pDXRAP->Render(rtStart, rtStop, AvgTimePerFrame, left, top, right, bottom, width, height) : E_UNEXPECTED;
+    //}
   };
 
   public:
@@ -88,6 +131,7 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
     STDMETHODIMP RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT *fullOutputRect, RECT *activeVideoRect);
     STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev);
     STDMETHODIMP SetDeviceOsd(IDirect3DDevice9* pD3DDev);
+    STDMETHOD(Render)(REFERENCE_TIME frameStart, int left, int top, int right, int bottom, int width, int height);
 
     virtual void EnableExclusive(bool bEnable);
 
@@ -142,5 +186,6 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
     int m_pRefCount = 0;
 
     Com::SmartPtr<IOsdRenderCallback> m_pORCB;
+    Com::SmartPtr<ISubRenderCallback> m_pSRCB;
 };
 

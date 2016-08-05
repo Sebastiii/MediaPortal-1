@@ -72,16 +72,16 @@ MPMadPresenter::~MPMadPresenter()
   //if (Com::SmartQIPtr<IMadVRExclusiveModeCallback> pEXL = m_pDXR)
   //  pEXL->Unregister(m_exclusiveCallback, this);
 
+  // Let's madVR restore original display mode (when adjust refresh it's handled by madVR)
+  if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
+    pMadVrCmd->SendCommand("restoreDisplayModeNow");
+
   if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
   {
     pWindow->put_Owner(reinterpret_cast<OAHWND>(nullptr));
     pWindow->put_Visible(false);
     pWindow.Release();
   }
-
-  // Let's madVR restore original display mode (when adjust refresh it's handled by madVR)
-  if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
-    pMadVrCmd->SendCommand("restoreDisplayModeNow");
 
   //g_renderManager.UnInit();
   //g_advancedSettings.m_guiAlgorithmDirtyRegions = m_kodiGuiDirtyAlgo;
@@ -91,9 +91,9 @@ MPMadPresenter::~MPMadPresenter()
   //SAFE_DELETE(m_pMadvrShared);
   //m_pSubPicQueue = nullptr;
   //m_pAllocator = nullptr;
-  //m_pMad = nullptr;
-  //m_pORCB = nullptr;
-  //m_pSRCB = nullptr;
+  m_pMad = nullptr;
+  m_pORCB = nullptr;
+  m_pSRCB = nullptr;
 
   Log("MPMadPresenter::Destructor() - instance 0x%x", this);
 }
@@ -112,22 +112,6 @@ void MPMadPresenter::InitializeOSD()
     m_pMad = nullptr;
   }
 }
-
-//void MPMadPresenter::InitializeOSDClear()
-//{
-//  {
-//    CAutoLock cAutoLock(this);
-//
-//    CComQIPtr<IMadVROsdServices> pOsdServices = m_pMad;
-//
-//    if (pOsdServices && !m_pShutdown)
-//    {
-//      pOsdServices->OsdSetRenderCallback("MP-GUI", nullptr, nullptr);
-//      AddRef();
-//      Log("MPMadPresenter::OsdSetRenderCallback InitializeOSD Clearing");
-//    }
-//  }
-//}
 
 void MPMadPresenter::SetOSDCallback()
 {
@@ -523,16 +507,10 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
 
   m_pMadD3DDev = (IDirect3DDevice9Ex*)pD3DDev;
 
-  if (m_pCallback && pD3DDev)
-  {
-    m_pInitOSDRender = false;
-    m_deviceState.SetDevice(pD3DDev);
-    m_pCallback->SetSubtitleDevice((DWORD)pD3DDev);
-    Log("MPMadPresenter::SetDevice() SetSubtitleDevice for D3D : 0x:%x", m_pMadD3DDev);
-  }
-
   if (m_pMadD3DDev)
   {
+    m_deviceState.SetDevice(m_pMadD3DDev);
+
     if (FAILED(hr = m_pMadD3DDev->CreateVertexBuffer(sizeof(VID_FRAME_VERTEX) * 4, D3DUSAGE_WRITEONLY, D3DFVF_VID_FRAME_VERTEX, D3DPOOL_DEFAULT, &m_pMadGuiVertexBuffer.p, NULL)))
       return hr;
 
@@ -550,6 +528,13 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
 
     if (FAILED(hr = m_pMadD3DDev->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pRenderTextureOsd.p, &m_hSharedOsdHandle)))
       return hr;
+
+    if (m_pCallback)
+    {
+      m_pInitOSDRender = false;
+      m_pCallback->SetSubtitleDevice((DWORD)m_pMadD3DDev);
+      Log("MPMadPresenter::SetDevice() SetSubtitleDevice for D3D : 0x:%x", m_pMadD3DDev);
+    }
   }
   else
     m_pMadD3DDev = nullptr;

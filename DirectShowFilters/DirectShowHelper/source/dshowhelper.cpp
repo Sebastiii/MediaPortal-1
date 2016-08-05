@@ -942,9 +942,7 @@ void MadDeinit()
   try
   {
     Log("MPMadDshow::MadDeinit shutdown start");
-    //m_madSubtitleProxy->Shutdown();
     m_madPresenter->Shutdown();
-    //m_madPresenter->Release();
     m_pVMR9Filter = nullptr;
     Log("MPMadDshow::MadDeinit shutdown done");
   }

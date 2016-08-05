@@ -871,7 +871,7 @@ namespace MediaPortal.Player
       {
         TimeSpan tsPlay = DateTime.Now - playbackTimer;
         // Register OSD back 2 seconds after rendering is done on madVR filter.
-        if (tsPlay.Seconds >= 2)
+        if (tsPlay.Seconds >= 3)
         {
           if (GUIGraphicsContext.MadVrOsd)
           {

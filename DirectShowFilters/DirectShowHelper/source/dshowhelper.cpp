@@ -924,10 +924,8 @@ BOOL MadInit(IVMR9Callback* callback, DWORD width, DWORD height, DWORD dwD3DDevi
   m_pVMR9Filter = Com::SmartQIPtr<IBaseFilter>(pRenderer).Detach();
   
   // madVR supports calling IVideoWindow::put_Owner before the pins are connected
-
   //if (Com::SmartQIPtr<IVideoWindow> pVW = pCAP)
   //    pVW->put_Owner((OAHWND)CDSPlayer::GetDShWnd());
-  //  m_pVMR9Filter->AddRef();
 
   *madFilter = m_pVMR9Filter;
 

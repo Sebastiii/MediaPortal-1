@@ -72,9 +72,14 @@ MPMadPresenter::~MPMadPresenter()
   //if (Com::SmartQIPtr<IMadVRExclusiveModeCallback> pEXL = m_pDXR)
   //  pEXL->Unregister(m_exclusiveCallback, this);
 
+  MPMadPresenter::EnableExclusive(false);
+
   // Let's madVR restore original display mode (when adjust refresh it's handled by madVR)
   if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
+  {
     pMadVrCmd->SendCommand("restoreDisplayModeNow");
+    pMadVrCmd.Release();
+  }
 
   if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
   {
@@ -82,6 +87,10 @@ MPMadPresenter::~MPMadPresenter()
     pWindow->put_Visible(false);
     pWindow.Release();
   }
+
+  m_pMad.FullRelease();
+  m_pSRCB.FullRelease();
+  m_pORCB.FullRelease();
 
   //g_renderManager.UnInit();
   //g_advancedSettings.m_guiAlgorithmDirtyRegions = m_kodiGuiDirtyAlgo;
@@ -91,9 +100,9 @@ MPMadPresenter::~MPMadPresenter()
   //SAFE_DELETE(m_pMadvrShared);
   //m_pSubPicQueue = nullptr;
   //m_pAllocator = nullptr;
-  m_pMad = nullptr;
-  m_pORCB = nullptr;
-  m_pSRCB = nullptr;
+  //m_pMad = nullptr;
+  //m_pORCB = nullptr;
+  //m_pSRCB = nullptr;
 
   Log("MPMadPresenter::Destructor() - instance 0x%x", this);
 }
@@ -117,7 +126,7 @@ void MPMadPresenter::SetOSDCallback()
 {
   {
     CAutoLock cAutoLock(this);
-    InitializeOSD();
+    //InitializeOSD();
   }
 }
 
@@ -156,18 +165,18 @@ STDMETHODIMP MPMadPresenter::CreateRenderer(IUnknown** ppRenderer)
     return E_FAIL;
   }
 
-  //// IOsdRenderCallback
-  //Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-  //if (!pOR) {
-  //  m_pMad = nullptr;
-  //  return E_FAIL;
-  //}
+  // IOsdRenderCallback
+  Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+  if (!pOR) {
+    m_pMad = nullptr;
+    return E_FAIL;
+  }
 
-  //m_pORCB = new COsdRenderCallback(this);
-  //if (FAILED(pOR->OsdSetRenderCallback("Kodi.Gui", m_pORCB))) {
-  //  m_pMad = nullptr;
-  //  return E_FAIL;
-  //}
+  m_pORCB = new COsdRenderCallback(this);
+  if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB))) {
+    m_pMad = nullptr;
+    return E_FAIL;
+  }
 
   // Configure initial Madvr Settings
   ConfigureMadvr();
@@ -193,16 +202,18 @@ void MPMadPresenter::ConfigureMadvr()
   if (Com::SmartQIPtr<IMadVRDirect3D9Manager> manager = m_pMad)
     manager->ConfigureDisplayModeChanger(false, true);
 
-  //CComQIPtr<IMadVRSubclassReplacement> pSubclassReplacement = m_pMad;
+  // TODO implement IMadVRSubclassReplacement
+  //if (Com::SmartQIPtr<IMadVRSubclassReplacement> pSubclassReplacement = m_pMad)  { }
 
   if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
   {
-    pWindow->put_Owner(m_hParent);
     pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+    pWindow->put_Owner(m_hParent);
   }
 
-  if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
-    pMadVrCmd->SendCommandBool("disableExclusiveMode", true);
+  // TODO - disable exclusive mode (need to read current setting)
+  //if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
+  //  pMadVrCmd->SendCommandBool("disableExclusiveMode", true);
 }
 
 HRESULT MPMadPresenter::Shutdown()

@@ -124,8 +124,8 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
     IVMR9Callback* m_pCallback = nullptr;
 
   private:
-    HRESULT RenderToTexture(IDirect3DTexture9* pTexture);
-    HRESULT RenderTexture(IDirect3DVertexBuffer9* pVertexBuf, IDirect3DTexture9* pTexture);
+    void RenderToTexture(IDirect3DTexture9* pTexture);
+    void RenderTexture(IDirect3DVertexBuffer9* pVertexBuf, IDirect3DTexture9* pTexture);
 
     HRESULT SetupOSDVertex(IDirect3DVertexBuffer9* pVertextBuf);
     HRESULT SetupMadDeviceState();

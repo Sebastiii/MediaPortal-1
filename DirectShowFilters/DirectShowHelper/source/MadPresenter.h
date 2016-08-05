@@ -75,7 +75,6 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
     STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void** ppv) {
       return
         QI(ISubRenderCallback)
-        //QI(ISubRenderCallback2)
         __super::NonDelegatingQueryInterface(riid, ppv);
     }
 
@@ -108,17 +107,11 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
 
     IBaseFilter* Initialize();
     void InitializeOSD();
-    void InitializeOSDClear();
+    //void InitializeOSDClear();
     void SetOSDCallback();
     HRESULT Shutdown();
 
     STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void** ppv);
-
-    //ULONG STDMETHODCALLTYPE AddRef();
-    //ULONG STDMETHODCALLTYPE Release();
-    //ULONG STDMETHODCALLTYPE NonDelegatingAddRef();
-    //ULONG STDMETHODCALLTYPE NonDelegatingRelease();
-
     STDMETHODIMP ClearBackground(LPCSTR name, REFERENCE_TIME frameStart, RECT *fullOutputRect, RECT *activeVideoRect);
     STDMETHODIMP RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT *fullOutputRect, RECT *activeVideoRect);
     STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev);
@@ -139,14 +132,13 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
     HRESULT SetupOSDVertex(IDirect3DVertexBuffer9* pVertextBuf);
     HRESULT SetupMadDeviceState();
 
-    OAHWND m_hParent = (OAHWND)nullptr;
+    OAHWND m_hParent = reinterpret_cast<OAHWND>(nullptr);
 
     IDirect3DDevice9Ex* m_pDevice = nullptr;
     IDirect3DDevice9Ex* m_pMadD3DDev = nullptr;
 
     IMediaControl* m_pMediaControl = nullptr;
 
-    //IUnknown* m_pMad = nullptr;
     Com::SmartPtr<IUnknown> m_pMad;
 
     CComQIPtr<IDirect3DTexture9> m_pRenderTextureGui = nullptr;
@@ -169,8 +161,6 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
 
     DeviceState m_deviceState;
 
-    //IMadVRCommand* m_pCommand = nullptr;
-
     int countFrame = 0;
     int firstFrame = 1;
     int secondFrame = 3;
@@ -179,5 +169,7 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
 
     Com::SmartPtr<IOsdRenderCallback> m_pORCB;
     Com::SmartPtr<ISubRenderCallback> m_pSRCB;
+
+    bool m_pInitOSDRender = false;
 };
 

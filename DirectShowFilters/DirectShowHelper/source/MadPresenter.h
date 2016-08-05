@@ -107,7 +107,6 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
 
     IBaseFilter* Initialize();
     void InitializeOSD();
-    //void InitializeOSDClear();
     void SetOSDCallback();
     HRESULT Shutdown();
 
@@ -122,7 +121,6 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
 
     bool m_pShutdown = false;
     bool m_pInitOSD = false;
-    MadSubtitleProxy* m_subProxy = nullptr;
     IVMR9Callback* m_pCallback = nullptr;
 
   private:

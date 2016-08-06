@@ -493,7 +493,7 @@ namespace MediaPortal.Player
 
         if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
         {
-          // Process 5 frames to clear D3D dialog window
+          // Process frames to clear D3D dialog window
           GUIWindowManager.MadVrProcess();
           _scene.MadVrRenderTarget = GUIGraphicsContext.DX9Device.GetRenderTarget(0);
           MadVrRenderTargetVMR9 = GUIGraphicsContext.DX9Device.GetRenderTarget(0);

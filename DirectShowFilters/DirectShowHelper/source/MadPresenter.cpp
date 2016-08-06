@@ -72,24 +72,6 @@ MPMadPresenter::~MPMadPresenter()
   //if (Com::SmartQIPtr<IMadVRExclusiveModeCallback> pEXL = m_pDXR)
   //  pEXL->Unregister(m_exclusiveCallback, this);
 
-  // Disable exclusive mode
-  if (m_ExclusiveMode)
-   MPMadPresenter::EnableExclusive(false);
-
-  // Let's madVR restore original display mode (when adjust refresh it's handled by madVR)
-  if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
-  {
-    pMadVrCmd->SendCommand("restoreDisplayModeNow");
-    pMadVrCmd.Release();
-  }
-
-  if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-  {
-    pWindow->put_Owner(reinterpret_cast<OAHWND>(nullptr));
-    pWindow->put_Visible(false);
-    pWindow.Release();
-  }
-
   m_pMad.FullRelease();
   m_pSRCB.FullRelease();
   m_pORCB.FullRelease();
@@ -116,7 +98,7 @@ void MPMadPresenter::SetOSDCallback()
 {
   {
     CAutoLock cAutoLock(this);
-    //InitializeOSD();
+    InitializeOSD();
   }
 }
 
@@ -155,18 +137,18 @@ STDMETHODIMP MPMadPresenter::CreateRenderer(IUnknown** ppRenderer)
     return E_FAIL;
   }
 
-  // IOsdRenderCallback
-  Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-  if (!pOR) {
-    m_pMad = nullptr;
-    return E_FAIL;
-  }
+  //// IOsdRenderCallback
+  //Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+  //if (!pOR) {
+  //  m_pMad = nullptr;
+  //  return E_FAIL;
+  //}
 
-  m_pORCB = new COsdRenderCallback(this);
-  if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB))) {
-    m_pMad = nullptr;
-    return E_FAIL;
-  }
+  //m_pORCB = new COsdRenderCallback(this);
+  //if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB))) {
+  //  m_pMad = nullptr;
+  //  return E_FAIL;
+  //}
 
   // Configure initial Madvr Settings
   ConfigureMadvr();
@@ -230,7 +212,24 @@ HRESULT MPMadPresenter::Shutdown()
     if (m_pCallback)
     {
       m_pCallback->Release();
-      m_pCallback = nullptr;
+    }
+
+    // Disable exclusive mode
+    if (m_ExclusiveMode)
+      MPMadPresenter::EnableExclusive(false);
+
+    // Let's madVR restore original display mode (when adjust refresh it's handled by madVR)
+    if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
+    {
+      pMadVrCmd->SendCommand("restoreDisplayModeNow");
+      pMadVrCmd.Release();
+    }
+
+    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    {
+      pWindow->put_Owner(reinterpret_cast<OAHWND>(nullptr));
+      pWindow->put_Visible(false);
+      pWindow.Release();
     }
 
     Log("MPMadPresenter::Shutdown() scope done ");
@@ -457,6 +456,8 @@ HRESULT MPMadPresenter::SetDeviceOsd(IDirect3DDevice9* pD3DDev)
     // release all resources
     //m_pSubPicQueue = nullptr;
     //m_pAllocator = nullptr;
+    if (m_pCallback)
+      m_pCallback->SetSubtitleDevice((DWORD)pD3DDev);
   }
   return S_OK;
 }
@@ -481,16 +482,27 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
           if (SUCCEEDED(hr = m_pMadD3DDev->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pRenderTextureGui.p, &m_hSharedGuiHandle)))
             if (SUCCEEDED(hr = m_pDevice->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pMPTextureOsd.p, &m_hSharedOsdHandle)))
               if (SUCCEEDED(hr = m_pMadD3DDev->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pRenderTextureOsd.p, &m_hSharedOsdHandle)))
+              {
+                hr = S_OK;
+                Log("MPMadPresenter::SetDevice() init ok for D3D : 0x:%x", m_pMadD3DDev);
+              }
 
-                if (m_pCallback)
-                {
-                  m_pInitOSDRender = false;
-                  m_pCallback->SetSubtitleDevice((DWORD)m_pMadD3DDev);
-                  Log("MPMadPresenter::SetDevice() SetSubtitleDevice for D3D : 0x:%x", m_pMadD3DDev);
-                }
+    if (m_pCallback)
+    {
+      m_pInitOSDRender = false;
+      m_pCallback->SetSubtitleDevice((DWORD)m_pMadD3DDev);
+      Log("MPMadPresenter::SetDevice() SetSubtitleDevice for D3D : 0x:%x", m_pMadD3DDev);
+    }
   }
   else
+  {
+    if (m_pCallback)
+    {
+      m_pCallback->SetSubtitleDevice((DWORD)m_pMadD3DDev);
+      Log("MPMadPresenter::SetDevice() reset subtitle device");
+    }
     m_pMadD3DDev = nullptr;
+  }
 
   return hr;
 }

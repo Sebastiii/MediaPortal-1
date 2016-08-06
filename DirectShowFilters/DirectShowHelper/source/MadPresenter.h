@@ -169,5 +169,6 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
     Com::SmartPtr<ISubRenderCallback> m_pSRCB;
 
     bool m_pInitOSDRender = false;
+    int m_ExclusiveMode = 0;
 };
 

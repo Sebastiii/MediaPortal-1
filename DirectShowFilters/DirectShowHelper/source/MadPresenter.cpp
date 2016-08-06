@@ -72,7 +72,9 @@ MPMadPresenter::~MPMadPresenter()
   //if (Com::SmartQIPtr<IMadVRExclusiveModeCallback> pEXL = m_pDXR)
   //  pEXL->Unregister(m_exclusiveCallback, this);
 
-  MPMadPresenter::EnableExclusive(false);
+  // Disable exclusive mode
+  if (m_ExclusiveMode)
+   MPMadPresenter::EnableExclusive(false);
 
   // Let's madVR restore original display mode (when adjust refresh it's handled by madVR)
   if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
@@ -199,9 +201,21 @@ void MPMadPresenter::ConfigureMadvr()
     pWindow->put_Owner(m_hParent);
   }
 
-  // TODO - disable exclusive mode (need to read current setting)
-  //if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
-  //  pMadVrCmd->SendCommandBool("disableExclusiveMode", true);
+  if (Com::SmartQIPtr<IMadVRSettings> m_pSettings = m_pMad)
+  {
+    // Read exclusive settings
+    m_pSettings->SettingsGetBoolean(L"enableExclusive", &m_ExclusiveMode);
+
+    if (m_ExclusiveMode)
+    {
+      m_pSettings->SettingsSetBoolean(L"exclusiveDelay", true);
+      m_pSettings->SettingsSetBoolean(L"enableExclusive", true);
+    }
+    else if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
+    {
+      MPMadPresenter::EnableExclusive(false);
+    }
+  }
 }
 
 HRESULT MPMadPresenter::Shutdown()

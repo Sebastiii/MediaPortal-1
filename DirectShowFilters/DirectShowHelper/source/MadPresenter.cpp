@@ -92,18 +92,6 @@ MPMadPresenter::~MPMadPresenter()
   m_pSRCB.FullRelease();
   m_pORCB.FullRelease();
 
-  //g_renderManager.UnInit();
-  //g_advancedSettings.m_guiAlgorithmDirtyRegions = m_kodiGuiDirtyAlgo;
-
-  // the order is important here
-  //CDSRendererCallback::Destroy();
-  //SAFE_DELETE(m_pMadvrShared);
-  //m_pSubPicQueue = nullptr;
-  //m_pAllocator = nullptr;
-  //m_pMad = nullptr;
-  //m_pORCB = nullptr;
-  //m_pSRCB = nullptr;
-
   Log("MPMadPresenter::Destructor() - instance 0x%x", this);
 }
 

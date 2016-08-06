@@ -553,7 +553,6 @@ namespace MediaPortal.Player
             (uint) GUIGraphicsContext.ActiveForm.ToInt32(), ref _vmr9Filter, mPMediaControl);
           hr = new HResult(graphBuilder.AddFilter(_vmr9Filter, "madVR"));
           Log.Info("VMR9: added madVR Renderer to graph");
-          MadvrInterface.SetRenderCallback(_vmr9Filter);
         }
         else
         {
@@ -1210,8 +1209,7 @@ namespace MediaPortal.Player
       if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
       {
         // Init put owner for madVR 3D
-        IVideoWindow _videoWindow = (IVideoWindow)_graphBuilder;
-        if (_videoWindow != null) _videoWindow.put_Visible(OABool.True);//.put_Owner(GUIGraphicsContext.ActiveForm);
+        //_videoWindow.put_Owner(GUIGraphicsContext.form.Handle);
       }
       return hr;
     }

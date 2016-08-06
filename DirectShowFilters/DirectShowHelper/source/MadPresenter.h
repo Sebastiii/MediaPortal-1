@@ -79,7 +79,7 @@ class MPMadPresenter : public CUnknown, /*public IOsdRenderCallback,*/ public CC
     }
 
     void SetDXRAP(MPMadPresenter* pDXRAP) {
-      CAutoLock cAutoLock(this);
+      //CAutoLock cAutoLock(this); // TODO need to be commented to avoid deadlock.
       m_pDXRAP = pDXRAP;
     }
 

@@ -98,6 +98,29 @@ namespace MediaPortal.GUI.Library
       else if (layers == GUILayers.over && !GUIGraphicsContext.IsFullScreenVideo)
         startLayer = videoLayer + 1;
 
+      // Check for madVR when GUI/OSD/Dialog is displayed, we should go to latency mode
+      if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR &&
+          GUIGraphicsContext.InVmr9Render)
+      {
+        for (int i = 0; i < MAX_LAYERS; ++i)
+        {
+          if (_layers[i] != null && _layers[i].ShouldRenderLayer())
+          {
+            if (i == (int) LayerType.Gui || i == (int) LayerType.Osd || i == (int) LayerType.Topbar2 ||
+                i == (int) LayerType.Dialog)
+            {
+              // why this hack for Intel HD GPU, this need to slow down primary D3D device to avoid flickering
+              if (GUIGraphicsContext.DX9Device != null && layers != GUILayers.all)
+              {
+                GUIGraphicsContext.DX9Device.Present(); //SLOW
+                GUIGraphicsContext.DX9Device.Present(); //SLOW
+              }
+              uiVisible = true;
+            }
+          }
+        }
+      }
+
       for (int i = startLayer; i < endLayer; ++i)
       {
         if (_layers[i] != null)
@@ -118,7 +141,7 @@ namespace MediaPortal.GUI.Library
           }
         }
       }
-
+      //Log.Debug("uiVisible {0} layers {1}", uiVisible, layers);
       return uiVisible;
     }
   }

@@ -734,6 +734,15 @@ namespace MediaPortal.Player
 
         GUIFontManager.Present();
         device.EndScene();
+        try
+        {
+          // Show the frame on the primary surface.
+          device.Present(); //SLOW
+        }
+        catch (DeviceLostException ex)
+        {
+          Log.Error("PlaneScene: Device lost - {0}", ex.ToString());
+        }
 
         if (layers == GUILayers.under)
         {
@@ -753,6 +762,7 @@ namespace MediaPortal.Player
       {
         _reEntrant = false;
       }
+      //Log.Error("visible {0} layers {1}", visible, layers);
       return visible ? 0 : 1; // S_OK, S_FALSE
     }
 

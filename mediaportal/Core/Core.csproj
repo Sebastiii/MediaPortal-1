@@ -20,7 +20,7 @@
     <DelaySign>false</DelaySign>
     <OutputType>Library</OutputType>
     <RootNamespace>MediaPortal</RootNamespace>
-    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <RunPostBuildEvent>Always</RunPostBuildEvent>
     <StartupObject>
     </StartupObject>
     <FileUpgradeFlags>
@@ -1666,8 +1666,7 @@
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
-    <PostBuildEvent>
-    </PostBuildEvent>
+    <PostBuildEvent>xcopy $(TargetDir)core.* $(SolutionDir)MediaPortal.Application\bin\$(ConfigurationName) /Y</PostBuildEvent>
   </PropertyGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

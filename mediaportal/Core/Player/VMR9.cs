@@ -413,21 +413,27 @@ namespace MediaPortal.Player
     /// <summary>
     /// Register madVR WindowsMessageMP
     /// </summary>
-    /// <param name="graphBuilder"></param>
-    public void WindowsMessageMP()
+    public void WindowsMessageMp()
     {
       // Needed to enable 3D (TODO why is needed ?)
       IVideoWindow _videoWindow = (IVideoWindow)_graphBuilder;
       if (_videoWindow != null) _videoWindow.put_Owner(GUIGraphicsContext.form.Handle);
-      Log.Debug("WMR9: Delayed OSD Callback");
-      WindowsMessage();
+      Log.Debug("VMR9: Delayed OSD Callback");
       RegisterOsd();
+    }
+
+    /// <summary>
+    /// Register madVR MadVrRepeatFrame
+    /// </summary>
+    public void MadVrRepeatFrame()
+    {
+      //Log.Debug("VMR9: Repeat madVR frame");
+      WindowsMessage();
     }
 
     /// <summary>
     /// Register madVR OSD callback
     /// </summary>
-    /// <param name="graphBuilder"></param>
     public void RegisterOsd()
     {
       if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)

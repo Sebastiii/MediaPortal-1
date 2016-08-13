@@ -107,6 +107,10 @@ void MPMadPresenter::SetOSDCallback()
   {
     //CAutoLock cAutoLock(this);
     //InitializeOSD(); // Disable OSD Callback from C#
+
+    // Render frame to try to fix HD4XXX GPU flickering issue
+    Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+    pOR->OsdRedrawFrame();
   }
 }
 

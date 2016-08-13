@@ -326,7 +326,7 @@ namespace MediaPortal.Player
           break;
         case GUIMessage.MessageType.GUI_MSG_REGISTER_MADVR_OSD:
           if (VMR9Util.g_vmr9 != null)
-            VMR9Util.g_vmr9.WindowsMessageMP();
+            VMR9Util.g_vmr9.WindowsMessageMp();
           break;
       }
     }
@@ -722,15 +722,7 @@ namespace MediaPortal.Player
           GUIGraphicsContext.RenderOverlay = true;
         }
 
-        //bool visible = false;
-        if (_disableLowLatencyMode)
-        {
-          GUIGraphicsContext.RenderGUI.RenderFrame(GUIGraphicsContext.TimePassed, layers);
-        }
-        else
-        {
-          GUIGraphicsContext.RenderGUI.RenderFrame(GUIGraphicsContext.TimePassed, layers, ref visible);
-        }
+        GUIGraphicsContext.RenderGUI.RenderFrame(GUIGraphicsContext.TimePassed, layers, ref visible);
 
         GUIFontManager.Present();
         device.EndScene();
@@ -760,6 +752,25 @@ namespace MediaPortal.Player
       }
       finally
       {
+        if (visible)
+        {
+          // why this hack for Intel HD GPU, this need to slow down primary D3D device to avoid flickering
+          if (GUIGraphicsContext.DX9Device != null && layers != GUILayers.all)
+          {
+            for (var j = 0; j < 10; ++j)
+            {
+              VMR9Util.g_vmr9.MadVrRepeatFrame();
+            }
+            // Show the frame on the primary surface.
+            GUIGraphicsContext.DX9Device.Present(); //SLOW
+          }
+        }
+
+        if (_disableLowLatencyMode)
+        {
+          visible = false;
+        }
+
         _reEntrant = false;
       }
       //Log.Error("visible {0} layers {1}", visible, layers);

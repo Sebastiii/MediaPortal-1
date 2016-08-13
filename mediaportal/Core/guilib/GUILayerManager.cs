@@ -19,6 +19,7 @@
 #endregion
 
 using System;
+using MediaPortal.Player;
 
 namespace MediaPortal.GUI.Library
 {
@@ -109,12 +110,17 @@ namespace MediaPortal.GUI.Library
             if (i == (int) LayerType.Gui || i == (int) LayerType.Osd || i == (int) LayerType.Topbar2 ||
                 i == (int) LayerType.Dialog)
             {
-              // why this hack for Intel HD GPU, this need to slow down primary D3D device to avoid flickering
-              if (GUIGraphicsContext.DX9Device != null && layers != GUILayers.all)
-              {
-                GUIGraphicsContext.DX9Device.Present(); //SLOW
-                GUIGraphicsContext.DX9Device.Present(); //SLOW
-              }
+              //// why this hack for Intel HD GPU, this need to slow down primary D3D device to avoid flickering
+              //if (GUIGraphicsContext.DX9Device != null && layers != GUILayers.all)
+              //{
+              //  for (var j = 0; j < 10; ++j)
+              //  {
+              //    VMR9Util.g_vmr9.MadVrRepeatFrame();
+              //  }
+              //  _layers[i].RenderLayer(timePassed);
+              //  GUIFontManager.Present();
+              //  GUIGraphicsContext.DX9Device.Present();
+              //}
               uiVisible = true;
             }
           }

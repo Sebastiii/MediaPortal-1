@@ -1189,8 +1189,9 @@ namespace MediaPortal.Player
       lock (this)
       {
         // TEST but crash when DXVA Native is used in LAV
-        IVideoWindow _videoWindow = (IVideoWindow) _graphBuilder;
-        if (_videoWindow != null) _videoWindow.put_Owner(GUIGraphicsContext.form.Handle);
+        // Commented out again because it lead to crash (but this code permit to start 3D but no clear why))
+        //IVideoWindow _videoWindow = (IVideoWindow) _graphBuilder;
+        //if (_videoWindow != null) _videoWindow.put_Owner(GUIGraphicsContext.form.Handle);
 
         var hr = mediaCtrl.Run();
         Log.Debug("VMR9: StartMediaCtrl start hr: {0}", hr);

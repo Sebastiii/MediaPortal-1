@@ -726,15 +726,15 @@ namespace MediaPortal.Player
 
         GUIFontManager.Present();
         device.EndScene();
-        try
-        {
-          // Show the frame on the primary surface.
-          device.Present(); //SLOW
-        }
-        catch (DeviceLostException ex)
-        {
-          Log.Error("PlaneScene: Device lost - {0}", ex.ToString());
-        }
+        //try
+        //{
+        //  // Show the frame on the primary surface.
+        //  device.Present(); //SLOW
+        //}
+        //catch (DeviceLostException ex)
+        //{
+        //  Log.Error("PlaneScene: Device lost - {0}", ex.ToString());
+        //}
 
         if (layers == GUILayers.under)
         {
@@ -763,6 +763,7 @@ namespace MediaPortal.Player
             }
             // Show the frame on the primary surface.
             GUIGraphicsContext.DX9Device.Present(); //SLOW
+            //Log.Error("visible {0} layers {1}", true, layers);
           }
         }
 

@@ -94,39 +94,6 @@ namespace MediaPortal.GUI.Library
       int startLayer = 0;
       int endLayer = MAX_LAYERS;
 
-      if (layers == GUILayers.under)
-        endLayer = videoLayer - 1;
-      else if (layers == GUILayers.over && !GUIGraphicsContext.IsFullScreenVideo)
-        startLayer = videoLayer + 1;
-
-      // Check for madVR when GUI/OSD/Dialog is displayed, we should go to latency mode
-      if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR &&
-          GUIGraphicsContext.InVmr9Render)
-      {
-        for (int i = 0; i < MAX_LAYERS; ++i)
-        {
-          if (_layers[i] != null && _layers[i].ShouldRenderLayer())
-          {
-            if (i == (int) LayerType.Gui || i == (int) LayerType.Osd || i == (int) LayerType.Topbar2 ||
-                i == (int) LayerType.Dialog)
-            {
-              //// why this hack for Intel HD GPU, this need to slow down primary D3D device to avoid flickering
-              //if (GUIGraphicsContext.DX9Device != null && layers != GUILayers.all)
-              //{
-              //  for (var j = 0; j < 10; ++j)
-              //  {
-              //    VMR9Util.g_vmr9.MadVrRepeatFrame();
-              //  }
-              //  _layers[i].RenderLayer(timePassed);
-              //  GUIFontManager.Present();
-              //  GUIGraphicsContext.DX9Device.Present();
-              //}
-              uiVisible = true;
-            }
-          }
-        }
-      }
-
       for (int i = startLayer; i < endLayer; ++i)
       {
         if (_layers[i] != null)
@@ -137,17 +104,23 @@ namespace MediaPortal.GUI.Library
             {
               continue;
             }
-            _layers[i].RenderLayer(timePassed);
-            GUIFontManager.Present();
-
-            if (videoLayer != i)
+            // For madVR, inform that we have UI displaying
+            if (i == (int) LayerType.Gui || i == (int) LayerType.Osd || i == (int) LayerType.Topbar2 ||
+                i == (int) LayerType.Dialog || i == (int) LayerType.Topbar1 || i == (int) LayerType.MiniEPG ||
+                i == (int) LayerType.Volume)
             {
               uiVisible = true;
             }
+            // madVR pass GUI rendering when video is played
+            if (i == (int) LayerType.Gui && layers == GUILayers.over)
+            {
+              continue;
+            }
+            _layers[i].RenderLayer(timePassed);
+            GUIFontManager.Present();
           }
         }
       }
-      //Log.Debug("uiVisible {0} layers {1}", uiVisible, layers);
       return uiVisible;
     }
   }

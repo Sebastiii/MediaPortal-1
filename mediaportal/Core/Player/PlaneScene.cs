@@ -110,6 +110,8 @@ namespace MediaPortal.Player
 
     private bool _disableLowLatencyMode = false;
 
+    private static bool _visible = false;
+
     #endregion
 
     #region ctor
@@ -642,6 +644,11 @@ namespace MediaPortal.Player
       }
     }
 
+    public bool IsFullScreen()
+    {
+      return GUIGraphicsContext.IsFullScreenVideo;
+    }
+
     public int RenderGui(Int16 width, Int16 height, Int16 arWidth, Int16 arHeight)
     {
       return RenderLayers(GUILayers.under, width, height, arWidth, arHeight);
@@ -654,7 +661,8 @@ namespace MediaPortal.Player
 
     private int RenderLayers(GUILayers layers, Int16 width, Int16 height, Int16 arWidth, Int16 arHeight)
     {
-      bool visible = false;
+      _visible = false;
+
       try
       {
         if (_reEntrant)
@@ -684,6 +692,35 @@ namespace MediaPortal.Player
         if (GUIWindowManager.IsSwitchingToNewWindow && !_vmr9Util.InMenu)
         {
           return 1; // (0) -> S_OK, (1) -> S_FALSE; //dont present video during window transitions
+        }
+
+        _vmr9Util.FreeFrameCounter++;
+
+        if (!_drawVideoAllowed || !_isEnabled)
+        {
+          Log.Info("planescene:RenderLayers() frame:{0} enabled:{1} allowed:{2}", _vmr9Util.FrameCounter, _isEnabled,
+            _drawVideoAllowed);
+          _vmr9Util.FrameCounter++;
+          return -1;
+        }
+        _vmr9Util.FrameCounter++;
+
+        //if we're stopping then just return
+        //float timePassed = GUIGraphicsContext.TimePassed;
+        if (_stopPainting)
+        {
+          return -1;
+        }
+
+        //sanity checks
+        if (GUIGraphicsContext.DX9Device == null)
+        {
+          return -1;
+        }
+
+        if (GUIGraphicsContext.DX9Device.Disposed)
+        {
+          return -1;
         }
 
         _reEntrant = true;
@@ -722,19 +759,10 @@ namespace MediaPortal.Player
           GUIGraphicsContext.RenderOverlay = true;
         }
 
-        GUIGraphicsContext.RenderGUI.RenderFrame(GUIGraphicsContext.TimePassed, layers, ref visible);
+        GUIGraphicsContext.RenderGUI.RenderFrame(GUIGraphicsContext.TimePassed, layers, ref _visible);
 
         GUIFontManager.Present();
         device.EndScene();
-        //try
-        //{
-        //  // Show the frame on the primary surface.
-        //  device.Present(); //SLOW
-        //}
-        //catch (DeviceLostException ex)
-        //{
-        //  Log.Error("PlaneScene: Device lost - {0}", ex.ToString());
-        //}
 
         if (layers == GUILayers.under)
         {
@@ -752,37 +780,27 @@ namespace MediaPortal.Player
       }
       finally
       {
-        if (visible)
-        {
-          // why this hack for Intel HD GPU, this need to slow down primary D3D device to avoid flickering
-          if (GUIGraphicsContext.DX9Device != null && layers != GUILayers.all)
-          {
-            for (var j = 0; j < 10; ++j)
-            {
-              VMR9Util.g_vmr9.MadVrRepeatFrame();
-            }
-            // Show the frame on the primary surface.
-            GUIGraphicsContext.DX9Device.Present(); //SLOW
-            //Log.Error("visible {0} layers {1}", true, layers);
-          }
-        }
-
         if (_disableLowLatencyMode)
         {
-          visible = false;
+          _visible = false;
         }
 
         _reEntrant = false;
+        GUIGraphicsContext.InVmr9Render = false;
       }
-      //Log.Error("visible {0} layers {1}", visible, layers);
-      return visible ? 0 : 1; // S_OK, S_FALSE
+      return _visible ? 0 : 1; // S_OK, S_FALSE
+    }
+
+    private int RenderLayersCall(GUILayers layers)
+    {
+
+      return _visible ? 0 : 1; // S_OK, S_FALSE
     }
 
     public void SetRenderTarget(uint target)
     {
-      IntPtr ptr = (IntPtr)target;
-      Surface surface = new Surface(ptr);
-      GUIGraphicsContext.DX9Device.SetRenderTarget(0, surface);
+      Surface surface = new Surface((IntPtr) target);
+      if (GUIGraphicsContext.DX9Device != null) GUIGraphicsContext.DX9Device.SetRenderTarget(0, surface);
       surface.ReleaseGraphics();
       surface.Dispose();
     }

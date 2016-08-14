@@ -86,6 +86,9 @@ namespace MediaPortal.Player
 
     [PreserveSig]
     void ForceOsdUpdate(bool pForce);
+
+    [PreserveSig]
+    bool IsFullScreen();
   }
 
   #endregion
@@ -427,8 +430,11 @@ namespace MediaPortal.Player
     /// </summary>
     public void MadVrRepeatFrame()
     {
-      //Log.Debug("VMR9: Repeat madVR frame");
-      WindowsMessage();
+      if (GUIGraphicsContext.Vmr9Active &&
+          GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+      {
+        WindowsMessage();
+      }
     }
 
     /// <summary>

@@ -110,7 +110,7 @@ namespace MediaPortal.Player
 
     private bool _disableLowLatencyMode = false;
 
-    private static bool _visible = false;
+    //private static bool _visible = false;
 
     #endregion
 
@@ -661,7 +661,7 @@ namespace MediaPortal.Player
 
     private int RenderLayers(GUILayers layers, Int16 width, Int16 height, Int16 arWidth, Int16 arHeight)
     {
-      _visible = false;
+      bool visible = false;
 
       try
       {
@@ -747,28 +747,48 @@ namespace MediaPortal.Player
           }
         }
 
+        float timePassed = GUIGraphicsContext.TimePassed;
+
+        GUIGraphicsContext.DX9Device.Present();
+
         Device device = GUIGraphicsContext.DX9Device;
 
         device.Clear(ClearFlags.Target, Color.FromArgb(0, 0, 0, 0), 1.0f, 0);
         device.BeginScene();
 
-        if (layers == GUILayers.over)
+        try
         {
-          SubtitleRenderer.GetInstance().Render();
-          BDOSDRenderer.GetInstance().Render();
-          GUIGraphicsContext.RenderOverlay = true;
+          if (!GUIGraphicsContext.BlankScreen)
+          {
+            // Render GUI + Video surface
+            GUIGraphicsContext.RenderGUI.RenderFrame(timePassed, GUILayers.all);
+            GUIFontManager.Present();
+          }
+        }
+        finally
+        {
+          GUIGraphicsContext.DX9Device.EndScene();
         }
 
-        GUIGraphicsContext.RenderGUI.RenderFrame(GUIGraphicsContext.TimePassed, layers, ref _visible);
+        ////if (layers == GUILayers.over)
+        //{
+        //  SubtitleRenderer.GetInstance().Render();
+        //  BDOSDRenderer.GetInstance().Render();
+        //  GUIGraphicsContext.RenderOverlay = true;
+        //}
 
-        GUIFontManager.Present();
-        device.EndScene();
+        //GUIGraphicsContext.RenderGUI.RenderFrame(GUIGraphicsContext.TimePassed, layers, ref visible);
+        //GUIGraphicsContext.RenderGUI.RenderFrame(GUIGraphicsContext.TimePassed, layers, ref visible);
+        //GUIGraphicsContext.RenderGUI.RenderFrame(GUIGraphicsContext.TimePassed, layers, ref visible);
 
-        if (layers == GUILayers.under)
-        {
-          GUIGraphicsContext.RenderGui = false;
-          GUIGraphicsContext.RenderOverlay = false;
-        }
+        //GUIFontManager.Present();
+        //device.EndScene();
+
+        //if (layers == GUILayers.under)
+        //{
+        //  GUIGraphicsContext.RenderGui = false;
+        //  GUIGraphicsContext.RenderOverlay = false;
+        //}
 
         // Present() call is done on C++ side so we are able to use DirectX 9 Ex device
         // which allows us to skip the v-sync wait. We don't want to wait with madVR
@@ -782,27 +802,28 @@ namespace MediaPortal.Player
       {
         if (_disableLowLatencyMode)
         {
-          _visible = false;
+          visible = false;
         }
 
         _reEntrant = false;
         GUIGraphicsContext.InVmr9Render = false;
       }
-      return _visible ? 0 : 1; // S_OK, S_FALSE
-    }
-
-    private int RenderLayersCall(GUILayers layers)
-    {
-
-      return _visible ? 0 : 1; // S_OK, S_FALSE
+      Log.Error("visible {0}", visible);
+      return visible ? 0 : 1; // S_OK, S_FALSE
     }
 
     public void SetRenderTarget(uint target)
     {
-      Surface surface = new Surface((IntPtr) target);
-      if (GUIGraphicsContext.DX9Device != null) GUIGraphicsContext.DX9Device.SetRenderTarget(0, surface);
-      surface.ReleaseGraphics();
-      surface.Dispose();
+      //lock (this)
+      {
+        Surface surface = new Surface((IntPtr) target);
+        if (GUIGraphicsContext.DX9Device != null)
+        {
+          GUIGraphicsContext.DX9Device.SetRenderTarget(0, surface);
+        }
+        surface.ReleaseGraphics();
+        surface.Dispose();
+      }
     }
 
     public void SetSubtitleDevice(IntPtr device)

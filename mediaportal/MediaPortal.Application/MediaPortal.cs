@@ -2968,8 +2968,11 @@ public class MediaPortalApp : D3D, IRender
 
   public void RenderFrame(float timePassed, GUILayers layers)
   {
-    bool uiVisible = false;
-    RenderFrame(timePassed, layers, ref uiVisible);
+    lock (this)
+    {
+      bool uiVisible = false;
+      RenderFrame(timePassed, layers, ref uiVisible);
+    }
   }
 
   #endregion

@@ -110,17 +110,26 @@ namespace MediaPortal.GUI.Library
                 i == (int) LayerType.Volume)
             {
               uiVisible = true;
+              //_layers[i].RenderLayer(timePassed);
+              //GUIFontManager.Present();
+              ////return uiVisible;
             }
-            // madVR pass GUI rendering when video is played
-            if (i == (int) LayerType.Gui && layers == GUILayers.over)
-            {
-              continue;
-            }
+            //// madVR pass GUI rendering when video is played
+            //if (i == (int) LayerType.Gui && layers == GUILayers.over)
+            //{
+            //  continue;
+            //}
             _layers[i].RenderLayer(timePassed);
             GUIFontManager.Present();
           }
         }
       }
+      //// madVR inform that MP frame is done (workaround to avoid flickering)
+      //if (GUIGraphicsContext.Vmr9Active && VMR9Util.g_vmr9 != null)
+      //{
+      //  VMR9Util.g_vmr9.MadVrRepeatFrame();
+      //}
+      Log.Error("uiVisible {0}", uiVisible);
       return uiVisible;
     }
   }

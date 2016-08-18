@@ -746,17 +746,17 @@ namespace MediaPortal.Player
           _diffuseColor = 0xFFffffff;
         }
 
-        //get desired video window
-        if (width > 0 && height > 0 && _textureAddress != 0)
-        {
-          Size nativeSize = new Size(width, height);
-          _shouldRenderTexture = SetVideoWindow(nativeSize);
-          Log.Error("should");
-        }
-        else
-        {
-          _shouldRenderTexture = false;
-        }
+        ////get desired video window
+        //if (width > 0 && height > 0)
+        //{
+        //  Size nativeSize = new Size(width, height);
+        //  _shouldRenderTexture = SetVideoWindow(nativeSize);
+        //  Log.Error("should");
+        //}
+        //else
+        //{
+        //  _shouldRenderTexture = false;
+        //}
 
         //if we're stopping then just return
         //float timePassed = GUIGraphicsContext.TimePassed;
@@ -789,16 +789,16 @@ namespace MediaPortal.Player
 
         //Log.Debug("PlaneScene width {0}, height {1}", width, height);
 
-        //if (GUIGraphicsContext.IsWindowVisible)
-        //{
-        //  Size nativeSize = new Size(width, height);
-        //  _shouldRenderTexture = SetVideoWindow(nativeSize);
-        //}
-        //else
-        //{
-        //  Size nativeSize = new Size(1, 1);
-        //  _shouldRenderTexture = SetVideoWindow(nativeSize);
-        //}
+        if (GUIGraphicsContext.IsWindowVisible)
+        {
+          Size nativeSize = new Size(width, height);
+          _shouldRenderTexture = SetVideoWindow(nativeSize);
+        }
+        else
+        {
+          Size nativeSize = new Size(1, 1);
+          _shouldRenderTexture = SetVideoWindow(nativeSize);
+        }
 
         visible = RenderLayersCall(layers, timePassed);
 
@@ -930,11 +930,14 @@ namespace MediaPortal.Player
 
     public void RenderSubtitle(long frameStart, int left, int top, int right, int bottom, int width, int height)
     {
-      ISubEngine engine = SubEngine.GetInstance();
-      if (engine != null)
+      lock (this)
       {
-        engine.SetTime(frameStart);
-        engine.Render(_subsRect, _destinationRect);
+        ISubEngine engine = SubEngine.GetInstance();
+        if (engine != null)
+        {
+          engine.SetTime(frameStart);
+          engine.Render(_subsRect, _destinationRect);
+        }
       }
     }
 

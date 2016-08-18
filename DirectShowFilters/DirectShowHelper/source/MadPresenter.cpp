@@ -308,64 +308,44 @@ HRESULT MPMadPresenter::ClearBackground(LPCSTR name, REFERENCE_TIME frameStart, 
   WORD videoHeight = (WORD)activeVideoRect->bottom - (WORD)activeVideoRect->top;
   WORD videoWidth = (WORD)activeVideoRect->right - (WORD)activeVideoRect->left;
 
-  bool uiVisible = false;
-
   CAutoLock cAutoLock(this);
 
-  // Wait that madVR complete the rendering
-  //m_mpWait.Wait(500);
+  bool isFullScreen = m_pCallback->IsFullScreen();
+
+  if (isFullScreen)
   {
-    //// Lock madVR thread while kodi rendering
-    //CAutoLock lock(&m_dsLock);
-    //m_dsLock.Lock();
-
-    Log("MPMadPresenter::ClearBackground()");
-
-    if (!m_pMPTextureGui || !m_pMadGuiVertexBuffer || !m_pRenderTextureGui || !m_pCallback)
-      return CALLBACK_INFO_DISPLAY;
-
-    //if (!m_pMPTextureOsd || !m_pMadOsdVertexBuffer || !m_pRenderTextureOsd || !m_pCallback)
-    //  return CALLBACK_INFO_DISPLAY;
-
-    //m_dwHeight = (WORD)fullOutputRect->bottom - (WORD)fullOutputRect->top;
-    //m_dwWidth = (WORD)fullOutputRect->right - (WORD)fullOutputRect->left;
-
-    //RenderToTexture(m_pMPTextureOsd);
-
-    //if (SUCCEEDED(hr = m_deviceState.Store()))
-    //  hr = m_pCallback->RenderOverlay(videoWidth, videoHeight, videoWidth, videoHeight);
-
-    //uiVisible = hr == S_OK ? true : false;
-
-    //if (SUCCEEDED(hr = m_pDevice->PresentEx(nullptr, nullptr, nullptr, nullptr, D3DPRESENT_FORCEIMMEDIATE)))
-    //  if (SUCCEEDED(hr = SetupMadDeviceState()))
-    //    if (SUCCEEDED(hr = SetupOSDVertex(m_pMadOsdVertexBuffer)))
-    //      // Draw MP texture on madVR device's side
-    //      RenderTexture(m_pMadOsdVertexBuffer, m_pRenderTextureOsd);
-
-    //m_deviceState.Restore();
-
-    RenderToTexture(m_pMPTextureGui);
-
-    if (SUCCEEDED(hr = m_deviceState.Store()))
-      hr = m_pCallback->RenderGui(videoWidth, videoHeight, videoWidth, videoHeight);
-
-    uiVisible = hr == S_OK ? true : false;
-
-    if (SUCCEEDED(hr = m_pDevice->PresentEx(nullptr, nullptr, nullptr, nullptr, D3DPRESENT_FORCEIMMEDIATE)))
-      if (SUCCEEDED(hr = SetupMadDeviceState()))
-        if (SUCCEEDED(hr = SetupOSDVertex(m_pMadGuiVertexBuffer)))
-          // Draw MP texture on madVR device's side
-          RenderTexture(m_pMadGuiVertexBuffer, m_pRenderTextureGui);
-
-    m_deviceState.Restore();
-
-    // if we don't unlock, OSD will be slow because it will reach the timeout set in SetOSDCallback()
     m_mpWait.Unlock();
     m_dsLock.Unlock();
-
-    return uiVisible ? CALLBACK_USER_INTERFACE : CALLBACK_INFO_DISPLAY;
+    return CALLBACK_USER_INTERFACE;
   }
+
+  bool uiVisible = false;
+
+  //Log("MPMadPresenter::ClearBackground()");
+
+  if (!m_pMPTextureGui || !m_pMadGuiVertexBuffer || !m_pRenderTextureGui || !m_pCallback)
+    return CALLBACK_INFO_DISPLAY;
+
+  RenderToTexture(m_pMPTextureGui);
+
+  if (SUCCEEDED(hr = m_deviceState.Store()))
+    hr = m_pCallback->RenderGui(videoWidth, videoHeight, videoWidth, videoHeight);
+
+  uiVisible = hr == S_OK ? true : false;
+
+  if (SUCCEEDED(hr = m_pDevice->PresentEx(nullptr, nullptr, nullptr, nullptr, D3DPRESENT_FORCEIMMEDIATE)))
+    if (SUCCEEDED(hr = SetupMadDeviceState()))
+      if (SUCCEEDED(hr = SetupOSDVertex(m_pMadGuiVertexBuffer)))
+        // Draw MP texture on madVR device's side
+        RenderTexture(m_pMadGuiVertexBuffer, m_pRenderTextureGui);
+
+  m_deviceState.Restore();
+
+  // if we don't unlock, OSD will be slow because it will reach the timeout set in SetOSDCallback()
+  m_mpWait.Unlock();
+  m_dsLock.Unlock();
+
+  return uiVisible ? CALLBACK_USER_INTERFACE : CALLBACK_INFO_DISPLAY;
 }
 
 HRESULT MPMadPresenter::RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT* fullOutputRect, RECT* activeVideoRect)
@@ -380,9 +360,17 @@ HRESULT MPMadPresenter::RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT* 
   bool uiVisible;
 
   CAutoLock cAutoLock(this);
-  
 
-  Log("MPMadPresenter::RenderOsd()");
+  //bool isFullScreen = m_pCallback->IsFullScreen();
+
+  //if (!isFullScreen)
+  //{
+  //  m_mpWait.Unlock();
+  //  m_dsLock.Unlock();
+  //  return CALLBACK_USER_INTERFACE;
+  //}
+
+  //Log("MPMadPresenter::RenderOsd()");
 
   if (!m_pMPTextureOsd || !m_pMadOsdVertexBuffer || !m_pRenderTextureOsd || !m_pCallback)
     return CALLBACK_INFO_DISPLAY;
@@ -391,13 +379,6 @@ HRESULT MPMadPresenter::RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT* 
 
   m_dwHeight = (WORD)fullOutputRect->bottom - (WORD)fullOutputRect->top;
   m_dwWidth = (WORD)fullOutputRect->right - (WORD)fullOutputRect->left;
-
-  //bool isFullScreen = m_pCallback->IsFullScreen();
-
-  //if (!isFullScreen)
-  //{
-  //  return CALLBACK_USER_INTERFACE;
-  //}
 
   //// Handle GetBackBuffer to be done only 2 frames
   //countFrame++;
@@ -432,11 +413,8 @@ HRESULT MPMadPresenter::RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT* 
   m_deviceState.Restore();
 
   // if we don't unlock, OSD will be slow because it will reach the timeout set in SetOSDCallback()
-  //if (isFullScreen)
-  {
-    m_mpWait.Unlock();
-    m_dsLock.Unlock();
-  }
+  m_mpWait.Unlock();
+  m_dsLock.Unlock();
 
   return uiVisible ? CALLBACK_USER_INTERFACE : CALLBACK_INFO_DISPLAY;
 }

@@ -874,28 +874,30 @@ namespace MediaPortal.Player
       {
         if (!GUIGraphicsContext.BlankScreen)
         {
-          // Render GUI + Video surface
-          //GUIGraphicsContext.RenderGUI.RenderFrame(timePassed, GUILayers.all);
-          //GUIGraphicsContext.RenderGUI.RenderFrame(timePassed, GUILayers.under);
-          //GUIGraphicsContext.RenderGUI.RenderFrame(timePassed, GUILayers.under);
+          if (layers == GUILayers.over)
+          {
+            SubtitleRenderer.GetInstance().Render();
+            BDOSDRenderer.GetInstance().Render();
+            GUIGraphicsContext.RenderOverlay = true;
+          }
           GUIGraphicsContext.RenderGUI.RenderFrame(GUIGraphicsContext.TimePassed, layers, ref _visible);
           GUIFontManager.Present();
-        }
-
-        if (layers == GUILayers.over)
-        {
-          SubtitleRenderer.GetInstance().Render();
-          BDOSDRenderer.GetInstance().Render();
-          GUIGraphicsContext.RenderOverlay = true;
         }
       }
       finally
       {
         GUIGraphicsContext.DX9Device.EndScene();
+
+        if (layers == GUILayers.under)
+        {
+          GUIGraphicsContext.RenderGui = false;
+          GUIGraphicsContext.RenderOverlay = false;
+        }
+
+        // Need to present to slow and avoid flickering when we are not in fullscreen (visible with Intel GPU HD4XXX)
         if (!GUIGraphicsContext.IsFullScreenVideo)
           GUIGraphicsContext.DX9Device.Present();
       }
-
       return _visible; // ? 0 : 1; // S_OK, S_FALSE
     }
 

@@ -859,7 +859,7 @@ namespace MediaPortal.Player
         _reEntrant = false;
         GUIGraphicsContext.InVmr9Render = false;
       }
-      Log.Error("visible {0}", visible);
+      //Log.Error("visible {0}", visible);
       return visible ? 0 : 1; // S_OK, S_FALSE
     }
 

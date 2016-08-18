@@ -101,7 +101,7 @@ namespace MediaPortal.GUI.Library
           //// madVR pass GUI rendering when video is played
           if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR && GUIGraphicsContext.Vmr9Active)
           {
-            if ((i == (int)LayerType.Gui || i == (int)LayerType.TopOverlay || i == (int)LayerType.VideoOverlay || i == (int)LayerType.Video || i == (int)LayerType.Gui ) && (layers == GUILayers.over|| layers == GUILayers.all))
+            if ((i == (int)LayerType.Gui /*|| i == (int)LayerType.TopOverlay || i == (int)LayerType.VideoOverlay || i == (int)LayerType.Video || i == (int)LayerType.Gui*/ ) && (layers == GUILayers.over|| layers == GUILayers.all))
             {
               continue;
             }
@@ -124,12 +124,7 @@ namespace MediaPortal.GUI.Library
           }
         }
       }
-      //// madVR inform that MP frame is done (workaround to avoid flickering)
-      //if (GUIGraphicsContext.Vmr9Active && VMR9Util.g_vmr9 != null)
-      //{
-      //  VMR9Util.g_vmr9.MadVrRepeatFrame();
-      //}
-      Log.Error("uiVisible {0}", uiVisible);
+      //Log.Error("uiVisible {0}", uiVisible);
       return uiVisible;
     }
   }

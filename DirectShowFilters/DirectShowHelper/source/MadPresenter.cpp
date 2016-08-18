@@ -310,13 +310,13 @@ HRESULT MPMadPresenter::ClearBackground(LPCSTR name, REFERENCE_TIME frameStart, 
 
   CAutoLock cAutoLock(this);
 
+  // Ugly hack to avoid flickering (most occurs on Intel GPU)
   bool isFullScreen = m_pCallback->IsFullScreen();
-
-  if (isFullScreen)
+    if (isFullScreen)
   {
     m_mpWait.Unlock();
     m_dsLock.Unlock();
-    return CALLBACK_USER_INTERFACE;
+    return CALLBACK_EMPTY;
   }
 
   bool uiVisible = false;
@@ -352,8 +352,6 @@ HRESULT MPMadPresenter::RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT* 
 {
   HRESULT hr = E_UNEXPECTED;
 
-  //return hr;
-
   WORD videoHeight = (WORD)activeVideoRect->bottom - (WORD)activeVideoRect->top;
   WORD videoWidth = (WORD)activeVideoRect->right - (WORD)activeVideoRect->left;
 
@@ -361,14 +359,18 @@ HRESULT MPMadPresenter::RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT* 
 
   CAutoLock cAutoLock(this);
 
-  //bool isFullScreen = m_pCallback->IsFullScreen();
-
-  //if (!isFullScreen)
-  //{
-  //  m_mpWait.Unlock();
-  //  m_dsLock.Unlock();
-  //  return CALLBACK_USER_INTERFACE;
-  //}
+  // Ugly hack to avoid flickering (most occurs on Intel GPU)
+  bool isFullScreen = m_pCallback->IsFullScreen();
+  if (!isFullScreen)
+  {
+    for (int x = 0; x < 6; ++x) // need to let in a loop to slow down why ???
+    {
+      m_pDevice->PresentEx(nullptr, nullptr, nullptr, nullptr, D3DPRESENT_FORCEIMMEDIATE);
+    }
+    m_mpWait.Unlock();
+    m_dsLock.Unlock();
+    return CALLBACK_EMPTY;
+  }
 
   //Log("MPMadPresenter::RenderOsd()");
 
@@ -380,22 +382,22 @@ HRESULT MPMadPresenter::RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT* 
   m_dwHeight = (WORD)fullOutputRect->bottom - (WORD)fullOutputRect->top;
   m_dwWidth = (WORD)fullOutputRect->right - (WORD)fullOutputRect->left;
 
-  //// Handle GetBackBuffer to be done only 2 frames
-  //countFrame++;
-  //if (countFrame == firstFrame || countFrame == secondFrame)
-  //{
-  //  if (SUCCEEDED(hr = m_pMadD3DDev->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &SurfaceMadVr)))
-  //  {
-  //    if (SUCCEEDED(hr = m_pCallback->RenderFrame(videoWidth, videoHeight, videoWidth, videoHeight, reinterpret_cast<DWORD>(SurfaceMadVr))))
-  //    {
-  //      SurfaceMadVr->Release();
-  //    }
-  //    if (countFrame == secondFrame)
-  //    {
-  //      countFrame = resetFrame;
-  //    }
-  //  }
-  //}
+  // Handle GetBackBuffer to be done only 2 frames
+  countFrame++;
+  if (countFrame == firstFrame || countFrame == secondFrame)
+  {
+    if (SUCCEEDED(hr = m_pMadD3DDev->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &SurfaceMadVr)))
+    {
+      if (SUCCEEDED(hr = m_pCallback->RenderFrame(videoWidth, videoHeight, videoWidth, videoHeight, reinterpret_cast<DWORD>(SurfaceMadVr))))
+      {
+        SurfaceMadVr->Release();
+      }
+      if (countFrame == secondFrame)
+      {
+        countFrame = resetFrame;
+      }
+    }
+  }
 
   RenderToTexture(m_pMPTextureOsd);
 
@@ -432,7 +434,7 @@ void MPMadPresenter::RenderToTexture(IDirect3DTexture9* pTexture)
     if (SUCCEEDED(hr = m_pCallback->SetRenderTarget(reinterpret_cast<DWORD>(pSurface))))
     {
       // TODO is it needed ?
-      //hr = m_pDevice->Clear(0, nullptr, D3DCLEAR_TARGET, D3DXCOLOR(0, 0, 0, 0), 1.0f, 0);
+      hr = m_pDevice->Clear(0, nullptr, D3DCLEAR_TARGET, D3DXCOLOR(0, 0, 0, 0), 1.0f, 0);
     }
   }
   //Log("RenderToTexture hr: 0x%08x", hr);

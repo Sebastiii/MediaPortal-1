@@ -908,8 +908,8 @@ namespace MediaPortal.Player
         {
           GUIGraphicsContext.DX9Device.SetRenderTarget(0, surface);
         }
-        //surface.ReleaseGraphics();
-        //surface.Dispose();
+        surface.ReleaseGraphics();
+        surface.Dispose();
       }
     }
 

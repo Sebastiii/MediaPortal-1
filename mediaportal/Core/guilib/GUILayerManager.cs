@@ -101,7 +101,7 @@ namespace MediaPortal.GUI.Library
           //// madVR pass GUI rendering when video is played
           if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR && GUIGraphicsContext.Vmr9Active)
           {
-            if ((i == (int)LayerType.Gui /*|| i == (int)LayerType.TopOverlay || i == (int)LayerType.VideoOverlay || i == (int)LayerType.Video || i == (int)LayerType.Gui*/ ) && (layers == GUILayers.over|| layers == GUILayers.all))
+            if (i == (int)LayerType.Gui && layers == GUILayers.over)
             {
               continue;
             }

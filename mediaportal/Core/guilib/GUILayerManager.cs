@@ -98,6 +98,14 @@ namespace MediaPortal.GUI.Library
       {
         if (_layers[i] != null)
         {
+          //// madVR pass GUI rendering when video is played
+          if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR && GUIGraphicsContext.Vmr9Active)
+          {
+            if ((i == (int)LayerType.Gui || i == (int)LayerType.TopOverlay || i == (int)LayerType.VideoOverlay || i == (int)LayerType.Video || i == (int)LayerType.Gui ) && (layers == GUILayers.over|| layers == GUILayers.all))
+            {
+              continue;
+            }
+          }
           if (_layers[i].ShouldRenderLayer())
           {
             if (GUIGraphicsContext.ShowBackground == false && i == videoLayer)
@@ -110,15 +118,7 @@ namespace MediaPortal.GUI.Library
                 i == (int) LayerType.Volume)
             {
               uiVisible = true;
-              //_layers[i].RenderLayer(timePassed);
-              //GUIFontManager.Present();
-              ////return uiVisible;
             }
-            //// madVR pass GUI rendering when video is played
-            //if (i == (int) LayerType.Gui && layers == GUILayers.over)
-            //{
-            //  continue;
-            //}
             _layers[i].RenderLayer(timePassed);
             GUIFontManager.Present();
           }

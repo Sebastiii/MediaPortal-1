@@ -301,7 +301,7 @@ void CRenderWait::Unlock()
   m_presentevent.notifyAll();
 }
 
-HRESULT MPMadPresenter::RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT* fullOutputRect, RECT* activeVideoRect)
+HRESULT MPMadPresenter::ClearBackground(LPCSTR name, REFERENCE_TIME frameStart, RECT* fullOutputRect, RECT* activeVideoRect)
 {
   HRESULT hr = E_UNEXPECTED;
 
@@ -321,58 +321,58 @@ HRESULT MPMadPresenter::RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT* 
 
     Log("MPMadPresenter::ClearBackground()");
 
-    //if (!m_pMPTextureGui || !m_pMadGuiVertexBuffer || !m_pRenderTextureGui || !m_pCallback)
-    //  return CALLBACK_INFO_DISPLAY;
-
-    if (!m_pMPTextureOsd || !m_pMadOsdVertexBuffer || !m_pRenderTextureOsd || !m_pCallback)
+    if (!m_pMPTextureGui || !m_pMadGuiVertexBuffer || !m_pRenderTextureGui || !m_pCallback)
       return CALLBACK_INFO_DISPLAY;
 
-    m_dwHeight = (WORD)fullOutputRect->bottom - (WORD)fullOutputRect->top;
-    m_dwWidth = (WORD)fullOutputRect->right - (WORD)fullOutputRect->left;
+    //if (!m_pMPTextureOsd || !m_pMadOsdVertexBuffer || !m_pRenderTextureOsd || !m_pCallback)
+    //  return CALLBACK_INFO_DISPLAY;
 
-    RenderToTexture(m_pMPTextureOsd);
+    //m_dwHeight = (WORD)fullOutputRect->bottom - (WORD)fullOutputRect->top;
+    //m_dwWidth = (WORD)fullOutputRect->right - (WORD)fullOutputRect->left;
 
-    if (SUCCEEDED(hr = m_deviceState.Store()))
-      hr = m_pCallback->RenderOverlay(videoWidth, videoHeight, videoWidth, videoHeight);
-
-    uiVisible = hr == S_OK ? true : false;
-
-    if (SUCCEEDED(hr = m_pDevice->PresentEx(nullptr, nullptr, nullptr, nullptr, D3DPRESENT_FORCEIMMEDIATE)))
-      if (SUCCEEDED(hr = SetupMadDeviceState()))
-        if (SUCCEEDED(hr = SetupOSDVertex(m_pMadOsdVertexBuffer)))
-          // Draw MP texture on madVR device's side
-          RenderTexture(m_pMadOsdVertexBuffer, m_pRenderTextureOsd);
-
-    m_deviceState.Restore();
-
-    //RenderToTexture(m_pMPTextureGui);
+    //RenderToTexture(m_pMPTextureOsd);
 
     //if (SUCCEEDED(hr = m_deviceState.Store()))
-    //  hr = m_pCallback->RenderGui(videoWidth, videoHeight, videoWidth, videoHeight);
+    //  hr = m_pCallback->RenderOverlay(videoWidth, videoHeight, videoWidth, videoHeight);
 
     //uiVisible = hr == S_OK ? true : false;
 
     //if (SUCCEEDED(hr = m_pDevice->PresentEx(nullptr, nullptr, nullptr, nullptr, D3DPRESENT_FORCEIMMEDIATE)))
     //  if (SUCCEEDED(hr = SetupMadDeviceState()))
-    //    if (SUCCEEDED(hr = SetupOSDVertex(m_pMadGuiVertexBuffer)))
+    //    if (SUCCEEDED(hr = SetupOSDVertex(m_pMadOsdVertexBuffer)))
     //      // Draw MP texture on madVR device's side
-    //      RenderTexture(m_pMadGuiVertexBuffer, m_pRenderTextureGui);
+    //      RenderTexture(m_pMadOsdVertexBuffer, m_pRenderTextureOsd);
 
     //m_deviceState.Restore();
 
+    RenderToTexture(m_pMPTextureGui);
+
+    if (SUCCEEDED(hr = m_deviceState.Store()))
+      hr = m_pCallback->RenderGui(videoWidth, videoHeight, videoWidth, videoHeight);
+
+    uiVisible = hr == S_OK ? true : false;
+
+    if (SUCCEEDED(hr = m_pDevice->PresentEx(nullptr, nullptr, nullptr, nullptr, D3DPRESENT_FORCEIMMEDIATE)))
+      if (SUCCEEDED(hr = SetupMadDeviceState()))
+        if (SUCCEEDED(hr = SetupOSDVertex(m_pMadGuiVertexBuffer)))
+          // Draw MP texture on madVR device's side
+          RenderTexture(m_pMadGuiVertexBuffer, m_pRenderTextureGui);
+
+    m_deviceState.Restore();
+
     // if we don't unlock, OSD will be slow because it will reach the timeout set in SetOSDCallback()
     m_mpWait.Unlock();
-    //m_dsLock.Unlock();
+    m_dsLock.Unlock();
 
     return uiVisible ? CALLBACK_USER_INTERFACE : CALLBACK_INFO_DISPLAY;
   }
 }
 
-HRESULT MPMadPresenter::ClearBackground(LPCSTR name, REFERENCE_TIME frameStart, RECT* fullOutputRect, RECT* activeVideoRect)
+HRESULT MPMadPresenter::RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT* fullOutputRect, RECT* activeVideoRect)
 {
   HRESULT hr = E_UNEXPECTED;
 
-  return hr;
+  //return hr;
 
   WORD videoHeight = (WORD)activeVideoRect->bottom - (WORD)activeVideoRect->top;
   WORD videoWidth = (WORD)activeVideoRect->right - (WORD)activeVideoRect->left;
@@ -392,12 +392,12 @@ HRESULT MPMadPresenter::ClearBackground(LPCSTR name, REFERENCE_TIME frameStart, 
   m_dwHeight = (WORD)fullOutputRect->bottom - (WORD)fullOutputRect->top;
   m_dwWidth = (WORD)fullOutputRect->right - (WORD)fullOutputRect->left;
 
-  bool isFullScreen = m_pCallback->IsFullScreen();
+  //bool isFullScreen = m_pCallback->IsFullScreen();
 
-  if (!isFullScreen)
-  {
-    return CALLBACK_USER_INTERFACE;
-  }
+  //if (!isFullScreen)
+  //{
+  //  return CALLBACK_USER_INTERFACE;
+  //}
 
   //// Handle GetBackBuffer to be done only 2 frames
   //countFrame++;
@@ -432,7 +432,7 @@ HRESULT MPMadPresenter::ClearBackground(LPCSTR name, REFERENCE_TIME frameStart, 
   m_deviceState.Restore();
 
   // if we don't unlock, OSD will be slow because it will reach the timeout set in SetOSDCallback()
-  if (isFullScreen)
+  //if (isFullScreen)
   {
     m_mpWait.Unlock();
     m_dsLock.Unlock();
@@ -586,7 +586,7 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
   {
     m_deviceState.SetDevice(m_pMadD3DDev);
 
-    //if (SUCCEEDED(hr = m_pDevice->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pMPTextureGui.p, &m_hSharedGuiHandle)))
+    if (SUCCEEDED(hr = m_pDevice->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pMPTextureGui.p, &m_hSharedGuiHandle)))
       if (SUCCEEDED(hr = m_pDevice->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pMPTextureOsd.p, &m_hSharedOsdHandle)))
       {
         hr = S_OK;
@@ -617,9 +617,9 @@ HRESULT MPMadPresenter::Render(REFERENCE_TIME frameStart, int left, int top, int
 
     if (!m_pInitOSDRender)
     {
-      //if (SUCCEEDED(hr = m_pMadD3DDev->CreateVertexBuffer(sizeof(VID_FRAME_VERTEX) * 4, D3DUSAGE_WRITEONLY, D3DFVF_VID_FRAME_VERTEX, D3DPOOL_DEFAULT, &m_pMadGuiVertexBuffer.p, NULL)))
+      if (SUCCEEDED(hr = m_pMadD3DDev->CreateVertexBuffer(sizeof(VID_FRAME_VERTEX) * 4, D3DUSAGE_WRITEONLY, D3DFVF_VID_FRAME_VERTEX, D3DPOOL_DEFAULT, &m_pMadGuiVertexBuffer.p, NULL)))
         if (SUCCEEDED(hr = m_pMadD3DDev->CreateVertexBuffer(sizeof(VID_FRAME_VERTEX) * 4, D3DUSAGE_WRITEONLY, D3DFVF_VID_FRAME_VERTEX, D3DPOOL_DEFAULT, &m_pMadOsdVertexBuffer.p, NULL)))
-          //if (SUCCEEDED(hr = m_pMadD3DDev->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pRenderTextureGui.p, &m_hSharedGuiHandle)))
+          if (SUCCEEDED(hr = m_pMadD3DDev->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pRenderTextureGui.p, &m_hSharedGuiHandle)))
             if (SUCCEEDED(hr = m_pMadD3DDev->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pRenderTextureOsd.p, &m_hSharedOsdHandle)))
             {
               hr = S_OK;

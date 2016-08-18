@@ -110,6 +110,10 @@ namespace MediaPortal.Player
 
     private bool _disableLowLatencyMode = false;
 
+    private static bool _visible = false;
+
+    private Surface _surfaceMadVrRenderTarget = null;
+
     //private static bool _visible = false;
 
     #endregion
@@ -663,25 +667,35 @@ namespace MediaPortal.Player
     {
       bool visible = false;
 
+      if (_reEntrant)
+      {
+        Log.Error("PlaneScene: re-entrancy in PresentImage");
+        return -1;
+      }
+      if (GUIGraphicsContext.CurrentState == GUIGraphicsContext.State.LOST)
+      {
+        return -1;
+      }
       try
       {
-        if (_reEntrant)
+        _reEntrant = true;
+
+        if (width > 0 && height > 0)
         {
-          Log.Error("PlaneScene: re-entrancy in PresentImage");
-          return -1;
+          _vmr9Util.VideoWidth = width;
+          _vmr9Util.VideoHeight = height;
+          _vmr9Util.VideoAspectRatioX = arWidth;
+          _vmr9Util.VideoAspectRatioY = arHeight;
+          _arVideoWidth = arWidth;
+          _arVideoHeight = arHeight;
         }
-        if (GUIGraphicsContext.CurrentState == GUIGraphicsContext.State.LOST)
-        {
-          return -1;
-        }
+
+        float timePassed = GUIGraphicsContext.TimePassed;
+
+        //if we're stopping then just return
         if (_stopPainting)
         {
           return -1;
-        }
-
-        if (!GUIGraphicsContext.InVmr9Render)
-        {
-          GUIGraphicsContext.InVmr9Render = true;
         }
 
         if (GUIGraphicsContext.IsSwitchingToNewSkin)
@@ -694,16 +708,54 @@ namespace MediaPortal.Player
           return 1; // (0) -> S_OK, (1) -> S_FALSE; //dont present video during window transitions
         }
 
-        _vmr9Util.FreeFrameCounter++;
-
-        if (!_drawVideoAllowed || !_isEnabled)
+        if (!GUIGraphicsContext.InVmr9Render)
         {
-          Log.Info("planescene:RenderLayers() frame:{0} enabled:{1} allowed:{2}", _vmr9Util.FrameCounter, _isEnabled,
-            _drawVideoAllowed);
-          _vmr9Util.FrameCounter++;
-          return -1;
+          GUIGraphicsContext.InVmr9Render = true;
         }
-        _vmr9Util.FrameCounter++;
+
+        //first time, fade in the video in 12 steps
+        int iMaxSteps = 12;
+        if (_fadeFrameCounter < iMaxSteps)
+        {
+          if (_vmr9Util.InMenu)
+          {
+            _diffuseColor = 0xFFffffff;
+          }
+          else
+          {
+            // fade in
+            int iStep = 0xff/iMaxSteps;
+            if (_fadingIn)
+            {
+              _diffuseColor = iStep*_fadeFrameCounter;
+              _diffuseColor <<= 24;
+              _diffuseColor |= 0xffffff;
+            }
+            else
+            {
+              _diffuseColor = (iMaxSteps - iStep)*_fadeFrameCounter;
+              _diffuseColor <<= 24;
+              _diffuseColor |= 0xffffff;
+            }
+          }
+          _fadeFrameCounter++;
+        }
+        else
+        {
+          //after 12 steps, just present the video texture
+          _diffuseColor = 0xFFffffff;
+        }
+
+        //get desired video window
+        if (width > 0 && height > 0 && _textureAddress != 0)
+        {
+          Size nativeSize = new Size(width, height);
+          _shouldRenderTexture = SetVideoWindow(nativeSize);
+        }
+        else
+        {
+          _shouldRenderTexture = false;
+        }
 
         //if we're stopping then just return
         //float timePassed = GUIGraphicsContext.TimePassed;
@@ -723,52 +775,51 @@ namespace MediaPortal.Player
           return -1;
         }
 
-        _reEntrant = true;
-        if (width > 0 && height > 0)
+        _vmr9Util.FreeFrameCounter++;
+
+        if (!_drawVideoAllowed || !_isEnabled)
         {
-          _vmr9Util.VideoWidth = width;
-          _vmr9Util.VideoHeight = height;
-          _vmr9Util.VideoAspectRatioX = arWidth;
-          _vmr9Util.VideoAspectRatioY = arHeight;
-          _arVideoWidth = arWidth;
-          _arVideoHeight = arHeight;
-
-          //Log.Debug("PlaneScene width {0}, height {1}", width, height);
-
-          if (GUIGraphicsContext.IsWindowVisible)
-          {
-            Size nativeSize = new Size(width, height);
-            _shouldRenderTexture = SetVideoWindow(nativeSize);
-          }
-          else
-          {
-            Size nativeSize = new Size(1, 1);
-            _shouldRenderTexture = SetVideoWindow(nativeSize);
-          }
+          Log.Info("planescene:RenderLayers() frame:{0} enabled:{1} allowed:{2}", _vmr9Util.FrameCounter, _isEnabled,
+            _drawVideoAllowed);
+          _vmr9Util.FrameCounter++;
+          return -1;
         }
+        _vmr9Util.FrameCounter++;
 
-        float timePassed = GUIGraphicsContext.TimePassed;
+        //Log.Debug("PlaneScene width {0}, height {1}", width, height);
 
-        GUIGraphicsContext.DX9Device.Present();
+        //if (GUIGraphicsContext.IsWindowVisible)
+        //  {
+        //    Size nativeSize = new Size(width, height);
+        //    _shouldRenderTexture = SetVideoWindow(nativeSize);
+        //  }
+        //  else
+        //  {
+        //    Size nativeSize = new Size(1, 1);
+        //    _shouldRenderTexture = SetVideoWindow(nativeSize);
+        //  }
 
-        Device device = GUIGraphicsContext.DX9Device;
+        visible = RenderLayersCall(layers, timePassed);
 
-        device.Clear(ClearFlags.Target, Color.FromArgb(0, 0, 0, 0), 1.0f, 0);
-        device.BeginScene();
+        //Device device = GUIGraphicsContext.DX9Device;
 
-        try
-        {
-          if (!GUIGraphicsContext.BlankScreen)
-          {
-            // Render GUI + Video surface
-            GUIGraphicsContext.RenderGUI.RenderFrame(timePassed, GUILayers.all);
-            GUIFontManager.Present();
-          }
-        }
-        finally
-        {
-          GUIGraphicsContext.DX9Device.EndScene();
-        }
+        //device.Clear(ClearFlags.Target, Color.FromArgb(0, 0, 0, 0), 1.0f, 0);
+        //device.BeginScene();
+
+        //try
+        //{
+        //  if (!GUIGraphicsContext.BlankScreen)
+        //  {
+        //    // Render GUI + Video surface
+        //    GUIGraphicsContext.RenderGUI.RenderFrame(timePassed, GUILayers.all);
+        //    GUIFontManager.Present();
+        //  }
+        //}
+        //finally
+        //{
+        //  GUIGraphicsContext.DX9Device.EndScene();
+        //  GUIGraphicsContext.DX9Device.Present();
+        //}
 
         ////if (layers == GUILayers.over)
         //{
@@ -812,6 +863,42 @@ namespace MediaPortal.Player
       return visible ? 0 : 1; // S_OK, S_FALSE
     }
 
+    private bool RenderLayersCall(GUILayers layers, float timePassed)
+    {
+      Device device = GUIGraphicsContext.DX9Device;
+
+      device.Clear(ClearFlags.Target, Color.FromArgb(0, 0, 0, 0), 1.0f, 0);
+      device.BeginScene();
+
+      try
+      {
+        if (!GUIGraphicsContext.BlankScreen)
+        {
+          // Render GUI + Video surface
+          //GUIGraphicsContext.RenderGUI.RenderFrame(timePassed, GUILayers.all);
+          //GUIGraphicsContext.RenderGUI.RenderFrame(timePassed, GUILayers.under);
+          //GUIGraphicsContext.RenderGUI.RenderFrame(timePassed, GUILayers.under);
+          GUIGraphicsContext.RenderGUI.RenderFrame(GUIGraphicsContext.TimePassed, layers, ref _visible);
+          GUIFontManager.Present();
+        }
+
+        if (layers == GUILayers.over)
+        {
+          SubtitleRenderer.GetInstance().Render();
+          BDOSDRenderer.GetInstance().Render();
+          GUIGraphicsContext.RenderOverlay = true;
+        }
+      }
+      finally
+      {
+        GUIGraphicsContext.DX9Device.EndScene();
+        if (!GUIGraphicsContext.IsFullScreenVideo)
+          GUIGraphicsContext.DX9Device.Present();
+      }
+
+      return _visible; // ? 0 : 1; // S_OK, S_FALSE
+    }
+
     public void SetRenderTarget(uint target)
     {
       //lock (this)
@@ -821,8 +908,8 @@ namespace MediaPortal.Player
         {
           GUIGraphicsContext.DX9Device.SetRenderTarget(0, surface);
         }
-        surface.ReleaseGraphics();
-        surface.Dispose();
+        //surface.ReleaseGraphics();
+        //surface.Dispose();
       }
     }
 

@@ -904,16 +904,13 @@ namespace MediaPortal.Player
 
     public void SetRenderTarget(uint target)
     {
-      //lock (this)
+      Surface surface = new Surface((IntPtr) target);
+      if (GUIGraphicsContext.DX9Device != null)
       {
-        Surface surface = new Surface((IntPtr) target);
-        if (GUIGraphicsContext.DX9Device != null)
-        {
-          GUIGraphicsContext.DX9Device.SetRenderTarget(0, surface);
-        }
-        surface.ReleaseGraphics();
-        surface.Dispose();
+        GUIGraphicsContext.DX9Device.SetRenderTarget(0, surface);
       }
+      surface.ReleaseGraphics();
+      surface.Dispose();
     }
 
     public void SetSubtitleDevice(IntPtr device)
@@ -930,14 +927,11 @@ namespace MediaPortal.Player
 
     public void RenderSubtitle(long frameStart, int left, int top, int right, int bottom, int width, int height)
     {
-      lock (this)
+      ISubEngine engine = SubEngine.GetInstance();
+      if (engine != null)
       {
-        ISubEngine engine = SubEngine.GetInstance();
-        if (engine != null)
-        {
-          engine.SetTime(frameStart);
-          engine.Render(_subsRect, _destinationRect);
-        }
+        engine.SetTime(frameStart);
+        engine.Render(_subsRect, _destinationRect);
       }
     }
 

@@ -751,6 +751,7 @@ namespace MediaPortal.Player
         {
           Size nativeSize = new Size(width, height);
           _shouldRenderTexture = SetVideoWindow(nativeSize);
+          Log.Error("should");
         }
         else
         {
@@ -789,15 +790,15 @@ namespace MediaPortal.Player
         //Log.Debug("PlaneScene width {0}, height {1}", width, height);
 
         //if (GUIGraphicsContext.IsWindowVisible)
-        //  {
-        //    Size nativeSize = new Size(width, height);
-        //    _shouldRenderTexture = SetVideoWindow(nativeSize);
-        //  }
-        //  else
-        //  {
-        //    Size nativeSize = new Size(1, 1);
-        //    _shouldRenderTexture = SetVideoWindow(nativeSize);
-        //  }
+        //{
+        //  Size nativeSize = new Size(width, height);
+        //  _shouldRenderTexture = SetVideoWindow(nativeSize);
+        //}
+        //else
+        //{
+        //  Size nativeSize = new Size(1, 1);
+        //  _shouldRenderTexture = SetVideoWindow(nativeSize);
+        //}
 
         visible = RenderLayersCall(layers, timePassed);
 

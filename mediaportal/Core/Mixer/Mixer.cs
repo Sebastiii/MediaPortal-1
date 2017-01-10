@@ -19,9 +19,7 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using MediaPortal.ExtensionMethods;
 using MediaPortal.GUI.Library;
 using MediaPortal.Player;
@@ -89,33 +87,43 @@ namespace MediaPortal.Mixer
 
     public void ChangeAudioDevice(string deviceName, bool setToDefault)
     {
-        try
+      try
+      {
+        if (_mMdeviceEnumerator == null)
+          _mMdeviceEnumerator = new MMDeviceEnumerator();
+
+        _mMdevice = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+
+        if (setToDefault || deviceName == "Default DirectSound Device" || deviceName == "Default WaveOut Device" ||
+            deviceName == "Mediaportal - Audio Renderer")
         {
-          if (_mMdeviceEnumerator == null)
-            _mMdeviceEnumerator = new MMDeviceEnumerator();
-
           _mMdevice = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+          Log.Info($"Mixer: changed audio device to default : {_mMdevice.FriendlyName}");
+          IsDefaultDevice = true;
+          return;
+        }
 
-          if (setToDefault)
-          {
-            _mMdevice = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-            return;
-          }
         var deviceFound = _mMdeviceEnumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
-          .FirstOrDefault(device => device.FriendlyName.Trim().ToLowerInvariant() == deviceName.Trim().ToLowerInvariant());
+          .FirstOrDefault(
+            device => device.FriendlyName.Trim().ToLowerInvariant() == deviceName.Trim().ToLowerInvariant());
 
         if (deviceFound != null)
-          {
-            _mMdevice = deviceFound;
-            Log.Info($"Mixer: changed audio device to : {deviceFound.FriendlyName}");
-          }
-          else
-            Log.Info($"Mixer: ChangeAudioDevice failed because device {deviceName} was not found.");
-        }
-        catch (Exception ex)
         {
-          Log.Error($"Mixer: error occured in ChangeAudioDevice: {ex}");
+          _mMdevice = deviceFound;
+          IsDefaultDevice = false;
+          Log.Info($"Mixer: changed audio device to : {deviceFound.FriendlyName}");
         }
+        else
+        {
+          Log.Info($"Mixer: ChangeAudioDevice failed because device {deviceName} was not found, falling back to default");
+          _mMdevice = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+          IsDefaultDevice = true;
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Error($"Mixer: error occured in ChangeAudioDevice: {ex}");
+      }
     }
 
     #endregion Methods
@@ -150,8 +158,16 @@ namespace MediaPortal.Mixer
         lock (this)
           try
           {
+            // Check if default device is set and still valid for volume control
+            if (IsDefaultDevice)
+            {
+              var mMdeviceCurrent = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+              if (mMdeviceCurrent.ID != _mMdevice.ID)
+                _mMdevice = mMdeviceCurrent;
+            }
+
             _volume = value;
-          int volumePercentage = (int)Math.Round((double)(100 * value) / VolumeMaximum);
+            int volumePercentage = (int) Math.Round((double) (100 * value) / VolumeMaximum);
 
             // Make sure we never go out of scope
             if (volumePercentage < 0)
@@ -194,9 +210,9 @@ namespace MediaPortal.Mixer
     #endregion Properties
 
     #region Fields
-
     private IntPtr _handle;
     private bool _isMuted;
+    public bool IsDefaultDevice;
     private int _volume;
     private MMDeviceEnumerator _mMdeviceEnumerator = new MMDeviceEnumerator();
     private MMDevice _mMdevice;

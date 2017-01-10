@@ -92,7 +92,7 @@ namespace MediaPortal.Player
         }
         catch (Exception ex)
         {
-          Log.Error("VolumeHandler: Mixer exception when init {0}", ex);
+          Log.Error("VolumeHandler: Mixer exception during init {0}", ex);
         }
 
         if (OSInfo.OSInfo.Win8OrLater() && hideWindowsOSD)
@@ -115,8 +115,6 @@ namespace MediaPortal.Player
       {
         _volumeTable = volumeTable;
       }
-
-      Log.Debug("Created volume handler #2");
     }
 
     #endregion Constructors

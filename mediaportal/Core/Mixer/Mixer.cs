@@ -29,9 +29,11 @@ namespace MediaPortal.Mixer
 {
   public sealed class Mixer : IDisposable
   {
-    #region Events
+    private bool _isDefaultDevice;
+    private int[] _volumeTable;
 
-    #endregion Events
+    private MMDeviceEnumerator _mMdeviceEnumerator = new MMDeviceEnumerator();
+    private MMDevice _mMdevice;
 
     #region Methods
 
@@ -58,10 +60,10 @@ namespace MediaPortal.Mixer
 
     public void Open()
     {
-      Open(0, false);
+      Open(0, false, null);
     }
 
-    public void Open(int mixerIndex, bool isDigital)
+    public void Open(int mixerIndex, bool isDigital, int[] volumeTable)
     {
       lock (this)
       {
@@ -74,7 +76,12 @@ namespace MediaPortal.Mixer
           if (_mMdevice != null)
           {
             Log.Info($"Mixer: default audio device: {_mMdevice.FriendlyName}");
-            //volume = (int)Math.Round(_audioDefaultDevice.Volume * VolumeMaximum);
+
+            if (volumeTable != null)
+            {
+              _volumeTable = volumeTable;
+              SetVolumeFromDevice(_mMdevice);
+            }
           }
         }
         catch (Exception)
@@ -82,6 +89,39 @@ namespace MediaPortal.Mixer
           _isMuted = false;
           _volume = VolumeMaximum;
         }
+      }
+    }
+
+    public void SetVolumeFromDevice(MMDevice device)
+    {
+      // First we need to make sure to convert the 0-100 volume to volume steps
+      try
+      {
+        if (_volumeTable == null || device == null)
+          return;
+
+        int currentVolumePercentage = (int) Math.Ceiling(_mMdevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100);
+
+        int totalVolumeSteps = _volumeTable.Length;
+        decimal volumePercentageDecimal = (decimal) currentVolumePercentage / 100;
+        double index = Math.Floor((double) (volumePercentageDecimal * totalVolumeSteps));
+
+        // Make sure we never go out of bounds
+        if (index < 0)
+          index = 0;
+
+        while (index >= _volumeTable.Length && index != 0)
+          index--;
+
+        // Update volume
+        int volumeStep = _volumeTable[(int) index];
+        _volume = volumeStep;
+
+      }
+      catch (Exception ex)
+      {
+        Log.Error($"Mixer: error occured in SetStartupVolume: {ex}");
+        throw;
       }
     }
 
@@ -94,11 +134,12 @@ namespace MediaPortal.Mixer
 
         _mMdevice = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
 
+        // Need to check for certain strings as well because NAudio doesn''t detect these
         if (setToDefault || deviceName == "Default DirectSound Device" || deviceName == "Default WaveOut Device")
         {
           _mMdevice = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
           Log.Info($"Mixer: changed audio device to default : {_mMdevice.FriendlyName}");
-          IsDefaultDevice = true;
+          _isDefaultDevice = true;
           return;
         }
 
@@ -109,15 +150,17 @@ namespace MediaPortal.Mixer
         if (deviceFound != null)
         {
           _mMdevice = deviceFound;
-          IsDefaultDevice = false;
+          _isDefaultDevice = false;
           Log.Info($"Mixer: changed audio device to : {deviceFound.FriendlyName}");
         }
         else
         {
           Log.Info($"Mixer: ChangeAudioDevice failed because device {deviceName} was not found, falling back to default");
           _mMdevice = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-          IsDefaultDevice = true;
+          _isDefaultDevice = true;
         }
+
+        SetVolumeFromDevice(_mMdevice);
       }
       catch (Exception ex)
       {
@@ -158,11 +201,14 @@ namespace MediaPortal.Mixer
           try
           {
             // Check if default device is set and still valid for volume control
-            if (IsDefaultDevice)
+            if (_isDefaultDevice)
             {
               var mMdeviceCurrent = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
               if (mMdeviceCurrent?.ID != _mMdevice?.ID)
+              {
                 _mMdevice = mMdeviceCurrent;
+                SetVolumeFromDevice(_mMdevice);
+              }
             }
 
             _volume = value;
@@ -214,11 +260,7 @@ namespace MediaPortal.Mixer
     #region Fields
     private IntPtr _handle;
     private bool _isMuted;
-    public bool IsDefaultDevice;
     private int _volume;
-    private MMDeviceEnumerator _mMdeviceEnumerator = new MMDeviceEnumerator();
-    private MMDevice _mMdevice;
-
     #endregion Fields
   }
 }

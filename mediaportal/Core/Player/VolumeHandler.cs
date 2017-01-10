@@ -86,9 +86,9 @@ namespace MediaPortal.Player
 
         try
         {
-          _mixer = new Mixer.Mixer();
-          _mixer.Open(0, isDigital);
           _volumeTable = volumeTable;
+          _mixer = new Mixer.Mixer();
+          _mixer.Open(0, isDigital, volumeTable);
         }
         catch (Exception ex)
         {
@@ -447,7 +447,7 @@ namespace MediaPortal.Player
                                                      55141, 65535
                                                    };
 
-    public int[] _volumeTable;
+    private int[] _volumeTable;
     private int _startupVolume;
     private static bool _showVolumeOSD;
 

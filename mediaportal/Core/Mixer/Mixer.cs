@@ -162,7 +162,7 @@ namespace MediaPortal.Mixer
             if (IsDefaultDevice)
             {
               var mMdeviceCurrent = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-              if (mMdeviceCurrent.ID != _mMdevice.ID)
+              if (mMdeviceCurrent?.ID != _mMdevice?.ID)
                 _mMdevice = mMdeviceCurrent;
             }
 
@@ -175,22 +175,25 @@ namespace MediaPortal.Mixer
             else if (volumePercentage > 100)
               volumePercentage = 100;
 
-            switch (volumePercentage)
+            if (_mMdevice != null)
             {
-              case 0:
-                IsMuted = true;
-                break;
-              case 100:
-                _mMdevice.AudioEndpointVolume.MasterVolumeLevelScalar = 1;
-                IsMuted = false;
-                break;
-              default:
+              switch (volumePercentage)
+              {
+                case 0:
+                  IsMuted = true;
+                  break;
+                case 100:
+                  _mMdevice.AudioEndpointVolume.MasterVolumeLevelScalar = 1;
+                  IsMuted = false;
+                  break;
+                default:
 
-                float volume = volumePercentage / 100.0f;
-                _mMdevice.AudioEndpointVolume.MasterVolumeLevelScalar = volume;
+                  float volume = volumePercentage / 100.0f;
+                  _mMdevice.AudioEndpointVolume.MasterVolumeLevelScalar = volume;
 
-                IsMuted = false;
-                break;
+                  IsMuted = false;
+                  break;
+              }
             }
 
             VolumeHandler.Instance.mixer_UpdateVolume();

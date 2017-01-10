@@ -94,8 +94,7 @@ namespace MediaPortal.Mixer
 
         _mMdevice = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
 
-        if (setToDefault || deviceName == "Default DirectSound Device" || deviceName == "Default WaveOut Device" ||
-            deviceName == "Mediaportal - Audio Renderer")
+        if (setToDefault || deviceName == "Default DirectSound Device" || deviceName == "Default WaveOut Device")
         {
           _mMdevice = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
           Log.Info($"Mixer: changed audio device to default : {_mMdevice.FriendlyName}");

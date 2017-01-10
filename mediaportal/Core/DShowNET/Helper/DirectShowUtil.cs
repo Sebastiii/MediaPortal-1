@@ -93,22 +93,28 @@ namespace DShowNET.Helper
       try
       {
         IPin pinOut = null;
-        IBaseFilter NewFilter = null;
+        IBaseFilter newFilter = null;
         IEnumFilters enumFilters;
         HResult hr = new HResult(graphBuilder.EnumFilters(out enumFilters));
+
+        Log.Info("Attach volume handler device to audio renderer: " + strFilterName);
+        VolumeHandler.Instance._mixer.ChangeAudioDevice(strFilterName, false);
+        GUIGraphicsContext.CurrentAudioRenderer = strFilterName;
+
         Log.Info("DirectShowUtils: First try to insert new audio renderer {0} ", strFilterName);
+
         // next add the new one...
         foreach (Filter filter in Filters.AudioRenderers)
         {
           if (String.Compare(filter.Name, strFilterName, true) == 0)
           {
             Log.Info("DirectShowUtils: Found audio renderer");
-            NewFilter = (IBaseFilter)Marshal.BindToMoniker(filter.MonikerString);
-            hr.Set(graphBuilder.AddFilter(NewFilter, strFilterName));
+            newFilter = (IBaseFilter)Marshal.BindToMoniker(filter.MonikerString);
+            hr.Set(graphBuilder.AddFilter(newFilter, strFilterName));
             if (hr < 0)
             {
               Log.Error("DirectShowUtils: unable to add filter:{0} to graph", strFilterName);
-              NewFilter = null;
+              newFilter = null;
             }
             else
             {
@@ -127,17 +133,17 @@ namespace DShowNET.Helper
               }
               if (setAsReferenceClock)
               {
-                hr.Set((graphBuilder as IMediaFilter).SetSyncSource(NewFilter as IReferenceClock));
+                hr.Set((graphBuilder as IMediaFilter).SetSyncSource(newFilter as IReferenceClock));
                 if (hr != 0)
                 {
                   Log.Warn("setAsReferenceClock sync source " + hr.ToDXString());
                 }
               }
-              return NewFilter;
+              return newFilter;
             }
           } //if (String.Compare(filter.Name,strFilterName,true) ==0)
         } //foreach (Filter filter in filters.AudioRenderers)
-        if (NewFilter == null)
+        if (newFilter == null)
         {
           Log.Error("DirectShowUtils: failed filter {0} not found", strFilterName);
         }
@@ -1711,6 +1717,10 @@ namespace DShowNET.Helper
     public static void RemoveFilters(IGraphBuilder graphBuilder)
     {
       RemoveFilters(graphBuilder, String.Empty);
+
+      Log.Info("Playback stopped and reverting volume OSD back to default device.");
+      VolumeHandler.Instance._mixer.ChangeAudioDevice(string.Empty, true);
+      GUIGraphicsContext.CurrentAudioRenderer = "";
     }
 
     public static void RemoveFilters(IGraphBuilder graphBuilder, string filterName)

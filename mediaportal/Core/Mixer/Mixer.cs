@@ -31,7 +31,7 @@ namespace MediaPortal.Mixer
   {
     #region Vars
 
-    private bool _isDefaultDevice;
+    private bool _isDefaultDevice = true;
     private bool _isInternalVolumeChange;
 
     private int[] _volumeTable;

@@ -29,11 +29,17 @@ namespace MediaPortal.Mixer
 {
   public sealed class Mixer : IDisposable
   {
+    #region Vars
+
     private bool _isDefaultDevice;
+    private bool _isInternalVolumeChange;
+
     private int[] _volumeTable;
 
     private MMDeviceEnumerator _mMdeviceEnumerator = new MMDeviceEnumerator();
     private MMDevice _mMdevice;
+
+    #endregion
 
     #region Methods
 
@@ -183,6 +189,21 @@ namespace MediaPortal.Mixer
       }
     }
 
+    private void CheckIfDefaultDeviceStillValid()
+    {
+      // Check if default device is set and still valid for volume control
+      if (_isDefaultDevice)
+      {
+        var mMdeviceCurrent = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+        if (mMdeviceCurrent?.ID != _mMdevice?.ID)
+        {
+          _mMdevice = mMdeviceCurrent;
+          SetVolumeFromDevice(_mMdevice);
+          UpdateDeviceAudioEndpoint();
+        }
+      }
+    }
+
     public void UpdateDeviceAudioEndpoint()
     {
       try
@@ -209,14 +230,13 @@ namespace MediaPortal.Mixer
 
     private void AudioEndpointVolume_OnVolumeNotification(NAudio.CoreAudioApi.AudioVolumeNotificationData data)
     {
-      if (data?.MasterVolume == null)
+      if (data?.MasterVolume == null || _isInternalVolumeChange)
         return;
 
       int volumePercentage = (int)(data.MasterVolume * 100f);
-
       _volume = ConvertVolumeToSteps(volumePercentage);
 
-      switch (_volume)
+      switch (volumePercentage)
       {
         case 0:
           _isMuted = true;    
@@ -246,7 +266,6 @@ namespace MediaPortal.Mixer
       }
     }
 
-
     public int Volume
     {
       get
@@ -260,17 +279,8 @@ namespace MediaPortal.Mixer
       {
         try
         {
-          // Check if default device is set and still valid for volume control
-          if (_isDefaultDevice)
-          {
-            var mMdeviceCurrent = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-            if (mMdeviceCurrent?.ID != _mMdevice?.ID)
-            {
-              _mMdevice = mMdeviceCurrent;
-              SetVolumeFromDevice(_mMdevice);
-              UpdateDeviceAudioEndpoint();
-            }
-          }
+          _isInternalVolumeChange = true;
+          CheckIfDefaultDeviceStillValid();
 
           _volume = value;
           int volumePercentage = (int) Math.Round((double) (100 * value) / VolumeMaximum);
@@ -293,7 +303,6 @@ namespace MediaPortal.Mixer
                 IsMuted = false;
                 break;
               default:
-
                 float volume = volumePercentage / 100.0f;
                 _mMdevice.AudioEndpointVolume.MasterVolumeLevelScalar = volume;
 
@@ -303,9 +312,11 @@ namespace MediaPortal.Mixer
           }
 
           VolumeHandler.Instance.mixer_UpdateVolume();
+          _isInternalVolumeChange = false;
         }
         catch (Exception ex)
         {
+          _isInternalVolumeChange = false;
           Log.Error($"Mixer: error occured in Volume: {ex}");
         }
       }

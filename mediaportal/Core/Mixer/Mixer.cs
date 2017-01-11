@@ -258,58 +258,56 @@ namespace MediaPortal.Mixer
       }
       set
       {
-        lock (this)
-          try
+        try
+        {
+          // Check if default device is set and still valid for volume control
+          if (_isDefaultDevice)
           {
-            // Check if default device is set and still valid for volume control
-            if (_isDefaultDevice)
+            var mMdeviceCurrent = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            if (mMdeviceCurrent?.ID != _mMdevice?.ID)
             {
-              var mMdeviceCurrent = _mMdeviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-              if (mMdeviceCurrent?.ID != _mMdevice?.ID)
-              {
-                _mMdevice = mMdeviceCurrent;
-                SetVolumeFromDevice(_mMdevice);
-                UpdateDeviceAudioEndpoint();
-              }
+              _mMdevice = mMdeviceCurrent;
+              SetVolumeFromDevice(_mMdevice);
+              UpdateDeviceAudioEndpoint();
             }
-
-            _volume = value;
-            int volumePercentage = (int) Math.Round((double) (100 * value) / VolumeMaximum);
-
-            // Make sure we never go out of scope
-            if (volumePercentage < 0)
-              volumePercentage = 0;
-            else if (volumePercentage > 100)
-              volumePercentage = 100;
-
-            if (_mMdevice != null)
-            {
-              switch (volumePercentage)
-              {
-                case 0:
-                  IsMuted = true;
-                  break;
-                case 100:
-                  _mMdevice.AudioEndpointVolume.MasterVolumeLevelScalar = 1;
-                  IsMuted = false;
-                  break;
-                default:
-
-                  float volume = volumePercentage / 100.0f;
-                  _mMdevice.AudioEndpointVolume.MasterVolumeLevelScalar = volume;
-
-                  IsMuted = false;
-                  break;
-              }
-            }
-
-            VolumeHandler.Instance.mixer_UpdateVolume();
           }
-          catch (Exception ex)
+
+          _volume = value;
+          int volumePercentage = (int) Math.Round((double) (100 * value) / VolumeMaximum);
+
+          // Make sure we never go out of scope
+          if (volumePercentage < 0)
+            volumePercentage = 0;
+          else if (volumePercentage > 100)
+            volumePercentage = 100;
+
+          if (_mMdevice != null)
           {
-            Log.Error($"Mixer: error occured in Volume: {ex}");
+            switch (volumePercentage)
+            {
+              case 0:
+                IsMuted = true;
+                break;
+              case 100:
+                _mMdevice.AudioEndpointVolume.MasterVolumeLevelScalar = 1;
+                IsMuted = false;
+                break;
+              default:
 
+                float volume = volumePercentage / 100.0f;
+                _mMdevice.AudioEndpointVolume.MasterVolumeLevelScalar = volume;
+
+                IsMuted = false;
+                break;
+            }
           }
+
+          VolumeHandler.Instance.mixer_UpdateVolume();
+        }
+        catch (Exception ex)
+        {
+          Log.Error($"Mixer: error occured in Volume: {ex}");
+        }
       }
     }
 

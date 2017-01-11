@@ -81,6 +81,7 @@ namespace MediaPortal.Mixer
             {
               _volumeTable = volumeTable;
               SetVolumeFromDevice(_mMdevice);
+              UpdateDeviceAudioEndpoint();
             }
           }
         }
@@ -97,13 +98,27 @@ namespace MediaPortal.Mixer
       // First we need to make sure to convert the 0-100 volume to volume steps
       try
       {
-        if (_volumeTable == null || device == null)
+        if (device == null)
           return;
 
-        int currentVolumePercentage = (int) Math.Ceiling(_mMdevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100);
+        int currentVolumePercentage = (int) Math.Ceiling(device.AudioEndpointVolume.MasterVolumeLevelScalar * 100);
+        _volume = ConvertVolumeToSteps(currentVolumePercentage);
+      }
+      catch (Exception ex)
+      {
+        Log.Error($"Mixer: error occured in SetStartupVolume: {ex}");
+      }
+    }
+
+    public int ConvertVolumeToSteps(int volumePercentage)
+    {
+      try
+      {
+        if (_volumeTable == null)
+          return 0;
 
         int totalVolumeSteps = _volumeTable.Length;
-        decimal volumePercentageDecimal = (decimal) currentVolumePercentage / 100;
+        decimal volumePercentageDecimal = (decimal) volumePercentage / 100;
         double index = Math.Floor((double) (volumePercentageDecimal * totalVolumeSteps));
 
         // Make sure we never go out of bounds
@@ -115,13 +130,12 @@ namespace MediaPortal.Mixer
 
         // Update volume
         int volumeStep = _volumeTable[(int) index];
-        _volume = volumeStep;
-
+        return volumeStep;
       }
       catch (Exception ex)
       {
-        Log.Error($"Mixer: error occured in SetStartupVolume: {ex}");
-        throw;
+        Log.Error($"Mixer: error occured in ConvertVolumeToSteps: {ex}");
+        return 0;
       }
     }
 
@@ -161,11 +175,35 @@ namespace MediaPortal.Mixer
         }
 
         SetVolumeFromDevice(_mMdevice);
+        UpdateDeviceAudioEndpoint();
       }
       catch (Exception ex)
       {
         Log.Error($"Mixer: error occured in ChangeAudioDevice: {ex}");
       }
+    }
+
+    public void UpdateDeviceAudioEndpoint()
+    {
+      try
+      {
+        if (_mMdevice?.AudioEndpointVolume != null)
+          _mMdevice.AudioEndpointVolume.OnVolumeNotification += AudioEndpointVolume_OnVolumeNotification;
+      }
+      catch (Exception ex)
+      {
+        Log.Error($"Mixer: error occured in UpdateDeviceAudioEndpoint: {ex}");
+      }
+    }
+
+    private void AudioEndpointVolume_OnVolumeNotification(NAudio.CoreAudioApi.AudioVolumeNotificationData data)
+    {
+      if (data?.MasterVolume == null)
+        return;
+
+      int volumePercentage = (int)(data.MasterVolume * 100f);
+      _volume = ConvertVolumeToSteps(volumePercentage);
+      VolumeHandler.Instance.mixer_UpdateVolume();
     }
 
     #endregion Methods
@@ -208,6 +246,7 @@ namespace MediaPortal.Mixer
               {
                 _mMdevice = mMdeviceCurrent;
                 SetVolumeFromDevice(_mMdevice);
+                UpdateDeviceAudioEndpoint();
               }
             }
 

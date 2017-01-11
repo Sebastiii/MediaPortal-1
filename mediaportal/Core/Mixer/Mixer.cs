@@ -196,13 +196,36 @@ namespace MediaPortal.Mixer
       }
     }
 
+    public MMDeviceCollection AllMultimediaDevices(bool onlyActive)
+    {
+      DeviceState deviceState = DeviceState.All;
+      if(onlyActive)
+        deviceState = DeviceState.Active;
+
+      var mmDeviceCollection = _mMdeviceEnumerator?.EnumerateAudioEndPoints(DataFlow.Render, deviceState);
+
+      return mmDeviceCollection;
+    }
+
     private void AudioEndpointVolume_OnVolumeNotification(NAudio.CoreAudioApi.AudioVolumeNotificationData data)
     {
       if (data?.MasterVolume == null)
         return;
 
       int volumePercentage = (int)(data.MasterVolume * 100f);
+
       _volume = ConvertVolumeToSteps(volumePercentage);
+
+      switch (_volume)
+      {
+        case 0:
+          _isMuted = true;
+          break;
+        default:
+          _isMuted = false;
+          break;
+      }
+
       VolumeHandler.Instance.mixer_UpdateVolume();
     }
 
@@ -217,8 +240,8 @@ namespace MediaPortal.Mixer
       {
         lock (this)
         {
-          _mMdevice.AudioEndpointVolume.Mute = value;
           _isMuted = value;
+          _mMdevice.AudioEndpointVolume.Mute = true;
         }
       }
     }

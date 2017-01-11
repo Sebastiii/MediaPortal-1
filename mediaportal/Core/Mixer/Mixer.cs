@@ -223,9 +223,11 @@ namespace MediaPortal.Mixer
       if(onlyActive)
         deviceState = DeviceState.Active;
 
-      var mmDeviceCollection = _mMdeviceEnumerator?.EnumerateAudioEndPoints(DataFlow.Render, deviceState);
+      if(_mMdeviceEnumerator == null)
+        _mMdeviceEnumerator = new MMDeviceEnumerator();
 
-      return mmDeviceCollection;
+      var devices = _mMdeviceEnumerator.EnumerateAudioEndPoints(DataFlow.Render, deviceState);
+      return devices;
     }
 
     private void AudioEndpointVolume_OnVolumeNotification(NAudio.CoreAudioApi.AudioVolumeNotificationData data)
@@ -258,11 +260,11 @@ namespace MediaPortal.Mixer
       get { lock (this) return _isMuted; }
       set
       {
-        lock (this)
-        {
-          _isMuted = value;
-          _mMdevice.AudioEndpointVolume.Mute = value;
-        }
+        _isInternalVolumeChange = true;
+        _isMuted = value;
+        _mMdevice.AudioEndpointVolume.Mute = value;
+        VolumeHandler.Instance.mixer_UpdateVolume();
+        _isInternalVolumeChange = false;
       }
     }
 

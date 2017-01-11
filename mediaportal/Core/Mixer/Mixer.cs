@@ -219,7 +219,7 @@ namespace MediaPortal.Mixer
       switch (_volume)
       {
         case 0:
-          _isMuted = true;
+          _isMuted = true;    
           break;
         default:
           _isMuted = false;
@@ -241,7 +241,7 @@ namespace MediaPortal.Mixer
         lock (this)
         {
           _isMuted = value;
-          _mMdevice.AudioEndpointVolume.Mute = true;
+          _mMdevice.AudioEndpointVolume.Mute = value;
         }
       }
     }

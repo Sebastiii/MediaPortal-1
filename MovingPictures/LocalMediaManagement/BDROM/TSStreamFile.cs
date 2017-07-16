@@ -1,6 +1,6 @@
-//============================================================================
+﻿//============================================================================
 // BDInfo - Blu-ray Video and Audio Analysis Tool
-// Copyright � 2010 Cinema Squid
+// Copyright © 2010 Cinema Squid
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -236,6 +236,11 @@ namespace BDInfo
                     TSCodecVC1.Scan(
                         (TSVideoStream)stream, buffer, ref streamState.StreamTag);
                     break;
+
+                //case TSStreamType.HEVC_VIDEO:
+                //  TSCodecVC1.Scan(
+                //      (TSVideoStream)stream, buffer, ref streamState.StreamTag);
+                //  break;
 
                 case TSStreamType.AC3_AUDIO:
                     TSCodecAC3.Scan(
@@ -1456,6 +1461,7 @@ namespace BDInfo
                 case TSStreamType.MPEG1_VIDEO:
                 case TSStreamType.MPEG2_VIDEO:
                 case TSStreamType.VC1_VIDEO:
+                case TSStreamType.HEVC_VIDEO:
                 {
                     stream = new TSVideoStream();
                 }

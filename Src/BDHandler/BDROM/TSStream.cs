@@ -31,6 +31,7 @@ namespace BDInfo
         AVC_VIDEO = 0x1b,
         MVC_VIDEO = 0x20,
         VC1_VIDEO = 0xea,
+        HEVC_VIDEO = 0x24, 
         MPEG1_AUDIO = 0x03,
         MPEG2_AUDIO = 0x04,
         LPCM_AUDIO = 0x80,
@@ -176,6 +177,7 @@ namespace BDInfo
                     case TSStreamType.AVC_VIDEO:
                     case TSStreamType.MVC_VIDEO:
                     case TSStreamType.VC1_VIDEO:
+                    case TSStreamType.HEVC_VIDEO:
                         return true;
 
                     default:
@@ -256,6 +258,8 @@ namespace BDInfo
                         return "MPEG-4 MVC Video";
                     case TSStreamType.VC1_VIDEO:
                         return "VC-1 Video";
+                    case TSStreamType.HEVC_VIDEO:
+                        return "HEVC Video";
                     case TSStreamType.MPEG1_AUDIO:
                         return "MP1 Audio";
                     case TSStreamType.MPEG2_AUDIO:
@@ -311,6 +315,8 @@ namespace BDInfo
                         return "MVC";
                     case TSStreamType.VC1_VIDEO:
                         return "VC-1";
+                    case TSStreamType.HEVC_VIDEO:
+                        return "HEVC";
                     case TSStreamType.MPEG1_AUDIO:
                         return "MP1";
                     case TSStreamType.MPEG2_AUDIO:
@@ -360,6 +366,8 @@ namespace BDInfo
                         return "MVC";
                     case TSStreamType.VC1_VIDEO:
                         return "VC-1";
+                    case TSStreamType.HEVC_VIDEO:
+                        return "HEVC";
                     case TSStreamType.MPEG1_AUDIO:
                         return "MP1";
                     case TSStreamType.MPEG2_AUDIO:

@@ -584,6 +584,11 @@ namespace MediaPortal.Plugins.BDHandler.Player
                     }
                 }
 
+                //// create the chosen file path (playlist) hack for UHD not working for seamless - DISABLE for now and need libbluray patched for LAV Splitter
+                //string pathM2TS = listToPlay.StreamClips[0].DisplayName;
+                //if (pathM2TS != null)
+                //  filePath = Path.Combine(bluray.DirectorySTREAM.FullName, pathM2TS);
+
                 #endregion
 
                 return true;

@@ -239,7 +239,7 @@ namespace BDInfo
                 int pos = 0;
 
                 FileType = ReadString(data, 8, ref pos);
-                if (FileType != "MPLS0100" && FileType != "MPLS0200")
+                if (FileType != "MPLS0100" && FileType != "MPLS0200" && FileType != "MPLS0300")
                 {
                     throw new Exception(string.Format(
                         "Playlist {0} has an unknown file type {1}.",
@@ -569,6 +569,7 @@ namespace BDInfo
                 case TSStreamType.MPEG1_VIDEO:
                 case TSStreamType.MPEG2_VIDEO:
                 case TSStreamType.VC1_VIDEO:
+                case TSStreamType.HEVC_VIDEO:
 
                     TSVideoFormat videoFormat = (TSVideoFormat)
                         (data[pos] >> 4);

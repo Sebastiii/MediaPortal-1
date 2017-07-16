@@ -162,7 +162,7 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>xcopy "$(TargetPath)" "%25PROGRAMFILES%25\Team MediaPortal\MediaPortal\Plugins\process" /Y /I</PostBuildEvent>
+    <PostBuildEvent>xcopy $(TargetDir)BDHandler.* "%25PROGRAMFILES%25\Team MediaPortal\MediaPortal\Plugins\process" /Y /I</PostBuildEvent>
     <PreBuildEvent>
     </PreBuildEvent>
   </PropertyGroup>

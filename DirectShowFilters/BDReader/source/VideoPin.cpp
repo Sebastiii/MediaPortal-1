@@ -194,7 +194,7 @@ void CVideoPin::SetVideoDecoder(int format, GUID* decoder)
   AM_MEDIA_TYPE tmp;
   tmp.cbFormat = 0;
 
-  if (format == BLURAY_STREAM_TYPE_VIDEO_H264)
+  if (format == BLURAY_STREAM_TYPE_VIDEO_H264 /*|| format == BLURAY_STREAM_TYPE_VIDEO_HEVC*/)
   {
     m_H264decoder = tmp.subtype = *decoder;
     LogDebug("vid: SetVideoDecoder for H264");

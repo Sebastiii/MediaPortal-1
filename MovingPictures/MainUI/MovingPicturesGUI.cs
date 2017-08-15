@@ -796,7 +796,7 @@ namespace MediaPortal.Plugins.MovingPictures.MainUI {
             if (initComplete) {
 
                 // Disable browser auto-refresh
-                browser.AutoRefresh = false;
+                if (browser != null) browser.AutoRefresh = false;
 
                 // Enable autoplay again when we are leaving the plugin
                 // But only when we are not playing something

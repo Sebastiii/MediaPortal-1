@@ -31,13 +31,6 @@
               <ZipFileName>Installer{CopyFile}\{2d139ace-bad5-458a-9f06-f442da539382}-SharpLibHid.dll</ZipFileName>
               <DestinationFilename>%Plugins%\Process\SharpLibHid.dll</DestinationFilename>
             </FileItem>
-            <FileItem InstallType="CopyFile" SystemFile="false" Modified="true">
-              <Param1 />
-              <UpdateOption>OverwriteIfOlder</UpdateOption>
-              <LocalFileName>..\LegacyInput\bin\x86\Release\LegacyInput.dll</LocalFileName>
-              <ZipFileName>Installer{CopyFile}\{684ac268-1ff6-4bfd-84ed-395687f5c01e}-LegacyInput.dll</ZipFileName>
-              <DestinationFilename>%Plugins%\Process\LegacyInput.dll</DestinationFilename>
-            </FileItem>
           </Items>
         </Files>
       </GroupItem>
@@ -467,7 +460,24 @@ Click Next to continue or Cancel to exit Setup.</Value>
     </Items>
   </Dependencies>
   <PluginDependencies>
-    <Items />
+    <Items>
+      <PluginDependencyItem AssemblyName="Auto3D.dll">
+        <CompatibleVersion>
+          <Items>
+            <CompatibleVersionItem>
+              <MinRequiredVersion>1.1.6.27644</MinRequiredVersion>
+              <DesignedForVersion>1.4.0.0</DesignedForVersion>
+            </CompatibleVersionItem>
+          </Items>
+        </CompatibleVersion>
+        <SubSystemsUsed>
+          <Items>
+            <SubSystemItem Name="MP.Config" />
+            <SubSystemItem Name="MP.SkinEngine" />
+          </Items>
+        </SubSystemsUsed>
+      </PluginDependencyItem>
+    </Items>
   </PluginDependencies>
   <GeneralInfo>
     <Name>Auto3D</Name>
@@ -543,13 +553,6 @@ Click Next to continue or Cancel to exit Setup.</Value>
         <LocalFileName>..\Externals\SharpLibHid.dll</LocalFileName>
         <ZipFileName>Installer{CopyFile}\{2d139ace-bad5-458a-9f06-f442da539382}-SharpLibHid.dll</ZipFileName>
         <DestinationFilename>%Plugins%\Process\SharpLibHid.dll</DestinationFilename>
-      </FileItem>
-      <FileItem InstallType="CopyFile" SystemFile="false" Modified="true">
-        <Param1 />
-        <UpdateOption>OverwriteIfOlder</UpdateOption>
-        <LocalFileName>..\LegacyInput\bin\x86\Release\LegacyInput.dll</LocalFileName>
-        <ZipFileName>Installer{CopyFile}\{684ac268-1ff6-4bfd-84ed-395687f5c01e}-LegacyInput.dll</ZipFileName>
-        <DestinationFilename>%Plugins%\Process\LegacyInput.dll</DestinationFilename>
       </FileItem>
       <FileItem InstallType="CopyFile" SystemFile="false" Modified="true">
         <Param1 />
@@ -751,7 +754,7 @@ Click Next to continue or Cancel to exit Setup.</Value>
         <Param1 />
         <UpdateOption>OverwriteIfOlder</UpdateOption>
         <LocalFileName>..\Auto3D\Auto3d-Icon2.png</LocalFileName>
-        <ZipFileName>Installer{CopyFile}\{8ed15096-f556-4ae5-b0f8-7e31df578b0a}-Auto3d-Icon2.png</ZipFileName>
+        <ZipFileName>Installer{CopyFile}\{149fe121-0fd3-4cda-9684-f75901032163}-Auto3d-Icon2.png</ZipFileName>
         <DestinationFilename />
       </FileItem>
     </Items>

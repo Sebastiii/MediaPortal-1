@@ -224,15 +224,15 @@ namespace MediaPortal.ProcessPlugins.Auto3D
         b3DMenuOnKey = reader.GetValueAsBool("Auto3DPlugin", "3DMenuOnKey", false);
         String menuHotKey = reader.GetValueAsString("Auto3DPlugin", "3DMenuKey", "CTRL + D");
 
-		if (menuHotKey.StartsWith("MCE")) // reject old configs
-			menuHotKey = "";
+        if (menuHotKey.StartsWith("MCE")) // reject old configs
+          menuHotKey = "";
 
         if (menuHotKey.StartsWith("HID"))
         {
           bMenuMCERemote = true;
           mceRemoteKey = menuHotKey;
 
-		  HIDInput.getInstance().HidEvent += Auto3DSetup_HidEvent;		
+          //HIDInput.getInstance().HidEvent += Auto3DSetup_HidEvent;		
         }
         else
         {
@@ -419,22 +419,22 @@ namespace MediaPortal.ProcessPlugins.Auto3D
       }
     }
 
-	bool Auto3DSetup_HidEvent(object aSender, String key)
-	{
-		if (key == mceRemoteKey)
-		{
-			if (_dlgMenu == null)
-				ManualSelectThread();
-			else
-			{
-				_dlgMenu.PageDestroy();
-			}
+    private bool Auto3DSetup_HidEvent(object aSender, String key)
+    {
+      if (key == mceRemoteKey)
+      {
+        if (_dlgMenu == null)
+          ManualSelectThread();
+        else
+        {
+          _dlgMenu.PageDestroy();
+        }
 
-			return true;
-		}
+        return true;
+      }
 
-		return false;
-	}
+      return false;
+    }
 
     [DllImport("user32.dll")]
     static extern int GetSystemMetrics(int smIndex);
@@ -458,17 +458,17 @@ namespace MediaPortal.ProcessPlugins.Auto3D
       _run = false;
       _activeDevice.Stop();
 
-	  if (bMenuMCERemote)
-	  {
-		  HIDInput.getInstance().HidEvent -= Auto3DSetup_HidEvent;
-	  }
+      if (bMenuMCERemote)
+      {
+        //HIDInput.getInstance().HidEvent -= Auto3DSetup_HidEvent;
+      }
 
       if (!bSuppressSwitchBackTo2D)
         GUIGraphicsContext.Render3DMode = GUIGraphicsContext.eRender3DMode.None;
 
-	  g_Player.PlayBackEnded -= OnVideoEnded;
-	  g_Player.PlayBackStopped -= OnVideoStopped;
-	  g_Player.PlayBackStarted -= OnVideoStarted;
+      g_Player.PlayBackEnded -= OnVideoEnded;
+      g_Player.PlayBackStopped -= OnVideoStopped;
+      g_Player.PlayBackStarted -= OnVideoStarted;
 
       SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
     }

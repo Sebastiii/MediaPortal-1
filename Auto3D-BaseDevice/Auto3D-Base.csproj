@@ -49,6 +49,18 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Common.Utils, Version=1.12.0.1314, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Externals\Common.Utils.dll</HintPath>
+    </Reference>
+    <Reference Include="Core, Version=1.12.0.1314, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Externals\Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Dialogs, Version=1.12.0.1314, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Externals\Dialogs.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -58,6 +70,10 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="Utils, Version=1.12.0.1314, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Externals\Utils.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Auto3DBaseDevice.cs" />
@@ -128,24 +144,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\Test.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\MediaPortal-1\Common-MP-TVE3\Common.Utils\Common.Utils.csproj">
-      <Project>{f6eda1f3-3dcd-43f4-8a90-e32da70c8227}</Project>
-      <Name>Common.Utils</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\MediaPortal-1\mediaportal\Core\Core.csproj">
-      <Project>{02fffc1f-2555-4b99-8b01-3432d0673855}</Project>
-      <Name>Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\MediaPortal-1\mediaportal\Dialogs\Dialogs.csproj">
-      <Project>{396c5208-5d46-4a11-92c1-fd0f2f42d7dd}</Project>
-      <Name>Dialogs</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\MediaPortal-1\mediaportal\Utils\Utils.csproj">
-      <Project>{6da0e4df-6230-4642-98b5-e690bb6942bb}</Project>
-      <Name>Utils</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

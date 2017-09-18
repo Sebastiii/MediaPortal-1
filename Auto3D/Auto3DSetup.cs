@@ -51,8 +51,8 @@ namespace MediaPortal.ProcessPlugins.Auto3D
       LoadSettings();
 
 	  // as we are not in context of MediaPortal, we need our on raw input filter	
-	  HIDInput.HandleOwnDevices = true;
-	  HIDInput.getInstance().HidEvent += Auto3DSetup_HidEvent;
+	  //HIDInput.HandleOwnDevices = true;
+	  //HIDInput.getInstance().HidEvent += Auto3DSetup_HidEvent;
 
 	  CenterToParent();
 
@@ -77,7 +77,7 @@ namespace MediaPortal.ProcessPlugins.Auto3D
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
       base.OnFormClosing(e);
-	  HIDInput.getInstance().HidEvent -= Auto3DSetup_HidEvent;
+	  //HIDInput.getInstance().HidEvent -= Auto3DSetup_HidEvent;
     }
 
     void textBoxMenuHotkey_KeyDown(object sender, KeyEventArgs e)

@@ -450,7 +450,7 @@ namespace MediaPortal.ProcessPlugins.Auto3D
       Log.Debug("Auto3D: Stop - MePoPowerOff = " + GUIGraphicsContext.StoppingToPowerOff);
 
       if (bShutDownPending || GUIGraphicsContext.StoppingToPowerOff)
-          SystemShutDown();     
+          SystemShutDown();
 
       // stop UPnP
       Auto3DUPnP.StopSSDP();
@@ -543,6 +543,12 @@ namespace MediaPortal.ProcessPlugins.Auto3D
           }
 
           fastCompareImage.UnlockBits(bmpData);
+
+          if (image != null)
+          {
+            image.Dispose();
+            image = null;
+          }
 
           Log.Debug("Similarity: " + similarity + " - " + vf[iStep].ToString());
         }
@@ -729,33 +735,43 @@ namespace MediaPortal.ProcessPlugins.Auto3D
         // wait for ending worker thread
 
         if (_workerThread != null && _workerThread.IsAlive)
+        {
           Thread.Sleep(20);
+          _workerThread.Abort();
+          _workerThread = null;
+        }
 
         // is 3d mode is active switch back to normal mode
 
         if (_currentMode != VideoFormat.Fmt2D)
+        {
           SwitchBack();
+          if (_workerThread != null)
+          {
+            _workerThread.Abort();
+            _workerThread = null;
+          }
+        }
       }
     }
 
-      private static VideoFormat ConvertMatchingFormatToVideoFormat(MatchingVideoFormat source)
+    private static VideoFormat ConvertMatchingFormatToVideoFormat(MatchingVideoFormat source)
+    {
+      switch (source)
       {
-        switch (source)
-        {
-          case MatchingVideoFormat.Simple2D:
-            return VideoFormat.Fmt2D;
-          case MatchingVideoFormat.SydeBySide3D:
-          case MatchingVideoFormat.SydeBySide3DReverse:
-            return VideoFormat.Fmt3DSBS;
-          case MatchingVideoFormat.TopBottom3D:
-          case MatchingVideoFormat.TopBottom3DReverse:
-            return VideoFormat.Fmt3DTAB;
-          case MatchingVideoFormat.Convert2DTo3D:
-            return VideoFormat.Fmt2D3D;
-        }
-
-        return VideoFormat.Fmt2D;
+        case MatchingVideoFormat.Simple2D:
+          return VideoFormat.Fmt2D;
+        case MatchingVideoFormat.SydeBySide3D:
+        case MatchingVideoFormat.SydeBySide3DReverse:
+          return VideoFormat.Fmt3DSBS;
+        case MatchingVideoFormat.TopBottom3D:
+        case MatchingVideoFormat.TopBottom3DReverse:
+          return VideoFormat.Fmt3DTAB;
+        case MatchingVideoFormat.Convert2DTo3D:
+          return VideoFormat.Fmt2D3D;
       }
+      return VideoFormat.Fmt2D;
+    }
 
     private void Analyze3DFormatVideo(g_Player.MediaType type)
     {

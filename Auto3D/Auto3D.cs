@@ -735,23 +735,12 @@ namespace MediaPortal.ProcessPlugins.Auto3D
         // wait for ending worker thread
 
         if (_workerThread != null && _workerThread.IsAlive)
-        {
           Thread.Sleep(20);
-          _workerThread.Abort();
-          _workerThread = null;
-        }
 
         // is 3d mode is active switch back to normal mode
 
         if (_currentMode != VideoFormat.Fmt2D)
-        {
           SwitchBack();
-          if (_workerThread != null)
-          {
-            _workerThread.Abort();
-            _workerThread = null;
-          }
-        }
       }
     }
 

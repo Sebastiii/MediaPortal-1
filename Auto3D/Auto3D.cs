@@ -499,7 +499,7 @@ namespace MediaPortal.ProcessPlugins.Auto3D
         }
 
         System.Drawing.Bitmap image = fg.GetCurrentImage();
-          
+
         if (image != null)
         {
           Bitmap fastCompareImage = new Bitmap(96, 96);
@@ -516,14 +516,15 @@ namespace MediaPortal.ProcessPlugins.Auto3D
 
           // Lock the bitmap's bits.
           Rectangle rect = new Rectangle(0, 0, fastCompareImage.Width, fastCompareImage.Height);
-          System.Drawing.Imaging.BitmapData bmpData = fastCompareImage.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+          System.Drawing.Imaging.BitmapData bmpData = fastCompareImage.LockBits(rect,
+            System.Drawing.Imaging.ImageLockMode.ReadWrite, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
 
           double similarity = 0;
 
           vf[iStep] = VideoFormat.Fmt2D; // assume normal format
 
           if (bCheckSideBySide)
-              similarity = Auto3DAnalyzer.CheckFor3DFormat(bmpData, bmpData.Width / 2, bmpData.Height, true);
+            similarity = Auto3DAnalyzer.CheckFor3DFormat(bmpData, bmpData.Width/2, bmpData.Height, true);
 
           if (similarity == -1) // not bright enough for analysis
             continue;
@@ -533,7 +534,7 @@ namespace MediaPortal.ProcessPlugins.Auto3D
           else
           {
             if (bCheckTopAndBottom)
-              similarity = Auto3DAnalyzer.CheckFor3DFormat(bmpData, bmpData.Width, bmpData.Height / 2, false);
+              similarity = Auto3DAnalyzer.CheckFor3DFormat(bmpData, bmpData.Width, bmpData.Height/2, false);
 
             if (similarity == -1) // not bright enough for analysis -> continue
               continue;
@@ -551,6 +552,11 @@ namespace MediaPortal.ProcessPlugins.Auto3D
           }
 
           Log.Debug("Similarity: " + similarity + " - " + vf[iStep].ToString());
+        }
+        else
+        {
+          // Wait for a valid frame
+          iStep = 0;
         }
 
         if (iStep > 3)

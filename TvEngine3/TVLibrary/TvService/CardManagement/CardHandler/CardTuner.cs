@@ -435,7 +435,7 @@ namespace TvService
         Log.Debug("card: tuned user: {0} subchannel: {1}", user.Name, result.SubChannelId);
         user.SubChannel = result.SubChannelId;
         user.IdChannel = idChannel;
-        context.Add(user);
+        context?.Add(user);
       }
       else
       {
@@ -444,7 +444,7 @@ namespace TvService
 
       if (result.IsTimeShifting || result.IsRecording)
       {
-        context.OnZap(user);
+        context?.OnZap(user);
       }
       return TvResult.Succeeded;
     }

@@ -102,7 +102,6 @@ namespace TvLibrary.Implementations.DVB
     /// MD Plugs
     /// </summary>
     protected MDPlugs _mdplugs;
-    //protected MDPlugs _mdplugsBackup;
 
     /// set to true to enable PAT lookup of PMT
     private bool alwaysUsePATLookup = DebugSettings.UsePATLookup;
@@ -176,7 +175,7 @@ namespace TvLibrary.Implementations.DVB
     /// <param name="subChannelId">The subchannel id</param>
     /// <param name="channel">The corresponding channel</param>
     public TvDvbChannel(IFilterGraph2 graphBuilder, ConditionalAccess ca, MDPlugs mdplugs, IBaseFilter tif,
-                        IBaseFilter tsWriter, int subChannelId, IChannel channel, TvCardBase tuner, string userName)
+                        IBaseFilter tsWriter, int subChannelId, IChannel channel, TvCardBase tuner)
     {
       _cancelled = false;
       _listenCA = false;
@@ -186,15 +185,7 @@ namespace TvLibrary.Implementations.DVB
       _graphState = GraphState.Created;
       _graphBuilder = graphBuilder;
       _conditionalAccess = ca;
-      //_mdplugsBackup = mdplugs;
-      if (userName == "epg")
-      {
-        _mdplugs = null;
-      }
-      else
-      {
-        _mdplugs = mdplugs;
-      }
+      _mdplugs = mdplugs; // TODO EPG MDAPI
       _filterTIF = tif;
       _teletextDecoder = new DVBTeletext();
       _packetHeader = new TSHelperTools.TSHeader();
@@ -1506,34 +1497,6 @@ namespace TvLibrary.Implementations.DVB
 
     #region IPMTCallback Members
 
-    private void HandlePmtUpdate()
-    {
-      bool updatePids;
-      int waitInterval;
-      if (SendPmtToCam(out updatePids, out waitInterval))
-      {
-        if (!updatePids || _channelInfo == null)
-        {
-          return;
-        }
-        SetMpegPidMapping(_channelInfo);
-        var dvbBaseChannel = _currentChannel as DVBBaseChannel;
-        if (dvbBaseChannel != null && (_mdplugs != null && _channelInfo.scrambled && _mdplugs.IsProviderSelected(dvbBaseChannel.Provider)))
-        {
-          //_mdplugs.SetChannel(_currentChannel, _channelInfo, true);
-          _mdplugs.AddSubChannel(_subChannelId, _currentChannel, _channelInfo, true);
-        }
-        else
-        {
-          Log.Log.Debug("OnPMTReceived: MDAPI disabled. Possible reasons are _mdplugs=null or provider not listed");
-        }
-      }
-      else
-      {
-        Log.Log.Debug("Failed SendPmtToCam in callback handler");
-      }
-    }
-
     /// <summary>
     /// Called when tswriter.ax has received a new pmt
     /// </summary>
@@ -1542,6 +1505,7 @@ namespace TvLibrary.Implementations.DVB
     {
       try
       {
+        DVBBaseChannel CurrentDVBChannel = _currentChannel as DVBBaseChannel;
         if (_eventPMT != null)
         {
           Log.Log.WriteFile("subch:{0} OnPMTReceived() pmt:{3:X} ran:{1} dynamic:{2}", _subChannelId, GraphRunning(),
@@ -1549,14 +1513,33 @@ namespace TvLibrary.Implementations.DVB
           _eventPMT.Set();
           // PMT callback is done on each new PMT version
           // check if the arrived PMT was _NOT_ requested (WaitForPMT), than it means dynamical change
-          if (!_pmtRequested)
+          if (_pmtRequested == false)
           {
-            new Thread(HandlePmtUpdate)
+            bool updatePids;
+            int waitInterval;
+            if (SendPmtToCam(out updatePids, out waitInterval))
             {
-              Priority = ThreadPriority.Highest,
-              Name = "PMT update",
-              IsBackground = true
-            }.Start();
+              if (updatePids)
+              {
+                if (_channelInfo != null)
+                {
+                  SetMpegPidMapping(_channelInfo, true);
+                  if (_mdplugs != null && _channelInfo.scrambled && _mdplugs.IsProviderSelected(CurrentDVBChannel.Provider))
+                  {
+                    //_mdplugs.SetChannel(_currentChannel, _channelInfo, true);
+                    _mdplugs.AddSubChannel(_subChannelId, _currentChannel, _channelInfo, true);
+                  }
+                  else
+                  {
+                    Log.Log.Debug("OnPMTReceived: MDAPI disabled. Possible reasons are _mdplugs=null or provider not listed");
+                  }
+                }
+              }
+            }
+            else
+            {
+              Log.Log.Debug("Failed SendPmtToCam in callback handler");
+            }
           }
         }
         PersistPMTtoDataBase(pmtPid);

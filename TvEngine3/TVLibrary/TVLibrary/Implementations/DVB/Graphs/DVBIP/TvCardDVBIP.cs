@@ -162,9 +162,9 @@ namespace TvLibrary.Implementations.DVB
     /// <param name="subChannelId">The sub channel id</param>
     /// <param name="channel">The channel.</param>
     /// <returns></returns>
-    public override ITvSubChannel Scan(int subChannelId, string userName, IChannel channel)
+    public override ITvSubChannel Scan(int subChannelId, IChannel channel)
     {
-      return DoTune(subChannelId, userName, channel, true);
+      return DoTune(subChannelId, channel, true);
     }
 
     /// <summary>
@@ -172,11 +172,10 @@ namespace TvLibrary.Implementations.DVB
     /// </summary>
     /// <param name="subChannelId">The sub channel id</param>
     /// <param name="channel">The channel.</param>
-    /// <param name="Username">The current User.</param>
     /// <returns>true if succeeded else false</returns>
-    public override ITvSubChannel Tune(int subChannelId, string userName, IChannel channel)
+    public override ITvSubChannel Tune(int subChannelId, IChannel channel)
     {
-      return DoTune(subChannelId, userName, channel, false);
+      return DoTune(subChannelId, channel, false);
     }
 
     /// <summary>
@@ -185,7 +184,7 @@ namespace TvLibrary.Implementations.DVB
     /// <param name="subChannelId"></param>
     /// <param name="channel"></param>
     /// <returns></returns>
-    private ITvSubChannel DoTune(int subChannelId, string userName,IChannel channel, bool ignorePMT)
+    private ITvSubChannel DoTune(int subChannelId, IChannel channel, bool ignorePMT)
     {
       Log.Log.WriteFile("dvbip:  Tune:{0}", channel);
       ITvSubChannel ch = null;
@@ -216,7 +215,7 @@ namespace TvLibrary.Implementations.DVB
           BuildGraph(dvbipChannel.Url);
           if (_mapSubChannels.ContainsKey(subChannelId) == false)
           {
-            subChannelId = GetNewSubChannel(channel, userName);
+            subChannelId = GetNewSubChannel(channel);
           }
         }
         else
@@ -230,7 +229,7 @@ namespace TvLibrary.Implementations.DVB
         if (_mapSubChannels.ContainsKey(subChannelId) == false)
         {
           Log.Log.Info("dvb:Getting new subchannel");
-          subChannelId = GetNewSubChannel(channel, userName);
+          subChannelId = GetNewSubChannel(channel);
         }
         else {}
         Log.Log.Info("dvb:Submit tunerequest size:{0} new:{1}", _mapSubChannels.Count, subChannelId);

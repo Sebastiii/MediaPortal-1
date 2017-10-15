@@ -206,17 +206,17 @@ namespace TvLibrary.Implementations.DVB
     /// <param name="subChannelId">The sub channel id</param>
     /// <param name="channel">The channel.</param>
     /// <returns></returns>
-    public override ITvSubChannel Scan(int subChannelId, string userName, IChannel channel)
+    public override ITvSubChannel Scan(int subChannelId, IChannel channel)
     {
       Log.Log.WriteFile("dvbs: Scan:{0}", channel);
       try
       {
-        if (!BeforeTune(ref subChannelId, userName, channel))
+        if (!BeforeTune(ref subChannelId, channel))
         {
           return null;
         }
-        ITvSubChannel ch = base.Scan(subChannelId, userName, channel);
-        AfterTune(channel, userName, subChannelId);
+        ITvSubChannel ch = base.Scan(subChannelId, channel);
+        AfterTune(channel, subChannelId);
         return ch;
       }
       catch (TvExceptionNoSignal)
@@ -244,17 +244,17 @@ namespace TvLibrary.Implementations.DVB
     /// <param name="subChannelId">The sub channel id</param>
     /// <param name="channel">The channel.</param>
     /// <returns></returns>
-    public override ITvSubChannel Tune(int subChannelId, string userName, IChannel channel)
+    public override ITvSubChannel Tune(int subChannelId, IChannel channel)
     {
       Log.Log.WriteFile("dvbs: Tune:{0}", channel);
       try
       {
-        if (!BeforeTune(ref subChannelId, userName, channel))
+        if (!BeforeTune(ref subChannelId, channel))
         {
           return null;
         }
-        ITvSubChannel ch = base.Tune(subChannelId, userName, channel);
-        AfterTune(channel, userName, subChannelId);
+        ITvSubChannel ch = base.Tune(subChannelId, channel);
+        AfterTune(channel, subChannelId);
         return ch;
       }
       catch (TvExceptionTuneCancelled)
@@ -276,7 +276,7 @@ namespace TvLibrary.Implementations.DVB
       }
     }
 
-    private void AfterTune(IChannel channel, string userName, int subChannelId)
+    private void AfterTune(IChannel channel, int subChannelId)
     {
       // workaround for hauppauge dvb-s cards that fail to properly set diseqC the first time around.
       // restart graph, but only once.
@@ -285,7 +285,7 @@ namespace TvLibrary.Implementations.DVB
         _diseqCretries++;
         Log.Log.WriteFile("dvbs: setting diseqC failed the first time, resetting diseqC");
         StopGraph();
-        Tune(subChannelId, userName, channel);
+        Tune(subChannelId, channel);
       }
 
       if (_filterTIF != null && _dvbsChannel != null &&
@@ -295,7 +295,7 @@ namespace TvLibrary.Implementations.DVB
       }
     }
 
-    private bool BeforeTune(ref int subChannelId, string userName, IChannel channel)
+    private bool BeforeTune(ref int subChannelId , IChannel channel)
     {
       DVBSChannel dvbsChannel = channel as DVBSChannel;
       if (dvbsChannel == null)
@@ -319,7 +319,7 @@ namespace TvLibrary.Implementations.DVB
       }
       if (_mapSubChannels.ContainsKey(subChannelId) == false)
       {
-        subChannelId = GetNewSubChannel(channel, userName);
+        subChannelId = GetNewSubChannel(channel);
       }
       if (useInternalNetworkProvider)
       {

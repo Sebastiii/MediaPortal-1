@@ -205,18 +205,16 @@ namespace TvLibrary.Interfaces
     /// </summary>
     /// <param name="subChannelId">The sub channel id.</param>
     /// <param name="channel">The channel.</param>
-    /// <param name="userName">The current User.</param>
     /// <returns>true if succeeded else false</returns>
-    ITvSubChannel Tune(int subChannelId, String userName, IChannel channel);
+    ITvSubChannel Tune(int subChannelId, IChannel channel);
 
     /// <summary>
     /// Scans the specified channel.
     /// </summary>
     /// <param name="subChannelId">The sub channel id.</param>
     /// <param name="channel">The channel.</param>
-    /// <param name="userName">The current User.</param>
     /// <returns>true if succeeded else false</returns>
-    ITvSubChannel Scan(int subChannelId,  String userName, IChannel channel);
+    ITvSubChannel Scan(int subChannelId, IChannel channel);
 
     #endregion
 

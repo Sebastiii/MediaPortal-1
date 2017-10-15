@@ -143,7 +143,7 @@ namespace TvService
           {
             return tvResult;
           }
-          result = _cardHandler.Card.Scan(user.SubChannel, user.Name, channel);
+          result = _cardHandler.Card.Scan(user.SubChannel, channel);
           if (result != null)
           {
             return AfterTune(user, idChannel, result);
@@ -337,7 +337,7 @@ namespace TvService
         }
         user.FailedCardId = -1;
         
-        result = _cardHandler.Card.Tune(user.SubChannel, user.Name, channel);
+        result = _cardHandler.Card.Tune(user.SubChannel, channel);
 
         if (result != null)
         {

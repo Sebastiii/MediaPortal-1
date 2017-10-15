@@ -226,7 +226,7 @@ namespace TvLibrary.Implementations.DVB
     /// <param name="broadcastStandard">The standard used to broadcast the channel.</param>
     /// <param name="groupNames">A dictionary of channel group names.</param>
     /// <returns>the created scanned channel instance</returns>
-    public static ScannedChannel CreateScannedChannel(IChannel channel, string userName, bool isVisibleInGuide, BroadcastStandard broadcastStandard, IDictionary<ChannelGroupType, IDictionary<ulong, string>> groupNames)
+    public static ScannedChannel CreateScannedChannel(IChannel channel, bool isVisibleInGuide, BroadcastStandard broadcastStandard, IDictionary<ChannelGroupType, IDictionary<ulong, string>> groupNames)
     {
       ScannedChannel scannedChannel = new ScannedChannel(channel);
       scannedChannel.IsVisibleInGuide = isVisibleInGuide;
@@ -284,7 +284,6 @@ namespace TvLibrary.Implementations.DVB
         _completeTables |= tableType;
         _event.Set();
       }
-      return base.Scan(channel, userName, settings);
     }
 
     /// <summary>

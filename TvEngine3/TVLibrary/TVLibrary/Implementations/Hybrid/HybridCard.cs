@@ -355,12 +355,10 @@ namespace TvLibrary.Implementations.Hybrid
     /// </summary>
     /// <param name="subChannelId">The sub channel id</param>
     /// <param name="channel">The channel.</param>
-    /// <param name="Username">The current User.</param>
     /// <returns>true if succeeded else false</returns>
-    public ITvSubChannel Tune(int subChannelId, string Username, IChannel channel)
+    public ITvSubChannel Tune(int subChannelId, IChannel channel)
     {
-      //_userName = UserName;
-      return _group.Tune(subChannelId, Username, channel);
+      return _group.Tune(subChannelId, channel);
     }
 
 
@@ -370,9 +368,9 @@ namespace TvLibrary.Implementations.Hybrid
     /// <param name="subChannelId">The sub channel id</param>
     /// <param name="channel">The channel.</param>
     /// <returns>true if succeeded else false</returns>
-    public ITvSubChannel Scan(int subChannelId, string userName, IChannel channel)
+    public ITvSubChannel Scan(int subChannelId, IChannel channel)
     {
-      return _group.Scan(subChannelId, userName, channel);
+      return _group.Scan(subChannelId, channel);
     }
 
     /// <summary>

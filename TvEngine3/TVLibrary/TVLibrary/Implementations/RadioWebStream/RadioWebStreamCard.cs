@@ -207,9 +207,8 @@ namespace TvLibrary.Implementations.RadioWebStream
     /// </summary>
     /// <param name="subChannelId">The sub channel id</param>
     /// <param name="channel">The channel.</param>
-    /// <param name="Username">The current User.</param>
     /// <returns></returns>
-    public ITvSubChannel Tune(int subChannelId, string UserName, IChannel channel)
+    public ITvSubChannel Tune(int subChannelId, IChannel channel)
     {
       Log.Log.WriteFile("RadioWebStream:  Tune:{0}", channel);
       return null;
@@ -221,7 +220,7 @@ namespace TvLibrary.Implementations.RadioWebStream
     /// <param name="subChannelId">The sub channel id</param>
     /// <param name="channel">The channel.</param>
     /// <returns></returns>
-    public ITvSubChannel Scan(int subChannelId, string userName, IChannel channel)
+    public ITvSubChannel Scan(int subChannelId, IChannel channel)
     {
       Log.Log.WriteFile("RadioWebStream:  Scan:{0}", channel);
       return null;

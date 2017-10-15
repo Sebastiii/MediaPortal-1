@@ -1100,7 +1100,7 @@ namespace TvLibrary.Implementations.DVB
     /// <param name="currentTransportStreamOriginalNetworkId">The identifier of the original network which the current transport stream is associated with.</param>
     /// <param name="channels">A dictionary of channels, keyed on the transport stream identifier and program number.</param>
     /// <param name="groupNames">A dictionary of channel group names.</param>
-    private void CollectServices(IGrabberSiDvb grabber, IChannel tuningChannel, string userName, ushort currentTransportStreamId, IDictionary<uint, ProgramInfo> programs, bool isFastNetworkScan, out ushort currentTransportStreamOriginalNetworkId, out IDictionary<uint, ScannedChannel> channels, out IDictionary<ChannelGroupType, IDictionary<ulong, string>> groupNames)
+    private void CollectServices(IGrabberSiDvb grabber, IChannel tuningChannel, ushort currentTransportStreamId, IDictionary<uint, ProgramInfo> programs, bool isFastNetworkScan, out ushort currentTransportStreamOriginalNetworkId, out IDictionary<uint, ScannedChannel> channels, out IDictionary<ChannelGroupType, IDictionary<ulong, string>> groupNames)
     {
       ushort serviceCount;
       grabber.GetServiceCount(out currentTransportStreamOriginalNetworkId, out serviceCount);

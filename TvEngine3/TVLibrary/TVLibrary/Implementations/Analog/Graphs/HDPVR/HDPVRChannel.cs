@@ -29,6 +29,7 @@ using TvLibrary.Interfaces.Analyzer;
 using TvLibrary.Implementations.DVB;
 using TvLibrary.Implementations.DVB.Structures;
 using TvLibrary.Channels;
+using ITsFilter = Mediaportal.TV.Server.TVLibrary.Interfaces.Analyzer.ITsWriter;
 
 namespace TvLibrary.Implementations.Analog
 {
@@ -71,7 +72,8 @@ namespace TvLibrary.Implementations.Analog
       }
 
       _tsFilterInterface = (ITsFilter)filterTsWriter;
-      _tsFilterInterface.AddChannel(ref _subChannelIndex);
+      _tsFilterInterface.AddChannel(this, out _subChannelIndex);
+      //_tsFilterInterface.AddChannel(ref _subChannelIndex);
       _subChannelId = subchannelId;
       _timeshiftFileName = "";
       _recordingFileName = "";
@@ -180,7 +182,7 @@ namespace TvLibrary.Implementations.Analog
       }
 
       Log.Log.Debug("HDPVR: found PMT after {0} seconds", waitLength.TotalSeconds);
-      return HandlePmt();
+      return HandlePmt(false);
     }
 
     /// <summary>
@@ -211,18 +213,18 @@ namespace TvLibrary.Implementations.Analog
       }
       if (!_pmtRequested)
       {
-        HandlePmt();
+        HandlePmt(true);
       }
       _pmtRequested = false;
       return 0;
     }
 
-    private bool HandlePmt()
+    private bool HandlePmt(bool isDynamic)
     {
       IntPtr pmtMem = Marshal.AllocCoTaskMem(4096); // max. size for pmt
       try
       {
-        _pmtLength = _tsFilterInterface.PmtGetPMTData(_subChannelIndex, pmtMem);
+        //_pmtLength = _tsFilterInterface.PmtGetPMTData(_subChannelIndex, pmtMem);
         if (_pmtLength < 6)
         {
           return false;
@@ -245,7 +247,7 @@ namespace TvLibrary.Implementations.Analog
         _channelInfo.DecodePmt(_pmtData);
         _channelInfo.serviceID = pmtProgramNumber;
         _channelInfo.network_pmt_PID = _pmtPid;
-        SetMpegPidMapping(_channelInfo);
+        SetMpegPidMapping(_channelInfo, isDynamic);
         return true;
       }
       finally

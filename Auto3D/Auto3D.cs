@@ -80,6 +80,8 @@ namespace MediaPortal.ProcessPlugins.Auto3D
 	
     bool bConvert2Dto3DEnabled = false;
 
+    bool bForceSubtitleMode = false;
+
     Thread _workerThread = null;
 
     GUIDialogMenu _dlgMenu = null;
@@ -676,16 +678,20 @@ namespace MediaPortal.ProcessPlugins.Auto3D
       }
     }
 
-   private void UpdateSubtitleRenderFormat()
+    private void UpdateSubtitleRenderFormat()
     {
-        if (bStretchSubtitles)
-        {
-            GUIGraphicsContext.StretchSubtitles = true;
-        }
-        else
-        {
-            GUIGraphicsContext.StretchSubtitles = subTitleType == eSubTitle.ImageBased ? true : false;
-        }       
+      if (bForceSubtitleMode)
+      {
+        return;
+      }
+      if (bStretchSubtitles)
+      {
+        GUIGraphicsContext.StretchSubtitles = true;
+      }
+      else
+      {
+        GUIGraphicsContext.StretchSubtitles = subTitleType == eSubTitle.ImageBased ? true : false;
+      }
     }
 
     private void AnalyzeVideo()
@@ -785,6 +791,7 @@ namespace MediaPortal.ProcessPlugins.Auto3D
         }
 
         _bPlaying = false;
+        bForceSubtitleMode = false;
 
         // wait for ending worker thread
 
@@ -921,7 +928,7 @@ namespace MediaPortal.ProcessPlugins.Auto3D
           }
 
           if ((bCheckSideBySide || bCheckTopAndBottom) /* && type == g_Player.MediaType.Video*/)
-            AnalyzeVideo();         
+            AnalyzeVideo();
         }
       }
     }
@@ -929,6 +936,7 @@ namespace MediaPortal.ProcessPlugins.Auto3D
     public void ManualSelect3DFormat(VideoFormat preSelected)
     {
       _dlgMenu = (GUIDialogMenu)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
+      bForceSubtitleMode = false;
 
       if (_dlgMenu != null)
       {
@@ -960,11 +968,13 @@ namespace MediaPortal.ProcessPlugins.Auto3D
           if (!GUIGraphicsContext.Switch3DSides)
             _dlgMenu.Add("3D Reverse Mode");
           else
-            _dlgMenu.Add("3D Normal Mode");          
+            _dlgMenu.Add("3D Normal Mode");
         }
 
         if (_activeDevice.IsDefined(VideoFormat.Fmt2D3D))
           _dlgMenu.Add("2D -> 3D via TV");
+
+        _dlgMenu.Add("Subtitle displayed mode change 3D/2D");
 
         _dlgMenu.DoModal((int)GUIWindow.Window.WINDOW_FULLSCREEN_VIDEO);
 
@@ -1030,6 +1040,12 @@ namespace MediaPortal.ProcessPlugins.Auto3D
             GUIGraphicsContext.Render3DMode = GUIGraphicsContext.eRender3DMode.SideBySideFrom2D;
             _currentMode = VideoFormat.Fmt3DSBS;
             break;
+
+          case "Subtitle displayed mode change 3D/2D":
+            GUIGraphicsContext.StretchSubtitles = !GUIGraphicsContext.StretchSubtitles;
+            bForceSubtitleMode = true;
+            break;
+
         }
 
         _dlgMenu = null;

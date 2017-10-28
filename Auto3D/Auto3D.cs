@@ -340,11 +340,15 @@ namespace MediaPortal.ProcessPlugins.Auto3D
         if (convertToString != null)
         {
           string _mPKey = convertToString.ToLowerInvariant();
-          if (_dlgMenu == null && _mPKey.ToLowerInvariant() == _menuHotKey.ToString().ToLowerInvariant())
+          if (_mPKey.ToLowerInvariant() == _menuHotKey.ToString().ToLowerInvariant())
           {
             Log.Info("Auto3D: Manual Mode via Hotkey");
-            ManualSelect3DFormat(VideoFormat.Fmt2D);
-            UpdateSubtitleRenderFormat();
+            if (_dlgMenu == null)
+              ManualSelectThread();
+            else
+            {
+              _dlgMenu.PageDestroy();
+            }
           }
         }
       }

@@ -324,15 +324,30 @@ namespace MediaPortal.ProcessPlugins.Auto3D
 
     // system was shut down through MediaPortal GUI
 
-    void GUIGraphicsContext_OnNewAction(GUI.Library.Action action)
+    private void GUIGraphicsContext_OnNewAction(GUI.Library.Action action)
     {
-        if (action.wID == GUI.Library.Action.ActionType.ACTION_SHUTDOWN && 
-            GUIGraphicsContext.CurrentState == GUIGraphicsContext.State.STOPPING)
-        {
-            Log.Debug("Auto3D: MediaPortal ShutDown");
+      if (action.wID == GUI.Library.Action.ActionType.ACTION_SHUTDOWN &&
+          GUIGraphicsContext.CurrentState == GUIGraphicsContext.State.STOPPING)
+      {
+        Log.Debug("Auto3D: MediaPortal ShutDown");
 
-            SystemShutDown();
+        SystemShutDown();
+      }
+      if (action.wID == GUI.Library.Action.ActionType.ACTION_KEY_PRESSED)
+      {
+        Log.Debug("Auto3D: Key pressed received");
+        var convertToString = (new KeysConverter()).ConvertToString(action.m_key.KeyChar);
+        if (convertToString != null)
+        {
+          string _mPKey = convertToString.ToLowerInvariant();
+          if (_dlgMenu == null && _mPKey.ToLowerInvariant() == _menuHotKey.ToString().ToLowerInvariant())
+          {
+            Log.Info("Auto3D: Manual Mode via Hotkey");
+            ManualSelect3DFormat(VideoFormat.Fmt2D);
+            UpdateSubtitleRenderFormat();
+          }
         }
+      }
     }
 
     // system was shut down through Windows GUI

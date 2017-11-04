@@ -2704,7 +2704,7 @@ namespace MediaPortal.Player
           VMR9Util.g_vmr9.Visible = false;
 
           // Refresh madVR
-          RefreshMadVrVideo();
+          //RefreshMadVrVideo();
 
           Log.Debug("g_Player.Process() - restore madVR rendering GUI");
           VMR9Util.g_vmr9.PlaneSceneMadvrTimer = DateTime.Now;
@@ -2785,6 +2785,7 @@ namespace MediaPortal.Player
 
     public static void RefreshMadVrVideo()
     {
+      return;
       if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR &&
           (GUIGraphicsContext.Vmr9Active || GUIGraphicsContext.ForceMadVRFirstStart))
       {

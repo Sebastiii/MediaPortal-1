@@ -1568,14 +1568,14 @@ public class MediaPortalApp : D3D, IRender
 
         // set maximum and minimum form size in windowed mode
         case WM_GETMINMAXINFO:
-          if (Windowed || !_ignoreFullscreenResolutionChanges)
-          {
-            if (!_suspended)
-            {
-              OnGetMinMaxInfo(ref msg);
-              PluginManager.WndProc(ref msg);
-            }
-          }
+          //if (Windowed || !_ignoreFullscreenResolutionChanges)
+          //{
+          //  if (!_suspended)
+          //  {
+          //    OnGetMinMaxInfo(ref msg);
+          //    PluginManager.WndProc(ref msg);
+          //  }
+          //}
           break;
 
         case WM_ENTERSIZEMOVE:
@@ -1619,39 +1619,40 @@ public class MediaPortalApp : D3D, IRender
 
         // handle display changes
         case WM_DISPLAYCHANGE:
-          Screen screen = Screen.FromControl(this);
-          if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR && AppActive &&
-              (!Equals(screen.Bounds.Size.Width, GUIGraphicsContext.currentScreen.Bounds.Width) ||
-               !Equals(screen.Bounds.Size.Height, GUIGraphicsContext.currentScreen.Bounds.Height)) ||
-              GUIGraphicsContext.ForcedRefreshRate3D)
-          {
-            NeedRecreateSwapChain = true;
-            GUIGraphicsContext.ForceMadVRRefresh = true;
+          //Screen screen = Screen.FromControl(this);
+          //if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR && AppActive &&
+          //    (!Equals(screen.Bounds.Size.Width, GUIGraphicsContext.currentScreen.Bounds.Width) ||
+          //     !Equals(screen.Bounds.Size.Height, GUIGraphicsContext.currentScreen.Bounds.Height)) ||
+          //    GUIGraphicsContext.ForcedRefreshRate3D)
+          //{
+          //  NeedRecreateSwapChain = true;
+          //  GUIGraphicsContext.ForceMadVRRefresh = true;
 
-            Log.Debug("Main: WM_DISPLAYCHANGE madVR screen change triggered");
-            Log.Debug("Main: WM_DISPLAYCHANGE madVR Width x Height : {0} x {1}", screen.Bounds.Size.Width, screen.Bounds.Size.Height);
-          }
+          //  Log.Debug("Main: WM_DISPLAYCHANGE madVR screen change triggered");
+          //  Log.Debug("Main: WM_DISPLAYCHANGE madVR Width x Height : {0} x {1}", screen.Bounds.Size.Width, screen.Bounds.Size.Height);
+          //}
 
-          // Handle this message here needed for madVR
-          if (Windowed || !_ignoreFullscreenResolutionChanges)
-          {
-            OnDisplayChange(ref msg);
-            PluginManager.WndProc(ref msg);
-          }
+          //// Handle this message here needed for madVR
+          //if (Windowed || !_ignoreFullscreenResolutionChanges)
+          //{
+          //  OnDisplayChange(ref msg);
+          //  PluginManager.WndProc(ref msg);
+          //}
 
-          // Restore bounds from the currentScreen value (to restore original startup MP screen after turned off used HDMI device
-          if (!Windowed && _ignoreFullscreenResolutionChanges && !RefreshRateChanger.RefreshRateChangePending)
-          {
-            if (GUIGraphicsContext.InVmr9Render)
-            {
-              if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
-              {
-                break;
-              }
-            }
-            SetBounds(GUIGraphicsContext.currentScreen.Bounds.X, GUIGraphicsContext.currentScreen.Bounds.Y, GUIGraphicsContext.currentScreen.Bounds.Width, GUIGraphicsContext.currentScreen.Bounds.Height);
-            Log.Debug("Main: WM_DISPLAYCHANGE restore current screen position");
-          }
+          //// Restore bounds from the currentScreen value (to restore original startup MP screen after turned off used HDMI device
+          //if (!Windowed && _ignoreFullscreenResolutionChanges && !RefreshRateChanger.RefreshRateChangePending)
+          //{
+          //  if (GUIGraphicsContext.InVmr9Render)
+          //  {
+          //    if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+          //    {
+          //      break;
+          //    }
+          //  }
+          //  SetBounds(GUIGraphicsContext.currentScreen.Bounds.X, GUIGraphicsContext.currentScreen.Bounds.Y, GUIGraphicsContext.currentScreen.Bounds.Width, GUIGraphicsContext.currentScreen.Bounds.Height);
+          //  Log.Debug("Main: WM_DISPLAYCHANGE restore current screen position");
+          //}
+          Thread.Sleep(2000);
           break;
 
         // handle device changes

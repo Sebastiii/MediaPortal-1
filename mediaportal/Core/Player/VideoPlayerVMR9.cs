@@ -512,21 +512,21 @@ namespace MediaPortal.Player
       {
         LAVSplitterSource reader = new LAVSplitterSource();
         _interfaceSourceFilter = reader as IBaseFilter;
-        var objectWithSite = reader as IObjectWithSite;
-        if (objectWithSite != null)
-        {
-          objectWithSite.SetSite(this);
-        }
+        //var objectWithSite = reader as IObjectWithSite;
+        //if (objectWithSite != null)
+        //{
+        //  objectWithSite.SetSite(this);
+        //}
       }
       else if (LAVFilter == LAV_SPLITTER_FILTER)
       {
         LAVSplitter reader = new LAVSplitter();
         Splitter = reader as IBaseFilter;
-        var objectWithSite = reader as IObjectWithSite;
-        if (objectWithSite != null)
-        {
-          objectWithSite.SetSite(this);
-        }
+        //var objectWithSite = reader as IObjectWithSite;
+        //if (objectWithSite != null)
+        //{
+        //  objectWithSite.SetSite(this);
+        //}
       }
     }
 

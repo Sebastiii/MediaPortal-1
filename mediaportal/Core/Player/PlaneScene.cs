@@ -980,7 +980,7 @@ namespace MediaPortal.Player
                 {
                   GUIGraphicsContext.Render3DModeHalf = GUIGraphicsContext.eRender3DModeHalf.None;
 
-                  if (!GUIGraphicsContext.NoneDone)
+                  if (GUIGraphicsContext.NoneDone)
                   {
                     // Get Client size
                     Size client = GUIGraphicsContext.form.ClientSize;
@@ -1303,7 +1303,7 @@ namespace MediaPortal.Player
 
           if (VMR9Util.g_vmr9 != null)
           {
-            VMR9Util.g_vmr9.ProcessMadVrOsd();
+            //VMR9Util.g_vmr9.ProcessMadVrOsd();
 
             // Enable the GetCurrentImage new madVR
             if (grabber != null) grabber.FrameGrabberD3D9Enable = false;

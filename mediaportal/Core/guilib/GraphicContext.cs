@@ -1084,18 +1084,19 @@ namespace MediaPortal.GUI.Library
             VMR9Util.g_vmr9?.SceneMadVr();
           }
 
-          if (GUIGraphicsContext.ForceMadVRRefresh)
-          {
-            Size client = GUIGraphicsContext.form.ClientSize;
-            VMR9Util.g_vmr9?.MadVrScreenResize(GUIGraphicsContext.form.Location.X, GUIGraphicsContext.form.Location.Y, client.Width, client.Height, false);
-            GUIGraphicsContext.NoneDone = false;
-            GUIGraphicsContext.TopAndBottomDone = false;
-            GUIGraphicsContext.SideBySideDone = false;
-            GUIGraphicsContext.SBSLeftDone = false;
-            GUIGraphicsContext.SBSRightDone = false;
-            GUIGraphicsContext.TABTopDone = false;
-            GUIGraphicsContext.TABBottomDone = false;
-          }
+          //if (GUIGraphicsContext.ForceMadVRRefresh)
+          //{
+          //  GUIGraphicsContext.ForceMadVRRefresh = false;
+          //  Size client = GUIGraphicsContext.form.ClientSize;
+          //  VMR9Util.g_vmr9?.MadVrScreenResize(GUIGraphicsContext.form.Location.X, GUIGraphicsContext.form.Location.Y, client.Width, client.Height, false);
+          //  GUIGraphicsContext.NoneDone = false;
+          //  GUIGraphicsContext.TopAndBottomDone = false;
+          //  GUIGraphicsContext.SideBySideDone = false;
+          //  GUIGraphicsContext.SBSLeftDone = false;
+          //  GUIGraphicsContext.SBSRightDone = false;
+          //  GUIGraphicsContext.TABTopDone = false;
+          //  GUIGraphicsContext.TABBottomDone = false;
+          //}
         }
       }
     }

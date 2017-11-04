@@ -19,6 +19,7 @@
 #endregion
 
 using System;
+using System.Threading;
 using MediaPortal.GUI.Library;
 
 namespace MediaPortal.Playlists

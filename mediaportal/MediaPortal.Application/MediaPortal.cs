@@ -1651,8 +1651,31 @@ public class MediaPortalApp : D3D, IRender
           //  }
           //  SetBounds(GUIGraphicsContext.currentScreen.Bounds.X, GUIGraphicsContext.currentScreen.Bounds.Y, GUIGraphicsContext.currentScreen.Bounds.Width, GUIGraphicsContext.currentScreen.Bounds.Height);
           //  Log.Debug("Main: WM_DISPLAYCHANGE restore current screen position");
-          //}
-          Thread.Sleep(2000);
+          if (g_Player.FullScreen && g_Player.Playing)// GUIGraphicsContext.InVmr9Render)
+          {
+            Log.Debug("Main: WM_DISPLAYCHANGE 1");
+            //Thread.Sleep(1000);
+            if (VMR9Util.g_vmr9?._graphBuilder != null)
+            {
+              //IVideoWindow videoWin = (IVideoWindow)VMR9Util.g_vmr9?._graphBuilder;
+              //Stopwatch s = new Stopwatch();
+              //s.Start();
+              //while (s.Elapsed < TimeSpan.FromSeconds(5))
+              //{
+              //  //
+              //  Application.DoEvents();
+              //}
+              //s.Stop();
+              //if (videoWin != null)
+              //{
+              //  videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
+              //  videoWin.put_MessageDrain(GUIGraphicsContext.form.Handle);
+              //  Log.Debug("Main: WM_DISPLAYCHANGE IVideoWindow");
+              //}
+            }
+            //return;
+              Log.Debug("Main: WM_DISPLAYCHANGE 2");
+          }
           break;
 
         // handle device changes

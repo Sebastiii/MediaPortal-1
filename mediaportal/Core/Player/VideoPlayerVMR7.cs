@@ -32,6 +32,7 @@ using MediaPortal.GUI.Library;
 using MediaPortal.Profile;
 using MediaPortal.Player.Subtitles;
 using System.Collections.Generic;
+using System.Diagnostics;
 using MediaPortal.Player.PostProcessing;
 
 namespace MediaPortal.Player
@@ -404,6 +405,17 @@ namespace MediaPortal.Player
           basicVideo.GetVideoSize(out m_iVideoWidth, out m_iVideoHeight);
         }
 
+        ////mediaCtrl.Pause();
+        //Stopwatch s = new Stopwatch();
+        //s.Start();
+        //while (s.Elapsed < TimeSpan.FromSeconds(15))
+        //{
+        //  //
+        //  //Application.DoEvents();
+        //}
+        //s.Stop();
+        //mediaCtrl.Run();
+
         GUIMessage msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_PLAYBACK_STARTED, 0, 0, 0, 0, 0, null);
         msg.Label = strFile;
         GUIWindowManager.SendThreadMessage(msg);
@@ -685,6 +697,7 @@ namespace MediaPortal.Player
           {
             Size client = GUIGraphicsContext.form.ClientSize;
             videoWin.SetWindowPosition(0, 0, client.Width, client.Height);
+            videoWin.put_WindowState(WindowState.ShowMaximized);
           }
         }
         else
@@ -829,6 +842,7 @@ namespace MediaPortal.Player
             if (videoWin != null)
             {
               videoWin.put_Visible(OABool.True);
+              videoWin.put_WindowState(WindowState.ShowMaximized);
             }
           }
         }

@@ -240,7 +240,7 @@ namespace MediaPortal.Player
     private int _frameCounter = 0;
     private DateTime _repaintTimer = DateTime.Now;
     private IVMRMixerBitmap9 _vmr9MixerBitmapInterface = null;
-    private IGraphBuilder _graphBuilder = null;
+    public IGraphBuilder _graphBuilder = null;
     private bool _isVmr9Initialized = false;
     private int _threadId;
     private Vmr9PlayState currentVmr9State = Vmr9PlayState.Playing;
@@ -699,6 +699,7 @@ namespace MediaPortal.Player
       if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
       {
         MadVrScreenResizeForce(x, y, width, height, displayChange);
+        Log.Debug("VMR9: MadVrScreenResizeForce : X: {0}, Y: {1},Width: {2},Height: {3}", x, y, width, height);
       }
     }
 
@@ -881,6 +882,7 @@ namespace MediaPortal.Player
           GUIGraphicsContext.ForcedRefreshRate3D = false;
           GUIGraphicsContext.ForcedRR3DBackDefault = false;
           GUIGraphicsContext.ForcedRefreshRate3DDone = false;
+          GUIGraphicsContext.RenderMadVr3Dchanged = false;
           IMediaControl mPMediaControl = (IMediaControl) graphBuilder;
           var xposition = GUIGraphicsContext.form.Location.X;
           var yposition = GUIGraphicsContext.form.Location.Y;
@@ -1568,14 +1570,34 @@ namespace MediaPortal.Player
       {
         if (!UseMadVideoRenderer3D || g_Player.IsTV || g_Player.IsTimeShifting || GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR)
         {
-          //// WIP testing, don't init Windows poisiton already done before.
-          ////IVideoWindow videoWin = (IVideoWindow)_graphBuilder;
-          ////if (videoWin != null)
-          ////{
-          ////  videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
-          ////  videoWin.put_MessageDrain(GUIGraphicsContext.form.Handle);
-          ////  Log.Debug("VMR9: StartMediaCtrl start put_WindowStyle");
-          ////}
+          //WIP testing, don't init Windows poisiton already done before.
+          IVideoWindow videoWin = (IVideoWindow)_graphBuilder;
+          if (videoWin != null)
+          {
+            videoWin.put_Owner(GUIGraphicsContext.form.Handle);
+            videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
+            videoWin.put_MessageDrain(GUIGraphicsContext.form.Handle);
+            videoWin.put_WindowState(WindowState.ShowMaximized);
+            //videoWin.SetWindowForeground(OABool.True);
+            //GUIGraphicsContext.form.TopMost = true;
+            //GUIGraphicsContext.form.Activate();
+
+            if ((GUIGraphicsContext.form.WindowState != FormWindowState.Minimized))
+            {
+              // Make MediaPortal window normal ( if minimized )
+              Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.ShowNormal);
+
+              // Make Mediaportal window focused
+              if (Win32API.SetForegroundWindow(GUIGraphicsContext.ActiveForm, true))
+              {
+                Log.Info("VMR9: Successfully switched focus.");
+              }
+
+              // Bring MP to front
+              GUIGraphicsContext.form.BringToFront();
+            }
+            Log.Debug("VMR9: StartMediaCtrl start put_WindowStyle");
+          }
         }
 
         var hr = mediaCtrl.Run();

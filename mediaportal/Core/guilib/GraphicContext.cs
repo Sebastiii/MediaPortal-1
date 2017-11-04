@@ -225,6 +225,7 @@ namespace MediaPortal.GUI.Library
       SideBySideDone = false;
       TopAndBottomDone = false;
       NoneDone = false;
+      RenderMadVr3Dchanged = false;
       Convert2Dto3DSkewFactor = 0;
       LastFrames = new List<Texture>();
       LastFramesIndex = 0;
@@ -1853,6 +1854,7 @@ namespace MediaPortal.GUI.Library
     internal static int ForcedRR3DWitdhBackup { get; set; }
     internal static int ForcedRR3DHeightBackup { get; set; }
     internal static double ForcedRR3DRate { get; set; }
+    internal static bool RenderMadVr3Dchanged { get; set; }
 
     //public static IntPtr madVRDIB { get; set; }
 

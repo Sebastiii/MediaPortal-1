@@ -2785,6 +2785,7 @@ namespace MediaPortal.Player
 
     public static void RefreshMadVrVideo()
     {
+      GUIGraphicsContext.UpdateVideoWindow = true;
       return;
       if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR &&
           (GUIGraphicsContext.Vmr9Active || GUIGraphicsContext.ForceMadVRFirstStart))

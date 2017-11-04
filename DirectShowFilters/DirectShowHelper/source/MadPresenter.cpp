@@ -487,6 +487,8 @@ STDMETHODIMP MPMadPresenter::CreateRenderer(IUnknown** ppRenderer)
     pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
     pWindow->put_MessageDrain(m_hParent);
     pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight); // TODO
+    pWindow->put_WindowState(SW_SHOWMAXIMIZED);
+    //pWindow->SetWindowForeground(TRUE);
     m_pInitMadVRWindowPositionDone = true;
   }
 
@@ -533,13 +535,13 @@ void MPMadPresenter::ConfigureMadvr()
     pMadVrCmd->SendCommandBool("disableSeekbar", true);
 
   if (Com::SmartQIPtr<IMadVRDirect3D9Manager> manager = m_pMad)
-    manager->ConfigureDisplayModeChanger(false, true);
+    manager->ConfigureDisplayModeChanger(true, true);
 
-  //// TODO implement IMadVRSubclassReplacement
-  //if (Com::SmartQIPtr<IMadVRSubclassReplacement> pSubclassReplacement = m_pMad)
-  //{
-  //  pSubclassReplacement->DisableSubclassing();
-  //}
+  // TODO implement IMadVRSubclassReplacement
+  if (Com::SmartQIPtr<IMadVRSubclassReplacement> pSubclassReplacement = m_pMad)
+  {
+    pSubclassReplacement->DisableSubclassing();
+  }
 
   //if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
   //{

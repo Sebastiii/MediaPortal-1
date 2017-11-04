@@ -1069,7 +1069,8 @@ void MadVrGrabScreenshotSend()
 
 void MadVrWindowPosition()
 {
-  m_madPresenter->InitMadVRWindowPosition();
+  //// WIP testing, don't init Windows poisiton already done before.
+  //m_madPresenter->InitMadVRWindowPosition();
 }
 
 void MadVr3DRight(int x, int y, int width, int height)

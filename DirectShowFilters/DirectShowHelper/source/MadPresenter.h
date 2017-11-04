@@ -213,6 +213,8 @@ class MPMadPresenter : public CUnknown, public CCritSec
     //virtual OAHWND HWnDMadVR() { return reinterpret_cast<OAHWND>(m_hWnd); }
     static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     HWND m_hWnd;
+    CWnd* m_pVideoWnd;
+    CWnd* pWnd;
     bool InitMadvrWindow(HWND &hWnd);
     void DeInitMadvrWindow();
     HINSTANCE m_hInstance;

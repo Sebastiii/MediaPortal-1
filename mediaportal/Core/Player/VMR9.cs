@@ -234,7 +234,6 @@ namespace MediaPortal.Player
     private bool _inMenu = false;
     private IRender _renderFrame;
     internal IBaseFilter _vmr9Filter = null;
-    internal IntPtr m_hWnd;
     private int _videoHeight, _videoWidth;
     private int _videoAspectRatioX, _videoAspectRatioY;
     private IQualProp _qualityInterface = null;
@@ -1569,13 +1568,14 @@ namespace MediaPortal.Player
       {
         if (!UseMadVideoRenderer3D || g_Player.IsTV || g_Player.IsTimeShifting || GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR)
         {
-          IVideoWindow videoWin = (IVideoWindow)_graphBuilder;
-          if (videoWin != null)
-          {
-            videoWin.put_WindowStyle((WindowStyle) ((int) WindowStyle.Child + (int) WindowStyle.ClipChildren + (int) WindowStyle.ClipSiblings));
-            videoWin.put_MessageDrain(GUIGraphicsContext.form.Handle);
-            Log.Debug("VMR9: StartMediaCtrl start put_WindowStyle");
-          }
+          //// WIP testing, don't init Windows poisiton already done before.
+          ////IVideoWindow videoWin = (IVideoWindow)_graphBuilder;
+          ////if (videoWin != null)
+          ////{
+          ////  videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
+          ////  videoWin.put_MessageDrain(GUIGraphicsContext.form.Handle);
+          ////  Log.Debug("VMR9: StartMediaCtrl start put_WindowStyle");
+          ////}
         }
 
         var hr = mediaCtrl.Run();

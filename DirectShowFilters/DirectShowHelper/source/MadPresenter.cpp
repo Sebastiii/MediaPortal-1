@@ -141,27 +141,12 @@ MPMadPresenter::~MPMadPresenter()
     Log("MPMadPresenter::Destructor() - m_pORCB release 2");
 
     Log("MPMadPresenter::Destructor() - m_pMad release 1");
-    //// for using no Kodi madVR window way comment out this line
-    //InvalidateRect(reinterpret_cast<HWND>(m_hParent), nullptr, TRUE);
-    //UpdateWindow(reinterpret_cast<HWND>(m_hParent));
-    //Log("MPMadPresenter::Destructor() - m_pMad release 2");
-
-    //if (m_ExclusiveMode)
-    //{
-    //  Log("MPMadPresenter::Destructor() - m_pMad release 2.1");
-    //  //ShowWindowAsync(reinterpret_cast<HWND>(m_hParent), SW_HIDE);
-    //  //ShowWindowAsync(reinterpret_cast<HWND>(m_hParent), SW_SHOW);
-    //  //ShowWindow(reinterpret_cast<HWND>(m_hParent), SW_SHOW);
-    //  //ShowWindowAsync(reinterpret_cast<HWND>(m_hParent), SW_SHOW);
-    //  Log("MPMadPresenter::Destructor() - m_pMad release 2.2");
-    //}
-
     if (m_pMad)
     {
       m_pMad.FullRelease();
       m_pMad.m_ptr = nullptr;
     }
-    Log("MPMadPresenter::Destructor() - m_pMad release 3");
+    Log("MPMadPresenter::Destructor() - m_pMad release 2");
 
     // Detroy create madVR window and need to be here to avoid some crash
     DeInitMadvrWindow(); // for using no Kodi madVR window way comment out this line
@@ -726,6 +711,15 @@ HRESULT MPMadPresenter::Stopping()
     //  MPMadPresenter::EnableExclusive(false);
     //  Log("MPMadPresenter::Stopping() disable exclusive mode");
     //}
+
+    // Needed to close madVR window at least for exclusive mode
+    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    {
+      pWindow->put_WindowStyle(WS_DISABLED);
+      pWindow->put_WindowState(SW_SHOWMAXIMIZED);
+      pWindow->put_WindowState(SW_HIDE);
+      pWindow->SetWindowForeground(TRUE);
+    }
 
     if (m_pMad)
     {

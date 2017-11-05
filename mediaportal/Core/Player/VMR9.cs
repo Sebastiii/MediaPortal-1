@@ -1575,26 +1575,13 @@ namespace MediaPortal.Player
             videoWin.put_Owner(GUIGraphicsContext.form.Handle);
             videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
             videoWin.put_MessageDrain(GUIGraphicsContext.form.Handle);
-            videoWin.put_WindowState(WindowState.ShowMaximized);
 
-            //videoWin.SetWindowForeground(OABool.True);
-            //GUIGraphicsContext.form.TopMost = true;
-            //GUIGraphicsContext.form.Activate();
+            // This line is improtant for madVR exclusive 3D mode
+            if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+            {
+              videoWin.put_WindowState(WindowState.ShowMaximized);
+            }
 
-            //if ((GUIGraphicsContext.form.WindowState != FormWindowState.Minimized))
-            //{
-            //  // Make MediaPortal window normal ( if minimized )
-            //  Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.ShowNormal);
-
-            //  // Make Mediaportal window focused
-            //  if (Win32API.SetForegroundWindow(GUIGraphicsContext.ActiveForm, true))
-            //  {
-            //    Log.Info("VMR9: Successfully switched focus.");
-            //  }
-
-            //  // Bring MP to front
-            //  GUIGraphicsContext.form.BringToFront();
-            //}
             Log.Debug("VMR9: StartMediaCtrl start put_WindowStyle");
           }
         }

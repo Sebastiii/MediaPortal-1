@@ -697,7 +697,7 @@ namespace MediaPortal.Player
           {
             Size client = GUIGraphicsContext.form.ClientSize;
             videoWin.SetWindowPosition(0, 0, client.Width, client.Height);
-            videoWin.put_WindowState(WindowState.ShowMaximized);
+            //videoWin.put_WindowState(WindowState.ShowMaximized);
           }
         }
         else
@@ -842,7 +842,7 @@ namespace MediaPortal.Player
             if (videoWin != null)
             {
               videoWin.put_Visible(OABool.True);
-              videoWin.put_WindowState(WindowState.ShowMaximized);
+              //videoWin.put_WindowState(WindowState.ShowMaximized);
             }
           }
         }

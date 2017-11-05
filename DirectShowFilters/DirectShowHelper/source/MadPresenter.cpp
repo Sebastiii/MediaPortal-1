@@ -486,9 +486,7 @@ STDMETHODIMP MPMadPresenter::CreateRenderer(IUnknown** ppRenderer)
     pWindow->put_Owner(m_hParent);
     pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
     pWindow->put_MessageDrain(m_hParent);
-    pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight); // TODO
-    pWindow->put_WindowState(SW_SHOWMAXIMIZED);
-    //pWindow->SetWindowForeground(TRUE);
+    //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight); // TODO
     m_pInitMadVRWindowPositionDone = true;
   }
 

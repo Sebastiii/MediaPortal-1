@@ -3976,9 +3976,11 @@ namespace MediaPortal.Player
           {
             // Resize OSD/Screen when resolution change
             if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR &&
-                (GUIGraphicsContext.InVmr9Render && (GUIGraphicsContext.ForceMadVRRefresh) ||
-                GUIGraphicsContext.ForceMadVRFirstStart))
+                (GUIGraphicsContext.InVmr9Render && (GUIGraphicsContext.ForceMadVRRefresh ||
+                GUIGraphicsContext.ForceMadVRFirstStart)))
             {
+              Size client = GUIGraphicsContext.form.ClientSize;
+
               if (GUIGraphicsContext.ForceMadVRRefresh)
               {
                 GUIGraphicsContext.ForceMadVRRefresh = false;
@@ -3986,8 +3988,9 @@ namespace MediaPortal.Player
               if (GUIGraphicsContext.ForceMadVRFirstStart)
               {
                 GUIGraphicsContext.ForceMadVRFirstStart = false;
+                //VMR9Util.g_vmr9?.MadVrScreenResize(GUIGraphicsContext.form.Location.X, GUIGraphicsContext.form.Location.Y, client.Width, client.Height, true);
+                //Log.Debug("g_player VideoWindowChanged() - ForceMadVRFirstStart - resize OSD/Screen message for madVR");
               }
-              Size client = GUIGraphicsContext.form.ClientSize;
 
               if (GUIGraphicsContext.DX9Device.PresentationParameters.BackBufferWidth != client.Width ||
                   GUIGraphicsContext.DX9Device.PresentationParameters.BackBufferHeight != client.Height)
@@ -4045,6 +4048,8 @@ namespace MediaPortal.Player
               // Refresh madVR
               RefreshMadVrVideo();
             }
+            // message handled
+            GUIGraphicsContext.ProcessMadVrOsdDisplay = false;
           }
           break;
       }

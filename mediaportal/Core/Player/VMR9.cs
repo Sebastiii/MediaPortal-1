@@ -883,6 +883,7 @@ namespace MediaPortal.Player
           GUIGraphicsContext.ForcedRR3DBackDefault = false;
           GUIGraphicsContext.ForcedRefreshRate3DDone = false;
           GUIGraphicsContext.RenderMadVr3Dchanged = false;
+          GUIGraphicsContext.ProcessMadVrOsdDisplay = false;
           IMediaControl mPMediaControl = (IMediaControl) graphBuilder;
           var xposition = GUIGraphicsContext.form.Location.X;
           var yposition = GUIGraphicsContext.form.Location.Y;
@@ -1235,33 +1236,30 @@ namespace MediaPortal.Player
             GUIWindowManager.SendThreadMessage(msg);
           }
         }
-        // Delayed Frame Grabber
-        if (tsPlay.Seconds >= 1)
+
+        //// Delayed Frame Grabber
+        //if (tsPlay.Seconds >= 1)
+        //{
+        //  if (!GUIGraphicsContext.WorkerThreadStart)
+        //  {
+        //    //_scene.WorkerThreadStart();
+        //  }
+        //}
+
+        if ((GUIGraphicsContext.ForceMadVRRefresh || GUIGraphicsContext.ForceMadVRFirstStart) && !GUIGraphicsContext.ProcessMadVrOsdDisplay)
         {
-          if (!GUIGraphicsContext.WorkerThreadStart)
-          {
-            //_scene.WorkerThreadStart();
-          }
-        }
-        if (GUIGraphicsContext.ForceMadVRRefresh ||
-            GUIGraphicsContext.ForceMadVRFirstStart)
-        {
+          GUIGraphicsContext.ProcessMadVrOsdDisplay = true;
           GUIMessage message = new GUIMessage(GUIMessage.MessageType.GUI_MSG_ONDISPLAYMADVRCHANGED, 0, 0, 0, 0, 0, null);
           GUIWindowManager.SendThreadMessage(message);
-          if (GUIGraphicsContext.ForceMadVRFirstStart)
-          {
-            GUIGraphicsContext.ForceMadVRFirstStart = false;
-            Size client = GUIGraphicsContext.form.ClientSize;
-            VMR9Util.g_vmr9?.MadVrScreenResize(GUIGraphicsContext.form.Location.X, GUIGraphicsContext.form.Location.Y, client.Width, client.Height, true);
-          }
           Log.Debug("VMR9: send resize OSD/Screen message for madVR");
         }
-        if (GUIGraphicsContext.InitMadVRWindowPosition)
-        {
-          GUIGraphicsContext.InitMadVRWindowPosition = false;
-          GUIMessage msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_MADVRREPOSITION, 0, 0, 0, 0, 0, null);
-          GUIWindowManager.SendThreadMessage(msg);
-        }
+
+        //if (GUIGraphicsContext.InitMadVRWindowPosition)
+        //{
+        //  GUIGraphicsContext.InitMadVRWindowPosition = false;
+        //  GUIMessage msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_MADVRREPOSITION, 0, 0, 0, 0, 0, null);
+        //  GUIWindowManager.SendThreadMessage(msg);
+        //}
       }
     }
 
@@ -1578,24 +1576,25 @@ namespace MediaPortal.Player
             videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
             videoWin.put_MessageDrain(GUIGraphicsContext.form.Handle);
             videoWin.put_WindowState(WindowState.ShowMaximized);
+
             //videoWin.SetWindowForeground(OABool.True);
             //GUIGraphicsContext.form.TopMost = true;
             //GUIGraphicsContext.form.Activate();
 
-            if ((GUIGraphicsContext.form.WindowState != FormWindowState.Minimized))
-            {
-              // Make MediaPortal window normal ( if minimized )
-              Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.ShowNormal);
+            //if ((GUIGraphicsContext.form.WindowState != FormWindowState.Minimized))
+            //{
+            //  // Make MediaPortal window normal ( if minimized )
+            //  Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.ShowNormal);
 
-              // Make Mediaportal window focused
-              if (Win32API.SetForegroundWindow(GUIGraphicsContext.ActiveForm, true))
-              {
-                Log.Info("VMR9: Successfully switched focus.");
-              }
+            //  // Make Mediaportal window focused
+            //  if (Win32API.SetForegroundWindow(GUIGraphicsContext.ActiveForm, true))
+            //  {
+            //    Log.Info("VMR9: Successfully switched focus.");
+            //  }
 
-              // Bring MP to front
-              GUIGraphicsContext.form.BringToFront();
-            }
+            //  // Bring MP to front
+            //  GUIGraphicsContext.form.BringToFront();
+            //}
             Log.Debug("VMR9: StartMediaCtrl start put_WindowStyle");
           }
         }

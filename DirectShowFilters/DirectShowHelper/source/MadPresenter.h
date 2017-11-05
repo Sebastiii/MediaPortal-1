@@ -319,5 +319,6 @@ class MPMadPresenter : public CUnknown, public CCritSec
 
     double m_pRefreshrate = 0;
     bool m_pPaused = false;
+    bool m_pKodiWindowUse = false;
 };
 

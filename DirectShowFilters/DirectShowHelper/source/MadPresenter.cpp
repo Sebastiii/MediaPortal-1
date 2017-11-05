@@ -340,14 +340,14 @@ void MPMadPresenter::InitMadVRWindowPosition()
 
   // Init created madVR window instance.
   SetDsWndVisible(true);
-  if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-  {
-    pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-    pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
-    pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
-    m_pReInitOSD = true;
-    m_pInitMadVRWindowPositionDone = true;
-  }
+  //if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+  //{
+  //  pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+  //  pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+  //  pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+  //  m_pReInitOSD = true;
+  //  m_pInitMadVRWindowPositionDone = true;
+  //}
 }
 
 void MPMadPresenter::MadVr3DSizeRight(int x, int y, int width, int height)
@@ -414,7 +414,8 @@ IBaseFilter* MPMadPresenter::Initialize()
         Sleep(100);
         pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
         pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
-        //pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+        pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+        pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
         Sleep(100);
         Log("%s : Create DSPlayer window - hWnd: %i", __FUNCTION__, m_hWnd);
         m_pCallback->DestroyHWnd(m_hWnd); // for using no Kodi madVR window way comment out this line

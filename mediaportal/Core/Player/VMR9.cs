@@ -1254,12 +1254,12 @@ namespace MediaPortal.Player
           Log.Debug("VMR9: send resize OSD/Screen message for madVR");
         }
 
-        //if (GUIGraphicsContext.InitMadVRWindowPosition)
-        //{
-        //  GUIGraphicsContext.InitMadVRWindowPosition = false;
-        //  GUIMessage msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_MADVRREPOSITION, 0, 0, 0, 0, 0, null);
-        //  GUIWindowManager.SendThreadMessage(msg);
-        //}
+        if (GUIGraphicsContext.InitMadVRWindowPosition)
+        {
+          GUIGraphicsContext.InitMadVRWindowPosition = false;
+          GUIMessage msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_MADVRREPOSITION, 0, 0, 0, 0, 0, null);
+          GUIWindowManager.SendThreadMessage(msg);
+        }
       }
     }
 

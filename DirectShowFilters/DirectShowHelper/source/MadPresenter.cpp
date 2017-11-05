@@ -76,10 +76,10 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 MPMadPresenter::MPMadPresenter(IVMR9Callback* pCallback, int xposition, int yposition, int width, int height, OAHWND parent, IDirect3DDevice9* pDevice, IMediaControl* pMediaControl) :
   CUnknown(NAME("MPMadPresenter"), NULL),
   m_pCallback(pCallback),
-  //m_Xposition(0), // for using no Kodi madVR window way comment out this line
-  //m_Yposition(0), // for using no Kodi madVR window way comment out this line
-  m_Xposition(xposition), // for using no Kodi madVR window way uncomment out this line
-  m_Yposition(yposition), // for using no Kodi madVR window way uncomment out this line
+  m_Xposition(0), // for using no Kodi madVR window way comment out this line
+  m_Yposition(0), // for using no Kodi madVR window way comment out this line
+  //m_Xposition(xposition), // for using no Kodi madVR window way uncomment out this line
+  //m_Yposition(yposition), // for using no Kodi madVR window way uncomment out this line
   m_dwGUIWidth(width),
   m_dwGUIHeight(height),
   m_hParent(parent),
@@ -141,24 +141,19 @@ MPMadPresenter::~MPMadPresenter()
     Log("MPMadPresenter::Destructor() - m_pORCB release 2");
 
     Log("MPMadPresenter::Destructor() - m_pMad release 1");
-    InvalidateRect(reinterpret_cast<HWND>(m_hParent), nullptr, TRUE);
-    UpdateWindow(reinterpret_cast<HWND>(m_hParent));
-    Log("MPMadPresenter::Destructor() - m_pMad release 2");
+    //// for using no Kodi madVR window way comment out this line
+    //InvalidateRect(reinterpret_cast<HWND>(m_hParent), nullptr, TRUE);
+    //UpdateWindow(reinterpret_cast<HWND>(m_hParent));
+    //Log("MPMadPresenter::Destructor() - m_pMad release 2");
 
-    if (m_ExclusiveMode)
-    {
-      Log("MPMadPresenter::Destructor() - m_pMad release 2.1");
-      //ShowWindowAsync(reinterpret_cast<HWND>(m_hParent), SW_HIDE);
-      //ShowWindowAsync(reinterpret_cast<HWND>(m_hParent), SW_SHOW);
-      //ShowWindow(reinterpret_cast<HWND>(m_hParent), SW_SHOW);
-      //ShowWindowAsync(reinterpret_cast<HWND>(m_hParent), SW_SHOW);
-      Log("MPMadPresenter::Destructor() - m_pMad release 2.2");
-    }
-
-    //if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    //if (m_ExclusiveMode)
     //{
-    //  pWindow->put_WindowStyle(WS_DISABLED);// | WS_BORDER | WS_DISABLED);
-    //  //pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+    //  Log("MPMadPresenter::Destructor() - m_pMad release 2.1");
+    //  //ShowWindowAsync(reinterpret_cast<HWND>(m_hParent), SW_HIDE);
+    //  //ShowWindowAsync(reinterpret_cast<HWND>(m_hParent), SW_SHOW);
+    //  //ShowWindow(reinterpret_cast<HWND>(m_hParent), SW_SHOW);
+    //  //ShowWindowAsync(reinterpret_cast<HWND>(m_hParent), SW_SHOW);
+    //  Log("MPMadPresenter::Destructor() - m_pMad release 2.2");
     //}
 
     if (m_pMad)
@@ -169,7 +164,7 @@ MPMadPresenter::~MPMadPresenter()
     Log("MPMadPresenter::Destructor() - m_pMad release 3");
 
     // Detroy create madVR window and need to be here to avoid some crash
-    //DeInitMadvrWindow(); // for using no Kodi madVR window way comment out this line
+    DeInitMadvrWindow(); // for using no Kodi madVR window way comment out this line
 
     //DestroyWindow(reinterpret_cast<HWND>(pWnd));
     //DestroyWindow(reinterpret_cast<HWND>(m_pVideoWnd));
@@ -399,8 +394,8 @@ void MPMadPresenter::MadVrScreenResize(int x, int y, int width, int height, bool
   if (m_pMadD3DDev)
   {
     Log("%s : SetWindowPos : %d x %d", __FUNCTION__, width, height);
-    //SetWindowPos(m_hWnd, 0, 0, 0, width, height, SWP_ASYNCWINDOWPOS); // for using no Kodi madVR window way comment out this line
-    SetWindowPos(m_hWnd, nullptr, x, y, width, height, SWP_ASYNCWINDOWPOS); // for using no Kodi madVR window way uncomment out this line
+    SetWindowPos(m_hWnd, 0, 0, 0, width, height, SWP_ASYNCWINDOWPOS); // for using no Kodi madVR window way comment out this line
+    //SetWindowPos(m_hWnd, nullptr, x, y, width, height, SWP_ASYNCWINDOWPOS); // for using no Kodi madVR window way uncomment out this line
 
     // Needed to update OSD/GUI when changing directx present parameter on resolution change.
     if (displayChange)
@@ -424,23 +419,23 @@ IBaseFilter* MPMadPresenter::Initialize()
 
   if (Com::SmartQIPtr<IBaseFilter> baseFilter = m_pMad)
   {
-    //// WIP testing, don't init Windows poisiton already done before.
-    ////if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-    ////{
-    ////  // Create a madVR Window
-    ////  if (InitMadvrWindow(m_hWnd)) // for using no Kodi madVR window way comment out this line
-    ////  {
-    ////    //m_hWnd = reinterpret_cast<HWND>(m_hParent); // for using no Kodi madVR window way uncomment out this line
-    ////    Sleep(100);
-    ////    pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-    ////    pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
-    ////    //pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
-    ////    Sleep(100);
-    ////    Log("%s : Create DSPlayer window - hWnd: %i", __FUNCTION__, m_hWnd);
-    ////    m_pCallback->DestroyHWnd(m_hWnd); // for using no Kodi madVR window way comment out this line
-    ////    Log("MPMadPresenter::Initialize() send DestroyHWnd value on C# side");
-    ////  }
-    ////}
+    //WIP testing, don't init Windows poisiton already done before.
+    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    {
+      // Create a madVR Window
+      if (InitMadvrWindow(m_hWnd)) // for using no Kodi madVR window way comment out this line
+      {
+        //m_hWnd = reinterpret_cast<HWND>(m_hParent); // for using no Kodi madVR window way uncomment out this line
+        Sleep(100);
+        pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+        pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+        //pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+        Sleep(100);
+        Log("%s : Create DSPlayer window - hWnd: %i", __FUNCTION__, m_hWnd);
+        m_pCallback->DestroyHWnd(m_hWnd); // for using no Kodi madVR window way comment out this line
+        Log("MPMadPresenter::Initialize() send DestroyHWnd value on C# side");
+      }
+    }
     return baseFilter;
   }
 
@@ -483,10 +478,15 @@ STDMETHODIMP MPMadPresenter::CreateRenderer(IUnknown** ppRenderer)
       m_pMad = nullptr;
       return E_FAIL;
     }
-    pWindow->put_Owner(m_hParent);
-    pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-    pWindow->put_MessageDrain(m_hParent);
-    //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight); // TODO
+
+    // for using no Kodi madVR window way comment out this line
+    Initialize();
+
+    //// for using no Kodi madVR window way uncomment out this block
+    //pWindow->put_Owner(m_hParent);
+    //pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+    //pWindow->put_MessageDrain(m_hParent);
+    ////pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight); // TODO
     m_pInitMadVRWindowPositionDone = true;
   }
 
@@ -573,7 +573,7 @@ HRESULT MPMadPresenter::Shutdown()
       Log("MPMadPresenter::Shutdown() reset subtitle device");
       m_pCallback->RestoreDeviceSurface(reinterpret_cast<DWORD>(m_pSurfaceDevice));
       Log("MPMadPresenter::Shutdown() RestoreDeviceSurface");
-      //m_pCallback->DestroyHWnd(m_hWnd); // for using no Kodi madVR window way comment out this line
+      m_pCallback->DestroyHWnd(m_hWnd); // for using no Kodi madVR window way comment out this line
       Log("MPMadPresenter::Shutdown() send DestroyHWnd on C# side");
       m_pCallback->Release();
       Log("MPMadPresenter::Shutdown() m_pCallback release");

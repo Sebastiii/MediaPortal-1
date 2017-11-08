@@ -518,13 +518,13 @@ namespace MediaPortal.Player
       RegisterOsd();
       if (VMR9Util.g_vmr9 != null) VMR9Util.g_vmr9.SetMpFullscreenWindow();
 
-      MadVRSettings msett = new MadVRSettings(_vmr9Filter);
-      string madVrLevelInitial = msett.GetString("levels");
-      msett.SetBool("enableDisplayModeChanger", false);
-      msett.SetBool("enableOverlay", false);
-      //msett.SetBool("restoreDisplayMode", true);
-      msett.SetBool("exclusiveModeActive", true);
-      msett.SetString("keyFseDisable10", "*");
+      //MadVRSettings msett = new MadVRSettings(_vmr9Filter); // TODO
+      //string madVrLevelInitial = msett.GetString("levels");
+      //msett.SetBool("enableDisplayModeChanger", false);
+      //msett.SetBool("enableOverlay", false);
+      ////msett.SetBool("restoreDisplayMode", true);
+      //msett.SetBool("exclusiveModeActive", true);
+      //msett.SetString("keyFseDisable10", "*");
     }
 
     /// <summary>
@@ -804,7 +804,7 @@ namespace MediaPortal.Player
             IVideoWindow videoWin = _vmr9Filter as IVideoWindow;
             if (videoWin != null)
             {
-              videoWin.put_Owner(GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+              videoWin.put_Owner(GUIGraphicsContext.MadVrHWnd != IntPtr.Zero // TODO
                 ? GUIGraphicsContext.MadVrHWnd
                 : GUIGraphicsContext.form.Handle);
               videoWin.put_WindowStyle((WindowStyle) ((int) WindowStyle.Child + (int) WindowStyle.ClipChildren + (int) WindowStyle.ClipSiblings));
@@ -2035,7 +2035,7 @@ namespace MediaPortal.Player
           GC.Collect();
           DirectShowUtil.FinalReleaseComObject(_vmr9Filter);
           Log.Debug("VMR9: Dispose 2.2");
-          MadvrInterface.restoreDisplayModeNow(_vmr9Filter);
+          //MadvrInterface.restoreDisplayModeNow(_vmr9Filter); // already released
           DestroyWindow(GUIGraphicsContext.MadVrHWnd); // for using no Kodi madVR window way comment out this line
           RestoreGuiForMadVr();
           Log.Debug("VMR9: Dispose 2.3");

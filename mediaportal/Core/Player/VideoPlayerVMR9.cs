@@ -730,11 +730,11 @@ namespace MediaPortal.Player
           }
         }
 
-        //Manually add codecs based on file extension if not in auto-settings
-        // switch back to directx fullscreen mode
-        Log.Info("VideoPlayer9: Enabling DX9 exclusive mode");
-        msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_SWITCH_FULL_WINDOWED, 0, 0, 0, 1, 0, null);
-        GUIWindowManager.SendMessage(msg);
+        ////Manually add codecs based on file extension if not in auto-settings // TODO
+        //// switch back to directx fullscreen mode
+        //Log.Info("VideoPlayer9: Enabling DX9 exclusive mode");
+        //msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_SWITCH_FULL_WINDOWED, 0, 0, 0, 1, 0, null);
+        //GUIWindowManager.SendMessage(msg);
 
         // Add preferred video filters
         UpdateFilters("Video");

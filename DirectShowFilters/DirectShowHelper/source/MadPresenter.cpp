@@ -724,16 +724,16 @@ HRESULT MPMadPresenter::Stopping()
       //pWindow->SetWindowForeground(TRUE);
     }
 
-    //if (m_pMad)
-    //{
-    //  // Let's madVR restore original display mode (when adjust refresh it's handled by madVR)
-    //  if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
-    //  {
-    //    pMadVrCmd->SendCommand("restoreDisplayModeNow");
-    //    pMadVrCmd.Release();
-    //    Log("MPMadPresenter::Stopping() restoreDisplayModeNow");
-    //  }
-    //}
+    if (m_pMad)
+    {
+      // Let's madVR restore original display mode (when adjust refresh it's handled by madVR)
+      if (Com::SmartQIPtr<IMadVRCommand> pMadVrCmd = m_pMad)
+      {
+        pMadVrCmd->SendCommand("restoreDisplayModeNow");
+        pMadVrCmd.Release();
+        Log("MPMadPresenter::Stopping() restoreDisplayModeNow");
+      }
+    }
 
     if (m_pSRCB)
     {

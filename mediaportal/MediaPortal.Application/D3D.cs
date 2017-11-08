@@ -566,7 +566,7 @@ namespace MediaPortal
         Windowed = false;
         Location = new Point(GUIGraphicsContext.currentScreen.Bounds.X, GUIGraphicsContext.currentScreen.Bounds.Y);
         ClientSize = GUIGraphicsContext.currentScreen.Bounds.Size;
-        GoFullscreen(true);
+        //GoFullscreen(true); // TODO
       }
       else
       {

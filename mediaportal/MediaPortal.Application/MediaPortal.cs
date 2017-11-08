@@ -1630,6 +1630,23 @@ public class MediaPortalApp : D3D, IRender
 
             Log.Debug("Main: WM_DISPLAYCHANGE madVR screen change triggered");
             Log.Debug("Main: WM_DISPLAYCHANGE madVR Width x Height : {0} x {1}", screen.Bounds.Size.Width, screen.Bounds.Size.Height);
+            //IVideoWindow videoWin = VMR9Util.g_vmr9?._vmr9Filter as IVideoWindow;
+            //if (videoWin != null)
+            //{
+            //  if (VMR9Util.g_vmr9 != null)
+            //  {
+            //    var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+            //      ? GUIGraphicsContext.MadVrHWnd
+            //      : GUIGraphicsContext.form.Handle;
+
+            //    //if (!isInExclusiveMode)
+            //    //{
+            //    // Set _vmr9Filter put_owner only if exclusive mode is off in madVR - TODO read madVR settings to know if exclusive is enable
+            //    // We need to not set owner here (when exclusive mode active) to make 3D fse working and set it later
+            //    videoWin.put_Owner(ownerHandle);
+            //    Log.Info("D3D: Switching from windowed mode to full screen");
+            //  }
+            //}
           }
 
           // Handle this message here needed for madVR

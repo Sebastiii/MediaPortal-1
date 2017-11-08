@@ -24,6 +24,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using DirectShowLib;
 using MediaPortal.ExtensionMethods;
 using MediaPortal.GUI.Library;
 using MediaPortal.Player.Subtitles;
@@ -1366,6 +1367,27 @@ namespace MediaPortal.Player
         }
         Log.Debug("Planescene: Set subtitle device - {0}", device);
       }
+      //if (device == IntPtr.Zero)
+      //{
+      //  IVideoWindow videoWin = VMR9Util.g_vmr9?._vmr9Filter as IVideoWindow;
+      //  if (videoWin != null)
+      //  {
+      //    if (VMR9Util.g_vmr9 != null)
+      //    {
+      //      videoWin.put_Owner(IntPtr.Zero);
+      //      var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+      //        ? GUIGraphicsContext.MadVrHWnd
+      //        : GUIGraphicsContext.form.Handle;
+
+      //      //if (!isInExclusiveMode)
+      //      //{
+      //      // Set _vmr9Filter put_owner only if exclusive mode is off in madVR - TODO read madVR settings to know if exclusive is enable
+      //      // We need to not set owner here (when exclusive mode active) to make 3D fse working and set it later
+      //      videoWin.put_Owner(ownerHandle);
+      //      Log.Info("D3D: Switching from windowed mode to full screen");
+      //    }
+      //  }
+      //}
     }
 
     public void RenderSubtitle(long frameStart, int left, int top, int right, int bottom, int width, int height, int xOffsetInPixels)
@@ -1387,6 +1409,16 @@ namespace MediaPortal.Player
     {
       if (GUIGraphicsContext.SubDeviceMadVr != IntPtr.Zero && !_subEngineType.Equals("XySubFilter"))
       {
+        // Check if value are correct (can happen when using zooming option
+        if (_subsRect.X < -100000)
+        {
+          _subsRect = viewportRect;
+        }
+        if (_destinationRect.X < -100000)
+        {
+          _destinationRect = croppedVideoRect;
+        }
+
         ISubEngine engine = SubEngine.GetInstance();
         if (GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.SideBySideTo2D ||
             GUIGraphicsContext.Render3DMode == GUIGraphicsContext.eRender3DMode.TopAndBottomTo2D)

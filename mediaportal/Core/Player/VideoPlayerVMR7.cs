@@ -193,7 +193,9 @@ namespace MediaPortal.Player
     protected PlayState m_state = PlayState.Init;
     protected int m_iVolume = 100;
     protected int m_volumeBeforeSeeking = 0;
-    protected IGraphBuilder graphBuilder;
+    //protected IGraphBuilder graphBuilder;
+    protected DirectShowLib.IGraphBuilder graphBuilder = null;
+    protected DirectShowLib.FilterGraphNoThread m_filterGraph = null;
     protected long m_speedRate = 10000;
     protected double m_dCurrentPos;
     protected double m_dDuration;
@@ -325,6 +327,27 @@ namespace MediaPortal.Player
           return false;
         }
 
+        try
+        {
+          //if (videoWin != null)
+          //{
+          //  videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
+          //  videoWin.put_MessageDrain(GUIGraphicsContext.form.Handle);
+          //}
+          if (AudioOnly)
+          {
+            mediaCtrl.Run();
+          }
+          else if (VMR9Util.g_vmr9 != null)
+          {
+            VMR9Util.g_vmr9.StartMediaCtrl(mediaCtrl);
+          }
+        }
+        catch (Exception error)
+        {
+          Log.Error("VideoPlayer: Unable to play with reason - {0}", error.Message);
+        }
+
         int hr = mediaEvt.SetNotifyWindow(GUIGraphicsContext.ActiveForm, WM_GRAPHNOTIFY, IntPtr.Zero);
         if (hr < 0)
         {
@@ -371,26 +394,26 @@ namespace MediaPortal.Player
         }*/
         DirectShowUtil.SetARMode(graphBuilder, AspectRatioMode.Stretched);
         // DsUtils.DumpFilters(graphBuilder);
-        try
-        {
-          //if (videoWin != null)
-          //{
-          //  videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
-          //  videoWin.put_MessageDrain(GUIGraphicsContext.form.Handle);
-          //}
-          if (AudioOnly)
-          {
-            hr = mediaCtrl.Run();
-          }
-          else if (VMR9Util.g_vmr9 != null)
-          {
-            hr = VMR9Util.g_vmr9.StartMediaCtrl(mediaCtrl);
-          }
-        }
-        catch (Exception error)
-        {
-          Log.Error("VideoPlayer: Unable to play with reason - {0}", error.Message);
-        }
+        //////try
+        //////{
+        //////  //if (videoWin != null)
+        //////  //{
+        //////  //  videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
+        //////  //  videoWin.put_MessageDrain(GUIGraphicsContext.form.Handle);
+        //////  //}
+        //////  if (AudioOnly)
+        //////  {
+        //////    hr = mediaCtrl.Run();
+        //////  }
+        //////  else if (VMR9Util.g_vmr9 != null)
+        //////  {
+        //////    hr = VMR9Util.g_vmr9.StartMediaCtrl(mediaCtrl);
+        //////  }
+        //////}
+        //////catch (Exception error)
+        //////{
+        //////  Log.Error("VideoPlayer: Unable to play with reason - {0}", error.Message);
+        //////}
         if (hr < 0)
         {
           Error.SetError("Unable to play movie", "Unable to start movie");

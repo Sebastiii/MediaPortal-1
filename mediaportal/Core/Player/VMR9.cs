@@ -233,14 +233,14 @@ namespace MediaPortal.Player
     private bool _inMadVrExclusiveMode = false;
     private bool _inMenu = false;
     private IRender _renderFrame;
-    internal IBaseFilter _vmr9Filter = null;
+    public IBaseFilter _vmr9Filter = null;
     private int _videoHeight, _videoWidth;
     private int _videoAspectRatioX, _videoAspectRatioY;
     private IQualProp _qualityInterface = null;
     private int _frameCounter = 0;
     private DateTime _repaintTimer = DateTime.Now;
     private IVMRMixerBitmap9 _vmr9MixerBitmapInterface = null;
-    private IGraphBuilder _graphBuilder = null;
+    public IGraphBuilder _graphBuilder = null;
     private bool _isVmr9Initialized = false;
     private int _threadId;
     private Vmr9PlayState currentVmr9State = Vmr9PlayState.Playing;
@@ -517,6 +517,14 @@ namespace MediaPortal.Player
       Log.Debug("VMR9: Delayed OSD Callback");
       RegisterOsd();
       if (VMR9Util.g_vmr9 != null) VMR9Util.g_vmr9.SetMpFullscreenWindow();
+
+      MadVRSettings msett = new MadVRSettings(_vmr9Filter);
+      string madVrLevelInitial = msett.GetString("levels");
+      msett.SetBool("enableDisplayModeChanger", false);
+      msett.SetBool("enableOverlay", false);
+      //msett.SetBool("restoreDisplayMode", true);
+      msett.SetBool("exclusiveModeActive", true);
+      msett.SetString("keyFseDisable10", "*");
     }
 
     /// <summary>
@@ -583,26 +591,6 @@ namespace MediaPortal.Player
       {
         Log.Debug("VMR9 : madVR reposition window");
         MadVrWindowPosition();
-        if (!UseMadVideoRenderer3D)
-        {
-          IVideoWindow videoWin = _vmr9Filter as IVideoWindow;
-          if (videoWin != null)
-          {
-            // Get Client size
-            Size client = GUIGraphicsContext.form.ClientSize;
-            videoWin.put_Owner(GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
-              ? GUIGraphicsContext.MadVrHWnd
-              : GUIGraphicsContext.ActiveForm);
-            videoWin.put_WindowStyle(
-              (WindowStyle) ((int) WindowStyle.Child + (int) WindowStyle.ClipChildren + (int) WindowStyle.ClipSiblings));
-            videoWin.put_MessageDrain(GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
-              ? GUIGraphicsContext.MadVrHWnd
-              : GUIGraphicsContext.form.Handle);
-            videoWin.put_WindowState(WindowState.ShowMaximized);
-            videoWin.SetWindowForeground(OABool.True);
-            videoWin.SetWindowPosition(0, 0, client.Width, client.Height);
-          }
-        }
       }
     }
 
@@ -718,6 +706,47 @@ namespace MediaPortal.Player
     {
       if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
       {
+        //// Tricky workaround to be able to make 3D FSE working
+        //IVideoWindow videoWin = _vmr9Filter as IVideoWindow;
+        //if (videoWin != null)
+        //{
+        //  if (_vmr9Filter != null)
+        //  {
+        //    //Get Client size
+        //    Size client = GUIGraphicsContext.form.ClientSize;
+        //    videoWin.SetWindowPosition(0, 0, client.Width, client.Height);
+
+        //    var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+        //      ? GUIGraphicsContext.MadVrHWnd
+        //      : GUIGraphicsContext.form.Handle;
+
+        //    videoWin.put_Owner(ownerHandle);
+        //    videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
+        //    videoWin.put_MessageDrain(ownerHandle);
+        //  }
+        //}
+        //IMadVRCommand _madCmd = _vmr9Filter as IMadVRCommand;
+        //if (_madCmd != null)
+        //{
+        //  int hr = 0;
+        //  string zoomMode = "touchInside";
+        //  //    zoomMode = "touchInside";
+        //  //    zoomMode = "touchOutside";
+        //  //    zoomMode = "stretch";
+        
+        //  hr = _madCmd.SendCommandString("setZoomMode", zoomMode);
+        //  _madCmd.SendCommand("redraw");
+        //}
+
+        //MadVRSettings msett = new MadVRSettings(_vmr9Filter);
+        //string madVrLevelInitial = msett.GetString("levels");
+        //msett.SetBool("enableDisplayModeChanger", false);
+        //msett.SetBool("enableOverlay", false);
+        //msett.SetBool("restoreDisplayMode", true);
+        //msett.SetString("keyFseDisable10", "*");
+
+        //string madVrLevel = msett.GetString("levels");
+
         MadVrScreenResizeForce(x, y, width, height, displayChange);
         Log.Debug("VMR9: MadVrScreenResizeForce : X: {0}, Y: {1},Width: {2},Height: {3}", x, y, width, height);
       }
@@ -737,6 +766,26 @@ namespace MediaPortal.Player
           GUIWindowManager.SendThreadMessage(msg);
           Log.Debug("VMR9: send message for madVR refresh force");
         }
+
+        //// Tricky workaround to be able to make 3D FSE working
+        //IVideoWindow videoWin = _vmr9Filter as IVideoWindow;
+        //if (videoWin != null)
+        //{
+        //  if (_vmr9Filter != null)
+        //  {
+        //    //Get Client size
+        //    Size client = GUIGraphicsContext.form.ClientSize;
+        //    videoWin.SetWindowPosition(0, 0, client.Width, client.Height);
+
+        //    var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+        //      ? GUIGraphicsContext.MadVrHWnd
+        //      : GUIGraphicsContext.form.Handle;
+
+        //    videoWin.put_Owner(ownerHandle);
+        //    videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
+        //    videoWin.put_MessageDrain(ownerHandle);
+        //  }
+        //}
       }
     }
 
@@ -755,6 +804,9 @@ namespace MediaPortal.Player
             IVideoWindow videoWin = _vmr9Filter as IVideoWindow;
             if (videoWin != null)
             {
+              videoWin.put_Owner(GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+                ? GUIGraphicsContext.MadVrHWnd
+                : GUIGraphicsContext.form.Handle);
               videoWin.put_WindowStyle((WindowStyle) ((int) WindowStyle.Child + (int) WindowStyle.ClipChildren + (int) WindowStyle.ClipSiblings));
               videoWin.put_MessageDrain(GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
                 ? GUIGraphicsContext.MadVrHWnd
@@ -927,6 +979,42 @@ namespace MediaPortal.Player
           Size client = GUIGraphicsContext.form.ClientSize;
           MadInit(_scene, xposition, yposition, client.Width, client.Height, (uint) upDevice.ToInt32(),
             (uint) GUIGraphicsContext.ActiveForm.ToInt32(), ref _vmr9Filter, mPMediaControl);
+          //if (!UseMadVideoRenderer3D)
+          //{
+          //  bool enableExclusiveMode = UseMadVideoRenderer; // set to true for now
+          //  bool isInExclusiveMode = _vmr9Filter != null && enableExclusiveMode;
+          //  if (GUIGraphicsContext.Fullscreen)
+          //  {
+          //    GoFullscreen(true);
+          //  }
+          //  IVideoWindow videoWin = graphBuilder as IVideoWindow;
+          //  if (videoWin != null)
+          //  {
+          //    if (_vmr9Filter != null)
+          //    {
+          //      var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+          //        ? GUIGraphicsContext.MadVrHWnd
+          //        : GUIGraphicsContext.form.Handle;
+
+          //      //if (!isInExclusiveMode)
+          //      //{
+          //      // Set _vmr9Filter put_owner only if exclusive mode is off in madVR - TODO read madVR settings to know if exclusive is enable
+          //      // We need to not set owner here (when exclusive mode active) to make 3D fse working and set it later
+          //      videoWin.put_Owner(ownerHandle);
+          //      //}
+          //      //else
+          //      //{
+          //      //  IVideoWindow videoWinBuilder = graphBuilder as IVideoWindow;
+          //      //  videoWinBuilder?.put_Owner(ownerHandle);
+          //      //}
+          //      videoWin.put_WindowStyle((WindowStyle)((int) WindowStyle.Child + (int) WindowStyle.ClipChildren + (int) WindowStyle.ClipSiblings));
+          //      videoWin.put_MessageDrain(ownerHandle);
+
+          //      //videoWin.put_WindowStyleEx(WindowStyleEx.ToolWindow);
+          //      //videoWin.SetWindowForeground(OABool.True);
+          //    }
+          //  }
+          //}
           hr = new HResult(graphBuilder.AddFilter(_vmr9Filter, "madVR"));
           Log.Info("VMR9: added madVR Renderer to graph");
         }
@@ -1076,6 +1164,23 @@ namespace MediaPortal.Player
         return false;
       }
       return true;
+    }
+
+    private void GoFullscreen(bool fullscreen)
+    {
+      if (fullscreen)
+      {
+        GUIGraphicsContext.form.WindowState = FormWindowState.Normal;
+        GUIGraphicsContext.form.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+        GUIGraphicsContext.form.WindowState = FormWindowState.Maximized;
+        GUIGraphicsContext.form.Bounds = GUIGraphicsContext.currentScreen.Bounds;
+        Win32API.ShowWindow(GUIGraphicsContext.form.Handle, Win32API.ShowWindowFlags.ShowMaximized);
+      }
+      else
+      {
+        GUIGraphicsContext.form.WindowState = FormWindowState.Normal;
+        GUIGraphicsContext.form.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Sizable;
+      }
     }
 
     /// <summary>

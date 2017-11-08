@@ -28,6 +28,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
+using DirectShowLib;
 using MediaPortal.Configuration;
 using MediaPortal.Dialogs;
 using MediaPortal.GUI.Library;
@@ -41,6 +42,7 @@ using MediaPortal.Video.Database;
 using Microsoft.DirectX;
 using Microsoft.DirectX.Direct3D;
 using WPFMediaKit.DirectX;
+using Win32 = MediaPortal.Player.Win32;
 
 #endregion
 
@@ -523,7 +525,23 @@ namespace MediaPortal
       // adjust form sizes and properties
       if (Windowed)
       {
-        Log.Info("D3D: Switching from windowed mode to full screen");
+        //IVideoWindow videoWin = VMR9Util.g_vmr9?._graphBuilder as IVideoWindow;
+        //if (videoWin != null)
+        //{
+        //  if (VMR9Util.g_vmr9 != null)
+        //  {
+        //    var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+        //      ? GUIGraphicsContext.MadVrHWnd
+        //      : GUIGraphicsContext.form.Handle;
+
+        //    //if (!isInExclusiveMode)
+        //    //{
+        //    // Set _vmr9Filter put_owner only if exclusive mode is off in madVR - TODO read madVR settings to know if exclusive is enable
+        //    // We need to not set owner here (when exclusive mode active) to make 3D fse working and set it later
+        //    videoWin.put_Owner(ownerHandle);
+        //    Log.Info("D3D: Switching from windowed mode to full screen");
+        //  }
+        //}
 
         if (AutoHideTaskbar)
         {
@@ -548,9 +566,27 @@ namespace MediaPortal
         Windowed = false;
         Location = new Point(GUIGraphicsContext.currentScreen.Bounds.X, GUIGraphicsContext.currentScreen.Bounds.Y);
         ClientSize = GUIGraphicsContext.currentScreen.Bounds.Size;
+        GoFullscreen(true);
       }
       else
       {
+        //IVideoWindow videoWin = VMR9Util.g_vmr9?._vmr9Filter as IVideoWindow;
+        //if (videoWin != null)
+        //{
+        //  if (VMR9Util.g_vmr9 != null)
+        //  {
+        //    var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+        //      ? GUIGraphicsContext.MadVrHWnd
+        //      : GUIGraphicsContext.form.Handle;
+
+        //    //if (!isInExclusiveMode)
+        //    //{
+        //    // Set _vmr9Filter put_owner only if exclusive mode is off in madVR - TODO read madVR settings to know if exclusive is enable
+        //    // We need to not set owner here (when exclusive mode active) to make 3D fse working and set it later
+        //    videoWin.put_Owner(ownerHandle);
+        //    Log.Info("D3D: Switching from windowed mode to full screen");
+        //  }
+        //}
         Log.Info("D3D: Switching from full screen to windowed mode");
 
         if (AutoHideTaskbar)
@@ -617,6 +653,23 @@ namespace MediaPortal
       if (GUIGraphicsContext.DX9Device != null)
       {
         GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
+      }
+    }
+
+    private void GoFullscreen(bool fullscreen)
+    {
+      if (fullscreen)
+      {
+        GUIGraphicsContext.form.WindowState = FormWindowState.Normal;
+        GUIGraphicsContext.form.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+        //GUIGraphicsContext.form.WindowState = FormWindowState.Maximized;
+        GUIGraphicsContext.form.Bounds = GUIGraphicsContext.currentScreen.Bounds;
+        Win32API.ShowWindow(GUIGraphicsContext.form.Handle, Win32API.ShowWindowFlags.Show);
+      }
+      else
+      {
+        GUIGraphicsContext.form.WindowState = FormWindowState.Normal;
+        GUIGraphicsContext.form.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Sizable;
       }
     }
 

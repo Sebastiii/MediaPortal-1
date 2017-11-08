@@ -138,7 +138,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
       {
         return S_OK;
       }
-      CAutoLock cAutoLock(this);
+      //CAutoLock cAutoLock(this);
       return m_pDXRAPSUB ? m_pDXRAPSUB->SetDevice(pD3DDev) : E_UNEXPECTED;
     }
 

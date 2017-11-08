@@ -1009,7 +1009,7 @@ void MadDeinit()
     //m_madPresenter->m_dsLock.Lock();
     m_madPresenter->m_pShutdown = true;
     Sleep(100);
-    m_madPresenter->Shutdown();
+    //m_madPresenter->Shutdown(); // When setting IVideoWin on madVR object instead of graphbuilder (instance is destroyed in cleanup)
     m_pVMR9Filter = nullptr;
     //m_madPresenter->m_dsLock.Unlock();
     Log("MPMadDshow::MadDeinit shutdown done");

@@ -322,7 +322,9 @@ namespace MediaPortal.GUI.Library
 
     public void PackSkinGraphics(string skinName)
     {
+#if !DEBUG
       Cleanup();
+#endif
       if (LoadPackedSkin())
       {
         return;

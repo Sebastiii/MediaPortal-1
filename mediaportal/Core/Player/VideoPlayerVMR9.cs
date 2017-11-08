@@ -544,8 +544,6 @@ namespace MediaPortal.Player
         //Get filterCodecName
         filterCodec = GetFilterCodec();
 
-        basicVideo = graphBuilder as IBasicVideo2;
-
         if (filterConfig.bAutoDecoderSettings)
         {
           AutoRenderingCheck = true;
@@ -586,6 +584,36 @@ namespace MediaPortal.Player
               Log.Error("VideoPlayer9:Failed to add VMR9 to graph");
               return false;
             }
+            ////IVideoWindow videoWin = graphBuilder as IVideoWindow;
+            //if (videoWin != null)
+            //{
+            //  //if (_vmr9Filter != null)
+            //  {
+            //    var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+            //      ? GUIGraphicsContext.MadVrHWnd
+            //      : GUIGraphicsContext.form.Handle;
+
+            //    //if (!isInExclusiveMode)
+            //    //{
+            //    // Set _vmr9Filter put_owner only if exclusive mode is off in madVR - TODO read madVR settings to know if exclusive is enable
+            //    // We need to not set owner here (when exclusive mode active) to make 3D fse working and set it later
+            //    //videoWin.put_Owner(ownerHandle);
+            //    Log.Error("VideoPlayer9:Failed to add VMR9 to graph");
+            //    Log.Error("VideoPlayer9:Failed to add VMR9 to graph");
+            //    Log.Error("VideoPlayer9:Failed to add VMR9 to graph");
+            //    //}
+            //    //else
+            //    //{
+            //    //  IVideoWindow videoWinBuilder = graphBuilder as IVideoWindow;
+            //    //  videoWinBuilder?.put_Owner(ownerHandle);
+            //    //}
+            //    videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
+            //    videoWin.put_MessageDrain(ownerHandle);
+
+            //    //videoWin.put_WindowStyleEx(WindowStyleEx.ToolWindow);
+            //    //videoWin.SetWindowForeground(OABool.True);
+            //  }
+            //}
             VMR9Util.g_vmr9.Enable(false);
             VMR9AlreadyAdded = true;
           }
@@ -701,6 +729,12 @@ namespace MediaPortal.Player
             VMR9Util.g_vmr9.Enable(false);
           }
         }
+
+        ////Manually add codecs based on file extension if not in auto-settings // TODO
+        //// switch back to directx fullscreen mode
+        //Log.Info("VideoPlayer9: Enabling DX9 exclusive mode");
+        //msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_SWITCH_FULL_WINDOWED, 0, 0, 0, 1, 0, null);
+        //GUIWindowManager.SendMessage(msg);
 
         // Add preferred video filters
         UpdateFilters("Video");
@@ -913,7 +947,39 @@ namespace MediaPortal.Player
         mediaSeek = (IMediaSeeking) graphBuilder;
         mediaPos = (IMediaPosition) graphBuilder;
         basicAudio = (IBasicAudio) graphBuilder;
-        videoWin = (IVideoWindow) graphBuilder;
+        basicVideo = VMR9Util.g_vmr9?._vmr9Filter as IBasicVideo2;
+        videoWin = (IVideoWindow)VMR9Util.g_vmr9?._vmr9Filter;
+        //videoWin = (IVideoWindow) graphBuilder;
+        //IVideoWindow videoWin = graphBuilder as IVideoWindow;
+        if (videoWin != null)
+        {
+          //if (_vmr9Filter != null)
+          {
+            var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+              ? GUIGraphicsContext.MadVrHWnd
+              : GUIGraphicsContext.form.Handle;
+
+            //if (!isInExclusiveMode)
+            //{
+            // Set _vmr9Filter put_owner only if exclusive mode is off in madVR - TODO read madVR settings to know if exclusive is enable
+            // We need to not set owner here (when exclusive mode active) to make 3D fse working and set it later
+            videoWin.put_Owner(ownerHandle);
+            Log.Error("VideoPlayer9:Failed to add VMR9 to graph");
+            Log.Error("VideoPlayer9:Failed to add VMR9 to graph");
+            Log.Error("VideoPlayer9:Failed to add VMR9 to graph");
+            //}
+            //else
+            //{
+            //  IVideoWindow videoWinBuilder = graphBuilder as IVideoWindow;
+            //  videoWinBuilder?.put_Owner(ownerHandle);
+            //}
+            videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
+            videoWin.put_MessageDrain(ownerHandle);
+
+            //videoWin.put_WindowStyleEx(WindowStyleEx.ToolWindow);
+            //videoWin.SetWindowForeground(OABool.True);
+          }
+        }
         if (VMR9Util.g_vmr9 != null)
         {
           m_iVideoWidth = VMR9Util.g_vmr9.VideoWidth;
@@ -1391,7 +1457,8 @@ namespace MediaPortal.Player
         mediaSeek = (IMediaSeeking)graphBuilder;
         mediaPos = (IMediaPosition)graphBuilder;
         basicAudio = (IBasicAudio)graphBuilder;
-        videoWin = (IVideoWindow)graphBuilder;
+        basicVideo = VMR9Util.g_vmr9?._vmr9Filter as IBasicVideo2;
+        videoWin = (IVideoWindow)VMR9Util.g_vmr9?._vmr9Filter;
         m_iVideoWidth = VMR9Util.g_vmr9.VideoWidth;
         m_iVideoHeight = VMR9Util.g_vmr9.VideoHeight;
 

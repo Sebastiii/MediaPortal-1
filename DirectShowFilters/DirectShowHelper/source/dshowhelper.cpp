@@ -1043,9 +1043,9 @@ void MadVrPaused(bool paused)
   m_madPresenter->SetMadVrPaused(paused);
 }
 
-void MadVrRepeatFrameSend()
+void MadVrRepeatFrameSend(DWORD dwD3DDevice)
 {
-  m_madPresenter->RepeatFrame();
+  m_madPresenter->RepeatFrame(dwD3DDevice);
 }
 
 void MadVrGrabFrameSend()

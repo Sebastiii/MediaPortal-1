@@ -195,7 +195,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
     IBaseFilter* Initialize();
     void InitializeOSD();
     void SetMadVrPaused(bool paused);
-    void RepeatFrame();
+    void RepeatFrame(DWORD dwD3DDevice);
     void GrabFrame();
     void GrabCurrentFrame();
     void GrabScreenshot();
@@ -227,6 +227,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
     STDMETHODIMP ClearBackground(LPCSTR name, REFERENCE_TIME frameStart, RECT *fullOutputRect, RECT *activeVideoRect);
     STDMETHODIMP RenderOsd(LPCSTR name, REFERENCE_TIME frameStart, RECT *fullOutputRect, RECT *activeVideoRect);
     STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev);
+    STDMETHODIMP ChangeDevice(IUnknown* pDev);
     STDMETHODIMP SetDeviceOsd(IDirect3DDevice9* pD3DDev);
     // ISubRenderCallback
     STDMETHOD(Render)(REFERENCE_TIME frameStart, int left, int top, int right, int bottom, int width, int height);

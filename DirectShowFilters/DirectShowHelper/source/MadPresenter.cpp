@@ -83,7 +83,7 @@ MPMadPresenter::MPMadPresenter(IVMR9Callback* pCallback, int xposition, int ypos
   m_pMediaControl(pMediaControl)
 {
   //Set to true to use the Kodi windows creation or false if not
-  m_pKodiWindowUse = false;
+  m_pKodiWindowUse = true;
   Log("MPMadPresenter::Constructor() - instance 0x%x", this);
   m_pKodiWindowUse ? m_Xposition = 0 : m_Xposition = xposition;
   m_pKodiWindowUse ? m_Yposition = 0 : m_Yposition = yposition;
@@ -201,7 +201,7 @@ void MPMadPresenter::SetMadVrPaused(bool paused)
   }
 }
 
-void MPMadPresenter::RepeatFrame()
+void MPMadPresenter::RepeatFrame(DWORD dwD3DDevice)
 {
   if (m_pShutdown)
   {
@@ -209,11 +209,18 @@ void MPMadPresenter::RepeatFrame()
     return;
   }
 
-  CAutoLock cAutoLock(this);
+  if (m_pDevice)
+  {
+    m_pDevice->Release();
+    m_pDevice = nullptr;
+  }
+  m_pDevice = reinterpret_cast<IDirect3DDevice9Ex*>(dwD3DDevice);
 
-  // Render frame to try to fix HD4XXX GPU flickering issue
-  Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-  pOR->OsdRedrawFrame();
+  //////CAutoLock cAutoLock(this);
+
+  //////// Render frame to try to fix HD4XXX GPU flickering issue
+  //////Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+  //////pOR->OsdRedrawFrame();
 }
 
 void MPMadPresenter::GrabScreenshot()
@@ -1259,6 +1266,22 @@ HRESULT MPMadPresenter::SetDeviceOsd(IDirect3DDevice9* pD3DDev)
   return S_OK;
 }
 
+STDMETHODIMP MPMadPresenter::ChangeDevice(IUnknown* pDev)
+{
+  CComQIPtr<IDirect3DDevice9Ex> pD3DDev = pDev;
+  CheckPointer(pD3DDev, E_NOINTERFACE);
+
+  CAutoLock cAutoLock(this);
+  HRESULT hr = S_FALSE;
+  if (m_pMadD3DDev != pD3DDev) {
+    //ClearCache();
+    m_pMadD3DDev = pD3DDev;
+    //hr = __super::ChangeDevice(pDev);
+  }
+
+  return hr;
+}
+
 HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
 {
   { // Scope for autolock for the local variable (lock, which when deleted releases the lock)
@@ -1281,9 +1304,62 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
     {
       if (m_pMadD3DDev) m_pMadD3DDev->Release();
       m_pMadD3DDev = nullptr;
+      //__super::SetPosition(CRect(), CRect());
+      if (m_pCallback)
+      {
+        m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(m_pMadD3DDev));
+        Log("MPMadPresenter::SetDevice() reset subtitle device");
+
+        if (m_pSRCB)
+        {
+          // nasty, but we have to let it know about our death somehow
+          static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetShutdownSub(m_pShutdown);
+          static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
+          Log("MPMadPresenter::Stopping() m_pSRCB");
+        }
+
+        if (m_pORCB)
+        {
+          // nasty, but we have to let it know about our death somehow
+          static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetShutdownOsd(m_pShutdown);
+          static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
+          Log("MPMadPresenter::Stopping() m_pORCB");
+        }
+
+        // IOsdRenderCallback
+        Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+        if (!pOR)
+        {
+          m_pMad = nullptr;
+          return E_FAIL;
+        }
+
+        m_pORCB = new COsdRenderCallback(this);
+        if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
+        {
+          m_pMad = nullptr;
+        }
+      }
+      Log("MPMadPresenter::SetDevice() Shutdown() 1");
+      m_deviceState.Shutdown();
+      Log("MPMadPresenter::SetDevice() Shutdown() 2");
+      //return S_OK;
     }
 
-    m_pMadD3DDev = static_cast<IDirect3DDevice9Ex*>(pD3DDev);
+    CSize screenSize;
+    MONITORINFO mi = { sizeof(MONITORINFO) };
+    if (GetMonitorInfo(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &mi)) {
+      screenSize.SetSize(mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top);
+    }
+
+    ChangeDevice(pD3DDev);
+
+    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    {
+      pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+    }
+
+    //m_pMadD3DDev = static_cast<IDirect3DDevice9Ex*>(pD3DDev);
 
     if (m_pMadD3DDev)
     {

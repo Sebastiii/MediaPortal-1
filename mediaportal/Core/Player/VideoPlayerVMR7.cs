@@ -399,6 +399,13 @@ namespace MediaPortal.Player
           return false;
         }
 
+        //madVR 
+        if (videoWin != null && GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+        {
+          DirectShowUtil.ReleaseComObject(videoWin);
+          videoWin = (IVideoWindow)VMR9Util.g_vmr9?._vmr9Filter;
+        }
+
         if (basicVideo != null)
         {
           basicVideo.GetVideoSize(out m_iVideoWidth, out m_iVideoHeight);

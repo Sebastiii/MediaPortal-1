@@ -177,7 +177,7 @@ namespace MediaPortal.Player
     private static extern unsafe void MadVrPaused(bool paused);
 
     [DllImport("dshowhelper.dll", CallingConvention = CallingConvention.Cdecl)]
-    private static extern unsafe void MadVrRepeatFrameSend();
+    private static extern unsafe void MadVrRepeatFrameSend(uint dwD3DDevice);
 
     [DllImport("dshowhelper.dll", CallingConvention = CallingConvention.Cdecl)]
     private static extern unsafe void MadVrGrabFrameSend();
@@ -545,7 +545,35 @@ namespace MediaPortal.Player
     {
       if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
       {
-        MadVrRepeatFrameSend();
+        HResult hr;
+        IntPtr hMonitor = Manager.GetAdapterMonitor(GUIGraphicsContext.DX9Device.DeviceCaps.AdapterOrdinal);
+        IntPtr upDevice = DirectShowUtil.GetUnmanagedDevice(GUIGraphicsContext.DX9Device);
+
+        //Size client = GUIGraphicsContext.form.ClientSize;
+        //MadInit(_scene, 0, 0, client.Width, client.Height, (uint)upDevice.ToInt32(),
+        //  (uint)GUIGraphicsContext.ActiveForm.ToInt32(), ref _vmr9Filter, null);
+        ////m_pDevice(static_cast<IDirect3DDevice9Ex*>(pDevice)
+        MadVrRepeatFrameSend((uint)upDevice.ToInt32());
+
+        // Tricky workaround to be able to make 3D FSE working
+        IVideoWindow videoWin = _vmr9Filter as IVideoWindow;
+        if (videoWin != null)
+        {
+          if (_vmr9Filter != null)
+          {
+            //Get Client size
+            Size client = GUIGraphicsContext.form.ClientSize;
+            videoWin.SetWindowPosition(0, 0, client.Width, client.Height);
+
+            var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+              ? GUIGraphicsContext.MadVrHWnd
+              : GUIGraphicsContext.form.Handle;
+
+            videoWin.put_Owner(ownerHandle);
+            videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
+            videoWin.put_MessageDrain(ownerHandle);
+          }
+        }
       }
     }
 

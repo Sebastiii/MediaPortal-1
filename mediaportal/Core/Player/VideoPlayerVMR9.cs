@@ -947,9 +947,16 @@ namespace MediaPortal.Player
         mediaSeek = (IMediaSeeking) graphBuilder;
         mediaPos = (IMediaPosition) graphBuilder;
         basicAudio = (IBasicAudio) graphBuilder;
-        basicVideo = VMR9Util.g_vmr9?._vmr9Filter as IBasicVideo2;
-        videoWin = (IVideoWindow)VMR9Util.g_vmr9?._vmr9Filter;
-        //videoWin = (IVideoWindow) graphBuilder;
+        if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+        {
+          basicVideo = VMR9Util.g_vmr9?._vmr9Filter as IBasicVideo2;
+          videoWin = (IVideoWindow)graphBuilder;
+          //videoWin = (IVideoWindow) VMR9Util.g_vmr9?._vmr9Filter;
+        }
+        else
+        {
+          videoWin = (IVideoWindow) graphBuilder;
+        }
         //IVideoWindow videoWin = graphBuilder as IVideoWindow;
         if (videoWin != null)
         {

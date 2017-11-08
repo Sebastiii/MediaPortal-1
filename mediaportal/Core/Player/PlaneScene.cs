@@ -1367,27 +1367,32 @@ namespace MediaPortal.Player
         }
         Log.Debug("Planescene: Set subtitle device - {0}", device);
       }
-      //if (device == IntPtr.Zero)
-      //{
-      //  IVideoWindow videoWin = VMR9Util.g_vmr9?._vmr9Filter as IVideoWindow;
-      //  if (videoWin != null)
-      //  {
-      //    if (VMR9Util.g_vmr9 != null)
-      //    {
-      //      videoWin.put_Owner(IntPtr.Zero);
-      //      var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
-      //        ? GUIGraphicsContext.MadVrHWnd
-      //        : GUIGraphicsContext.form.Handle;
+      if (device == IntPtr.Zero)
+      {
+        // Restore GUIGraphicsContext.State
+        if (GUIGraphicsContext.CurrentState == GUIGraphicsContext.State.RUNNING)
+        {
+          GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.LOST;
+        }
+        //IVideoWindow videoWin = VMR9Util.g_vmr9?._vmr9Filter as IVideoWindow;
+        //if (videoWin != null)
+        //{
+        //  if (VMR9Util.g_vmr9 != null)
+        //  {
+        //    videoWin.put_Owner(IntPtr.Zero);
+        //    var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+        //      ? GUIGraphicsContext.MadVrHWnd
+        //      : GUIGraphicsContext.form.Handle;
 
-      //      //if (!isInExclusiveMode)
-      //      //{
-      //      // Set _vmr9Filter put_owner only if exclusive mode is off in madVR - TODO read madVR settings to know if exclusive is enable
-      //      // We need to not set owner here (when exclusive mode active) to make 3D fse working and set it later
-      //      videoWin.put_Owner(ownerHandle);
-      //      Log.Info("D3D: Switching from windowed mode to full screen");
-      //    }
-      //  }
-      //}
+        //    //if (!isInExclusiveMode)
+        //    //{
+        //    // Set _vmr9Filter put_owner only if exclusive mode is off in madVR - TODO read madVR settings to know if exclusive is enable
+        //    // We need to not set owner here (when exclusive mode active) to make 3D fse working and set it later
+        //    videoWin.put_Owner(ownerHandle);
+        //    Log.Info("D3D: Switching from windowed mode to full screen");
+        //  }
+        //}
+      }
     }
 
     public void RenderSubtitle(long frameStart, int left, int top, int right, int bottom, int width, int height, int xOffsetInPixels)

@@ -515,6 +515,8 @@ namespace MediaPortal
         GUIWindowManager.UnRoute(); // only unroute if we still the routed window
       }
 
+      RecoverDevice();
+
       // reset device if necessary
       Windowed = !Windowed;
       RecreateSwapChain(false);
@@ -967,6 +969,8 @@ namespace MediaPortal
       {
         GUIGraphicsContext.DX9Device.DeviceLost += OnDeviceLost;
       }
+      // TEST
+      VMR9Util.g_vmr9?.MadVrRepeatFrame();
     }
 
 

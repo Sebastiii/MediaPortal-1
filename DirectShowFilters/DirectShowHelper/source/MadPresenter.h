@@ -98,25 +98,23 @@ class MPMadPresenter : public CUnknown, public CCritSec
     STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev)
     {
       Log("MPMadPresenterH::SetDeviceOSD() device 0x:%x", pD3DDev);
-      if (m_pShutdownOsd)
+      if (m_pShutdownOsd || m_pmadVrStopping)
       {
         if (!pD3DDev)
         {
           if (m_pDXRAP)
           {
-            m_pDXRAP->SetDeviceOsd(pD3DDev);
+            m_pDXRAP->SetDevice(pD3DDev);
             // to see for deadlock needed to solve deadlock on stop
             m_pDXRAP = nullptr;
-            return S_FALSE;
+            Log("MPMadPresenterH::SetDeviceOSD() destroy");
           }
         }
         return S_OK;
       }
-      if (!pD3DDev && m_pmadVrStopping)
+
+      if (!pD3DDev)
       {
-        m_pDXRAP->SetDeviceOsd(pD3DDev);
-        m_pDXRAP = nullptr; // to see for deadlock needed to solve deadlock on stop
-        Log("MPMadPresenterH::SetDeviceOSD() destroy");
         return S_OK;
       }
 
@@ -157,31 +155,23 @@ class MPMadPresenter : public CUnknown, public CCritSec
     STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev)
     {
       Log("MPMadPresenterH::SetDeviceSUB() device 0x:%x", pD3DDev);
-      if (m_pShutdownSub)
+      if (m_pShutdownSub || m_pmadVrStopping)
       {
         if (!pD3DDev)
         {
           if (m_pDXRAPSUB)
           {
             m_pDXRAPSUB->SetDevice(pD3DDev);
-            m_pDXRAPSUB = nullptr; // to see for deadlock needed to solve deadlock on stop
+            // to see for deadlock needed to solve deadlock on stop
+            m_pDXRAPSUB = nullptr;
+            Log("MPMadPresenterH::SetDeviceSUB() destroy");
           }
         }
         return S_OK;
       }
-      if (!pD3DDev && m_pmadVrStopping)
+      
+      if (!pD3DDev)
       {
-        m_pDXRAPSUB->SetDevice(pD3DDev);
-        // to see for deadlock needed to solve deadlock on stop
-        m_pDXRAPSUB = nullptr;
-        Log("MPMadPresenterH::SetDeviceSUB() destroy");
-        return S_OK;
-      }
-
-      if (pD3DDev)
-      {
-        m_pDXRAPSUB->SetDeviceCreation(pD3DDev);
-        m_pDXRAPSUB->SetDevice(pD3DDev);
         return S_OK;
       }
 

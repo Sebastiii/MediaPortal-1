@@ -1427,21 +1427,10 @@ HRESULT MPMadPresenter::SetDeviceCreation(IDirect3DDevice9* pD3DDev)
       Log("MPMadPresenter::SetDevice() put_Owner()");
     }
   }
-
-  ////////CAutoLock cAutoLock(this);
-  //////if (pD3DDev)
-  //////{
-  //////  // release all resources
-  //////  //m_pSubPicQueue = nullptr;
-  //////  //m_pAllocator = nullptr;
-  //////  if (m_pCallback)
-  //////    m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
-  //////}
-  /*else
-  {
-  SetDevice(pD3DDev);
-  Log("MPMadPresenter::SetDeviceOsd() device 0x:%x", pD3DDev);
-  }*/
+  //{
+  //  SetDevice(pD3DDev);
+  //  Log("MPMadPresenter::SetDeviceOsd() device 0x:%x", pD3DDev);
+  //}
   return S_OK;
 }
 
@@ -1483,10 +1472,11 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
       Log("MPMadPresenter::SetDevice() Shutdown() 1");
       m_deviceState.Shutdown();
       Log("MPMadPresenter::SetDevice() Shutdown() 2");
+      ChangeDevice(pD3DDev); // if commented -> deadlock
       return S_OK;
     }
 
-    //ChangeDevice(pD3DDev); // if commented -> deadlock
+    ChangeDevice(pD3DDev); // if commented -> deadlock
     //m_pMadD3DDev = static_cast<IDirect3DDevice9Ex*>(pD3DDev);
 
     if (m_pMadD3DDev)

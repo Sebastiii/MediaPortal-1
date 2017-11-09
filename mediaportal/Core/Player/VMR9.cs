@@ -165,7 +165,7 @@ namespace MediaPortal.Player
     [DllImport("dshowhelper.dll", CallingConvention = CallingConvention.Cdecl)]
     private static extern unsafe bool MadInit(IVMR9PresentCallback callback, int xposition, int yposition,
                                               int width, int height, uint dwD3DDevice, uint parent,
-                                              ref IBaseFilter madFilter, IMediaControl mPMediaControl);
+                                              ref IBaseFilter madFilter, IGraphBuilder mPMediaControl);
 
     [DllImport("dshowhelper.dll", CallingConvention = CallingConvention.Cdecl)]
     private static extern unsafe void MadDeinit();
@@ -545,8 +545,8 @@ namespace MediaPortal.Player
     {
       if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
       {
-        HResult hr;
-        IntPtr hMonitor = Manager.GetAdapterMonitor(GUIGraphicsContext.DX9Device.DeviceCaps.AdapterOrdinal);
+        //HResult hr;
+        //IntPtr hMonitor = Manager.GetAdapterMonitor(GUIGraphicsContext.DX9Device.DeviceCaps.AdapterOrdinal);
         IntPtr upDevice = DirectShowUtil.GetUnmanagedDevice(GUIGraphicsContext.DX9Device);
 
         //Size client = GUIGraphicsContext.form.ClientSize;
@@ -555,25 +555,25 @@ namespace MediaPortal.Player
         ////m_pDevice(static_cast<IDirect3DDevice9Ex*>(pDevice)
         MadVrRepeatFrameSend((uint)upDevice.ToInt32());
 
-        // Tricky workaround to be able to make 3D FSE working
-        IVideoWindow videoWin = _vmr9Filter as IVideoWindow;
-        if (videoWin != null)
-        {
-          if (_vmr9Filter != null)
-          {
-            //Get Client size
-            Size client = GUIGraphicsContext.form.ClientSize;
-            videoWin.SetWindowPosition(0, 0, client.Width, client.Height);
+        //// Tricky workaround to be able to make 3D FSE working
+        //IVideoWindow videoWin = _vmr9Filter as IVideoWindow;
+        //if (videoWin != null)
+        //{
+        //  if (_vmr9Filter != null)
+        //  {
+        //    //Get Client size
+        //    Size client = GUIGraphicsContext.form.ClientSize;
+        //    videoWin.SetWindowPosition(0, 0, client.Width, client.Height);
 
-            var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
-              ? GUIGraphicsContext.MadVrHWnd
-              : GUIGraphicsContext.form.Handle;
+        //    var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+        //      ? GUIGraphicsContext.MadVrHWnd
+        //      : GUIGraphicsContext.form.Handle;
 
-            videoWin.put_Owner(ownerHandle);
-            videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
-            videoWin.put_MessageDrain(ownerHandle);
-          }
-        }
+        //    videoWin.put_Owner(ownerHandle);
+        //    videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
+        //    videoWin.put_MessageDrain(ownerHandle);
+        //  }
+        //}
       }
     }
 
@@ -945,7 +945,7 @@ namespace MediaPortal.Player
           // Get Client size
           Size client = GUIGraphicsContext.form.ClientSize;
           MadInit(_scene, xposition, yposition, client.Width, client.Height, (uint) upDevice.ToInt32(),
-            (uint) GUIGraphicsContext.ActiveForm.ToInt32(), ref _vmr9Filter, mPMediaControl);
+            (uint) GUIGraphicsContext.ActiveForm.ToInt32(), ref _vmr9Filter, graphBuilder);
           //if (!UseMadVideoRenderer3D)
           //{
           //  bool enableExclusiveMode = UseMadVideoRenderer; // set to true for now

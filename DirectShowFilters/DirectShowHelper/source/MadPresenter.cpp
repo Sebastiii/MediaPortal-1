@@ -73,7 +73,7 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
   return -1;  // Failure
 }
 
-MPMadPresenter::MPMadPresenter(IVMR9Callback* pCallback, int xposition, int yposition, int width, int height, OAHWND parent, IDirect3DDevice9* pDevice, IMediaControl* pMediaControl) :
+MPMadPresenter::MPMadPresenter(IVMR9Callback* pCallback, int xposition, int yposition, int width, int height, OAHWND parent, IDirect3DDevice9* pDevice, IGraphBuilder* pMediaControl) :
   CUnknown(NAME("MPMadPresenter"), nullptr),
   m_pCallback(pCallback),
   m_dwGUIWidth(width),
@@ -83,7 +83,7 @@ MPMadPresenter::MPMadPresenter(IVMR9Callback* pCallback, int xposition, int ypos
   m_pMediaControl(pMediaControl)
 {
   //Set to true to use the Kodi windows creation or false if not
-  m_pKodiWindowUse = true;
+  m_pKodiWindowUse = false;
   Log("MPMadPresenter::Constructor() - instance 0x%x", this);
   m_pKodiWindowUse ? m_Xposition = 0 : m_Xposition = xposition;
   m_pKodiWindowUse ? m_Yposition = 0 : m_Yposition = yposition;
@@ -246,7 +246,7 @@ void MPMadPresenter::SetMadVrPaused(bool paused)
   // TODO why it deadlock ?
   //CAutoLock cAutoLock(this);
 
-  if (m_pMediaControl)
+  /*if (m_pMediaControl)
   {
     if (paused)
     {
@@ -259,7 +259,7 @@ void MPMadPresenter::SetMadVrPaused(bool paused)
         Log("MPMadPresenter:::SetMadVrPaused() pause");
       }
     }
-  }
+  }*/
 }
 
 void MPMadPresenter::RepeatFrame(DWORD dwD3DDevice)
@@ -267,6 +267,60 @@ void MPMadPresenter::RepeatFrame(DWORD dwD3DDevice)
   if (m_pShutdown)
   {
     Log("MPMadPresenter::RepeatFrame() shutdown");
+    return;
+  }
+
+  // Create a madVR Window
+  if (!m_pKodiWindowUse) // no Kodi window
+  {
+    m_hWnd = reinterpret_cast<HWND>(m_hParent);
+    IVideoWindow *pWindow = NULL;
+    if ((m_pMediaControl) && (SUCCEEDED(this->m_pMediaControl->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&pWindow)))) && (pWindow))
+    //if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    {
+      pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+      pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+      pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+      pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+      //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+    }
+  }
+  return;
+
+  static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
+  static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
+  m_pSRCB.Release();
+  m_pORCB.Release();
+  m_pSRCB = nullptr;
+  m_pORCB = nullptr;
+
+  // ISubRenderCallback
+  Com::SmartQIPtr<ISubRender> pSR = m_pMad;
+  if (!pSR)
+  {
+    m_pMad = nullptr;
+    return;
+  }
+
+  m_pSRCB = new CSubRenderCallback(this);
+  if (FAILED(pSR->SetCallback(m_pSRCB)))
+  {
+    m_pMad = nullptr;
+    return;
+  }
+
+  // IOsdRenderCallback
+  Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+  if (!pOR)
+  {
+    m_pMad = nullptr;
+    return;
+  }
+
+  m_pORCB = new COsdRenderCallback(this);
+  if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
+  {
+    m_pMad = nullptr;
     return;
   }
 
@@ -499,29 +553,44 @@ IBaseFilter* MPMadPresenter::Initialize()
 
   if (Com::SmartQIPtr<IBaseFilter> baseFilter = m_pMad)
   {
-    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-    {
-      // Create a madVR Window
-      if (!m_pKodiWindowUse) // no Kodi window
-      {
-        m_hWnd = reinterpret_cast<HWND>(m_hParent);
-      }
-      else if (InitMadvrWindow(m_hWnd) && m_pKodiWindowUse) // Kodi window
-      {
-        m_pCallback->DestroyHWnd(m_hWnd);
-        ////////pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-        //////////pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-        ////////pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
-        ////////pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
-        ////////pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
-        ////////Log("%s : Create DSPlayer window - hWnd: %i", __FUNCTION__, m_hWnd);
-        ////////Log("MPMadPresenter::Initialize() send DestroyHWnd value on C# side");
-      }
-      else
-      {
-        return nullptr;
-      }
-    }
+    ////if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    //{
+    //  // Create a madVR Window
+    //  if (!m_pKodiWindowUse) // no Kodi window
+    //  {
+    //    m_hWnd = reinterpret_cast<HWND>(m_hParent);
+    //    //IVideoWindow *pWindow = NULL;
+    //    //if ((m_pMediaControl) && (SUCCEEDED(this->m_pMediaControl->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&pWindow)))) && (pWindow))
+    //    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    //    {
+    //      pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+    //      //pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+    //      pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+    //      pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+    //      pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+    //    }
+    //  }
+    //  else if (InitMadvrWindow(m_hWnd) && m_pKodiWindowUse) // Kodi window
+    //  {
+    //    m_pCallback->DestroyHWnd(m_hWnd);
+
+    //    IVideoWindow *pWindow = NULL;
+    //    if ((m_pMediaControl) && (SUCCEEDED(this->m_pMediaControl->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&pWindow)))) && (pWindow))
+    //    {
+    //      pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+    //      pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+    //      pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+    //      pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+    //      //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+    //    }
+    //    Log("%s : Create DSPlayer window - hWnd: %i", __FUNCTION__, m_hWnd);
+    //    Log("MPMadPresenter::Initialize() send DestroyHWnd value on C# side");
+    //  }
+    //  else
+    //  {
+    //    return nullptr;
+    //  }
+    //}
     return baseFilter;
   }
   return nullptr;
@@ -787,7 +856,6 @@ HRESULT MPMadPresenter::Stopping()
       static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
       Log("MPMadPresenter::Stopping() m_pSRCB");
     }
-    CSubRenderCallback(nullptr);
 
     if (m_pORCB)
     {
@@ -796,7 +864,6 @@ HRESULT MPMadPresenter::Stopping()
       static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
       Log("MPMadPresenter::Stopping() m_pORCB");
     }
-    COsdRenderCallback(nullptr);
 
     Log("MPMadPresenter::Stopping() start to stop instance - 1");
 
@@ -852,7 +919,7 @@ HRESULT MPMadPresenter::Stopping()
       m_pORCB.Release();
     Log("MPMadPresenter::Stopping() m_pORCB release 2");
 
-    if (m_pMediaControl)
+    /*if (m_pMediaControl)
     {
       Log("MPMadPresenter::Stopping() m_pMediaControl stop 1");
       int counter = 0;
@@ -876,7 +943,7 @@ HRESULT MPMadPresenter::Stopping()
       }
       m_pMediaControl = nullptr;
       Log("MPMadPresenter::Stopping() m_pMediaControl stop 2");
-    }
+    }*/
 
     if (m_pMadD3DDev) {
       m_pMadD3DDev->Release();
@@ -1353,6 +1420,13 @@ HRESULT MPMadPresenter::SetDeviceOsd(IDirect3DDevice9* pD3DDev)
     if (m_pCallback)
       m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
   }
+
+  //if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+  //{
+  //  pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+  //  Log("MPMadPresenter::SetDevice() put_Owner()");
+  //}
+
   /*else
   {
     SetDevice(pD3DDev);
@@ -1369,64 +1443,71 @@ HRESULT MPMadPresenter::SetDeviceCreation(IDirect3DDevice9* pD3DDev)
     return S_OK;
   }
 
-  if (pD3DDev)
-  {
-    Com::SmartQIPtr<ISubRender> pSR = m_pMad;
-    if (!pSR)
-    {
-      m_pMad = nullptr;
-      return E_FAIL;
-    }
+  //static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
+  //static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
+  //m_pSRCB.Release();
+  //m_pORCB.Release();
+  //m_pSRCB = nullptr;
+  //m_pORCB = nullptr;
 
-    m_pSRCB = new CSubRenderCallback(this);
-    if (FAILED(pSR->SetCallback(m_pSRCB)))
-    {
-      m_pMad = nullptr;
-      return E_FAIL;
-    }
+  //if (pD3DDev)
+  //{
+  //  Com::SmartQIPtr<ISubRender> pSR = m_pMad;
+  //  if (!pSR)
+  //  {
+  //    m_pMad = nullptr;
+  //    return E_FAIL;
+  //  }
 
-    // IOsdRenderCallback
-    Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-    if (!pOR)
-    {
-      m_pMad = nullptr;
-      return E_FAIL;
-    }
+  //  m_pSRCB = new CSubRenderCallback(this);
+  //  if (FAILED(pSR->SetCallback(m_pSRCB)))
+  //  {
+  //    m_pMad = nullptr;
+  //    return E_FAIL;
+  //  }
 
-    m_pORCB = new COsdRenderCallback(this);
-    if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
-    {
-      m_pMad = nullptr;
-    }
+  //  // IOsdRenderCallback
+  //  Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+  //  if (!pOR)
+  //  {
+  //    m_pMad = nullptr;
+  //    return E_FAIL;
+  //  }
 
-    if (m_pSRCB)
-    {
-      // nasty, but we have to let it know about our death somehow
-      static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetShutdownSub(false);
-      Log("MPMadPresenter::SetDevice() m_pSRCB");
-    }
+  //  m_pORCB = new COsdRenderCallback(this);
+  //  if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
+  //  {
+  //    m_pMad = nullptr;
+  //  }
 
-    if (m_pORCB)
-    {
-      // nasty, but we have to let it know about our death somehow
-      static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetShutdownOsd(false);
-      Log("MPMadPresenter::SetDevice() m_pORCB");
-    }
+  //  if (m_pSRCB)
+  //  {
+  //    // nasty, but we have to let it know about our death somehow
+  //    static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetShutdownSub(false);
+  //    Log("MPMadPresenter::SetDevice() m_pSRCB");
+  //  }
 
-    CSize screenSize;
-    MONITORINFO mi = { sizeof(MONITORINFO) };
-    if (GetMonitorInfo(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &mi)) {
-      screenSize.SetSize(mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top);
-    }
+  //  if (m_pORCB)
+  //  {
+  //    // nasty, but we have to let it know about our death somehow
+  //    static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetShutdownOsd(false);
+  //    Log("MPMadPresenter::SetDevice() m_pORCB");
+  //  }
+
+  //  CSize screenSize;
+  //  MONITORINFO mi = { sizeof(MONITORINFO) };
+  //  if (GetMonitorInfo(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &mi)) {
+  //    screenSize.SetSize(mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top);
+  //  }
 
     ChangeDevice(pD3DDev);
 
-    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-    {
-      pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-      Log("MPMadPresenter::SetDevice() put_Owner()");
-    }
-  }
+    //if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    //{
+    //  pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+    //  Log("MPMadPresenter::SetDevice() put_Owner()");
+    //}
+  //}
   //{
   //  SetDevice(pD3DDev);
   //  Log("MPMadPresenter::SetDeviceOsd() device 0x:%x", pD3DDev);
@@ -1445,8 +1526,8 @@ STDMETHODIMP MPMadPresenter::ChangeDevice(IUnknown* pDev)
     //ClearCache();
     m_pMadD3DDev = pD3DDev;
     //hr = __super::ChangeDevice(pDev);
+    return S_OK;
   }
-
   return hr;
 }
 
@@ -1464,15 +1545,28 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
 
     if (!pD3DDev)
     {
+      ChangeDevice(pD3DDev); // if commented -> deadlock
+      Log("MPMadPresenter::SetDevice() Shutdown() 1");
+      m_deviceState.Shutdown();
+      Log("MPMadPresenter::SetDevice() Shutdown() 2");
       if (m_pCallback)
       {
         m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
         Log("MPMadPresenter::SetDevice() reset subtitle device");
       }
-      Log("MPMadPresenter::SetDevice() Shutdown() 1");
-      m_deviceState.Shutdown();
-      Log("MPMadPresenter::SetDevice() Shutdown() 2");
-      ChangeDevice(pD3DDev); // if commented -> deadlock
+      if (m_pSRCB)
+      {
+        // nasty, but we have to let it know about our death somehow
+        static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(this);
+        Log("MPMadPresenter::Destructor() - m_pSRCB");
+      }
+
+      if (m_pORCB)
+      {
+        // nasty, but we have to let it know about our death somehow
+        static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(this);
+        Log("MPMadPresenter::Destructor() - m_pORCB");
+      }
       return S_OK;
     }
 

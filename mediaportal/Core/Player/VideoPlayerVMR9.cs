@@ -952,22 +952,23 @@ namespace MediaPortal.Player
         if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
         {
           basicVideo = VMR9Util.g_vmr9?._vmr9Filter as IBasicVideo2;
-          videoWin = (IVideoWindow) VMR9Util.g_vmr9?._vmr9Filter;
+          videoWin = (IVideoWindow)VMR9Util.g_vmr9?._vmr9Filter;
+          //videoWin = (IVideoWindow)graphBuilder;
         }
         else
         {
           videoWin = (IVideoWindow) graphBuilder;
         }
 
-        if (videoWin != null)
-        {
-          var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
-            ? GUIGraphicsContext.MadVrHWnd
-            : GUIGraphicsContext.form.Handle;
-          videoWin.put_Owner(ownerHandle);
-          videoWin.put_WindowStyle((WindowStyle) ((int) WindowStyle.Child + (int) WindowStyle.ClipChildren + (int) WindowStyle.ClipSiblings));
-          videoWin.put_MessageDrain(ownerHandle);
-        }
+        //if (videoWin != null)
+        //{
+        //  var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+        //    ? GUIGraphicsContext.MadVrHWnd
+        //    : GUIGraphicsContext.form.Handle;
+        //  videoWin.put_Owner(ownerHandle);
+        //  videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
+        //  videoWin.put_MessageDrain(ownerHandle);
+        //}
         //if (videoWin2 != null)
         //{
         //  var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
@@ -1455,7 +1456,7 @@ namespace MediaPortal.Player
         mediaPos = (IMediaPosition)graphBuilder;
         basicAudio = (IBasicAudio)graphBuilder;
         basicVideo = VMR9Util.g_vmr9?._vmr9Filter as IBasicVideo2;
-        videoWin = (IVideoWindow)VMR9Util.g_vmr9?._vmr9Filter;
+        //videoWin = (IVideoWindow)VMR9Util.g_vmr9?._vmr9Filter;
         m_iVideoWidth = VMR9Util.g_vmr9.VideoWidth;
         m_iVideoHeight = VMR9Util.g_vmr9.VideoHeight;
 

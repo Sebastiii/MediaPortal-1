@@ -1868,12 +1868,12 @@ namespace MediaPortal.Player
 
         try
         {
-          InvokeOnPlayerThread(() =>
-          {
+          //InvokeOnPlayerThread(() =>
+          //{
             //create a fresh DS Player everytime we want one
-            DisposePlayerInternal();
+            //DisposePlayerInternal();
 
-            _player = new VideoPlayerVMR9();
+            //_player = new VideoPlayerVMR9();
 
             if (_player != null)
             {
@@ -1947,7 +1947,7 @@ namespace MediaPortal.Player
               {
                 ForcePlay = false;
               }
-              //return bResult;
+              return bResult;
             }
 
             //try
@@ -1997,8 +1997,8 @@ namespace MediaPortal.Player
             //  }
             //}
 
-          }, true);
-          return true;
+          //}, true);
+          //return true;
         }
         catch (Exception ex)
         {

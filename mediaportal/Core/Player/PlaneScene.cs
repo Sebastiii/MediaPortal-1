@@ -1369,7 +1369,7 @@ namespace MediaPortal.Player
       }
       if (device == IntPtr.Zero)
       {
-        VMR9Util.g_vmr9?.MadVrRepeatFrame();
+        //////////VMR9Util.g_vmr9?.MadVrRepeatFrame();
         // Restore GUIGraphicsContext.State
         //if (GUIGraphicsContext.CurrentState == GUIGraphicsContext.State.RUNNING)
         //{

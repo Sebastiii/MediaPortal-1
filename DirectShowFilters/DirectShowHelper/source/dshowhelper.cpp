@@ -973,7 +973,7 @@ void CloseFrameGrabbing()
 //  m_pmadVrStopping = true;
 //};
 
-BOOL MadInit(IVMR9Callback* callback, int xposition, int yposition, int width, int height, DWORD dwD3DDevice, OAHWND parent, IBaseFilter** madFilter, IMediaControl* pMediaControl)
+BOOL MadInit(IVMR9Callback* callback, int xposition, int yposition, int width, int height, DWORD dwD3DDevice, OAHWND parent, IBaseFilter** madFilter, IGraphBuilder* pMediaControl)
 {
   m_RenderPrefix = _T("mad");
 
@@ -998,6 +998,8 @@ BOOL MadInit(IVMR9Callback* callback, int xposition, int yposition, int width, i
   //    pVW->put_Owner((OAHWND)CDSPlayer::GetDShWnd());
 
   *madFilter = m_pVMR9Filter;
+
+  m_madPresenter->RepeatFrame(dwD3DDevice);
 
   if (!madFilter)
     return FALSE;
@@ -1053,7 +1055,7 @@ void MadVrPaused(bool paused)
 
 void MadVrRepeatFrameSend(DWORD dwD3DDevice)
 {
-  //m_madPresenter->RepeatFrame(dwD3DDevice);
+  m_madPresenter->RepeatFrame(dwD3DDevice);
   //m_madPresenter = new MPMadPresenter(reinterpret_cast<IDirect3DDevice9*>(dwD3DDevice));
 }
 

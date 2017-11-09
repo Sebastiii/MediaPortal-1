@@ -1369,12 +1369,13 @@ namespace MediaPortal.Player
       }
       if (device == IntPtr.Zero)
       {
+        VMR9Util.g_vmr9?.MadVrRepeatFrame();
         // Restore GUIGraphicsContext.State
-        if (GUIGraphicsContext.CurrentState == GUIGraphicsContext.State.RUNNING)
-        {
-          GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.LOST;
-        }
-        //IVideoWindow videoWin = VMR9Util.g_vmr9?._vmr9Filter as IVideoWindow;
+        //if (GUIGraphicsContext.CurrentState == GUIGraphicsContext.State.RUNNING)
+        //{
+        //  GUIGraphicsContext.CurrentState = GUIGraphicsContext.State.LOST;
+        //}
+        //IVideoWindow videoWin = VMR9Util.g_vmr9?._graphBuilder as IVideoWindow;
         //if (videoWin != null)
         //{
         //  if (VMR9Util.g_vmr9 != null)
@@ -1392,6 +1393,24 @@ namespace MediaPortal.Player
         //    Log.Info("D3D: Switching from windowed mode to full screen");
         //  }
         //}
+        //  IVideoWindow videoWin = VMR9Util.g_vmr9?._vmr9Filter as IVideoWindow;
+        //  if (videoWin != null)
+        //  {
+        //    if (VMR9Util.g_vmr9 != null)
+        //    {
+        //      videoWin.put_Owner(IntPtr.Zero);
+        //      var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+        //        ? GUIGraphicsContext.MadVrHWnd
+        //        : GUIGraphicsContext.form.Handle;
+
+        //      //if (!isInExclusiveMode)
+        //      //{
+        //      // Set _vmr9Filter put_owner only if exclusive mode is off in madVR - TODO read madVR settings to know if exclusive is enable
+        //      // We need to not set owner here (when exclusive mode active) to make 3D fse working and set it later
+        //      videoWin.put_Owner(ownerHandle);
+        //      Log.Info("D3D: Switching from windowed mode to full screen");
+        //    }
+        //  }
       }
     }
 

@@ -95,6 +95,67 @@ MPMadPresenter::MPMadPresenter(IVMR9Callback* pCallback, int xposition, int ypos
   Log("MPMadPresenter::Constructor() Store Device Surface");
 }
 
+MPMadPresenter::MPMadPresenter(IDirect3DDevice9* pDevice) :
+  CUnknown(NAME("MPMadPresenter"), nullptr),
+  m_pDevice(static_cast<IDirect3DDevice9Ex*>(pDevice))
+{
+  ////Set to true to use the Kodi windows creation or false if not
+  //m_pKodiWindowUse = true;
+  //Log("MPMadPresenter::Constructor() - instance 0x%x", this);
+  //m_pShutdown = false;
+  m_pDevice->GetRenderTarget(0, &m_pSurfaceDevice);
+
+  Com::SmartQIPtr<ISubRender> pSR = m_pMad;
+  if (!pSR)
+  {
+    m_pMad = nullptr;
+    return;
+  }
+
+  m_pSRCB = new CSubRenderCallback(this);
+  if (FAILED(pSR->SetCallback(m_pSRCB)))
+  {
+    m_pMad = nullptr;
+    return;
+  }
+
+  //if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+  //{
+  //  if (!pWindow)
+  //  {
+  //    m_pMad = nullptr;
+  //    return;
+  //  }
+
+  //  // Create madVR video instance
+  //  Initialize();
+  //}
+
+  // IOsdRenderCallback
+  Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+  if (!pOR)
+  {
+    m_pMad = nullptr;
+    return;
+  }
+
+  m_pORCB = new COsdRenderCallback(this);
+  if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
+  {
+    m_pMad = nullptr;
+    return;
+  }
+
+  //// Configure initial Madvr Settings
+  //ConfigureMadvr();
+
+  //SetDevice(pDevice);
+  //// Store device surface MP GUI for later
+  //m_pCallback->RestoreDeviceSurface(reinterpret_cast<LONG>(m_pSurfaceDevice));
+  //m_pInitMadVRWindowPositionDone = false;
+  Log("MPMadPresenter::Constructor() Store Device Surface");
+}
+
 bool isFullscreen(HWND window)
 {
   RECT a, b;
@@ -209,12 +270,30 @@ void MPMadPresenter::RepeatFrame(DWORD dwD3DDevice)
     return;
   }
 
-  if (m_pDevice)
-  {
-    m_pDevice->Release();
-    m_pDevice = nullptr;
-  }
-  m_pDevice = reinterpret_cast<IDirect3DDevice9Ex*>(dwD3DDevice);
+  //if (m_pDevice)
+  //{
+  //  m_pDevice->Release();
+  //  m_pDevice = nullptr;
+  //  m_pDevice = reinterpret_cast<IDirect3DDevice9Ex*>(dwD3DDevice);
+  //}
+  //else
+  //{
+  //  if (m_pSRCB)
+  //  {
+  //    // nasty, but we have to let it know about our death somehow
+  //    static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetShutdownSub(true);
+  //    static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
+  //    Log("MPMadPresenter::RepeatFrame() m_pSRCB");
+  //  }
+
+  //  if (m_pORCB)
+  //  {
+  //    // nasty, but we have to let it know about our death somehow
+  //    static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetShutdownOsd(true);
+  //    static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
+  //    Log("MPMadPresenter::RepeatFrame() m_pORCB");
+  //  }
+  //}
 
   //////CAutoLock cAutoLock(this);
 
@@ -598,16 +677,19 @@ HRESULT MPMadPresenter::Shutdown()
 
 void MPMadPresenter::DeInitMadvrWindow()
 {
-  // remove ourself as user data to ensure we're not called anymore
-  SetWindowLongPtr(m_hWnd, GWL_USERDATA, 0);
+  if (m_hWnd)
+  {
+    // remove ourself as user data to ensure we're not called anymore
+    SetWindowLongPtr(m_hWnd, GWL_USERDATA, 0);
 
-  // destroy the hidden window
-  DestroyWindow(m_hWnd);
+    // destroy the hidden window
+    DestroyWindow(m_hWnd);
 
-  Log("%s : DestroyWindow window - hWnd: %i", __FUNCTION__, m_hWnd);
+    Log("%s : DestroyWindow window - hWnd: %i", __FUNCTION__, m_hWnd);
 
-  // unregister the window class
-  UnregisterClass(m_className.c_str(), m_hInstance);
+    // unregister the window class
+    UnregisterClass(m_className.c_str(), m_hInstance);
+  }
 
   // reset the hWnd
   m_hWnd = nullptr;
@@ -698,6 +780,24 @@ HRESULT MPMadPresenter::Stopping()
   { // Scope for autolock for the local variable (lock, which when deleted releases the lock)
     //CAutoLock lock(this);
 
+    if (m_pSRCB)
+    {
+      // nasty, but we have to let it know about our death somehow
+      static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetShutdownSub(m_pShutdown);
+      static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
+      Log("MPMadPresenter::Stopping() m_pSRCB");
+    }
+    CSubRenderCallback(nullptr);
+
+    if (m_pORCB)
+    {
+      // nasty, but we have to let it know about our death somehow
+      static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetShutdownOsd(m_pShutdown);
+      static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
+      Log("MPMadPresenter::Stopping() m_pORCB");
+    }
+    COsdRenderCallback(nullptr);
+
     Log("MPMadPresenter::Stopping() start to stop instance - 1");
 
     if (Com::SmartQIPtr<IMadVRSettings> m_pSettings = m_pMad)
@@ -742,22 +842,6 @@ HRESULT MPMadPresenter::Stopping()
       }
     }
 
-    if (m_pSRCB)
-    {
-      // nasty, but we have to let it know about our death somehow
-      static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetShutdownSub(m_pShutdown);
-      static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
-      Log("MPMadPresenter::Stopping() m_pSRCB");
-    }
-
-    if (m_pORCB)
-    {
-      // nasty, but we have to let it know about our death somehow
-      static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetShutdownOsd(m_pShutdown);
-      static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
-      Log("MPMadPresenter::Stopping() m_pORCB");
-    }
-
     Log("MPMadPresenter::Stopping() m_pSRCB release 1");
     if (m_pSRCB)
       m_pSRCB.Release();
@@ -792,6 +876,12 @@ HRESULT MPMadPresenter::Stopping()
       }
       m_pMediaControl = nullptr;
       Log("MPMadPresenter::Stopping() m_pMediaControl stop 2");
+    }
+
+    if (m_pMadD3DDev) {
+      m_pMadD3DDev->Release();
+      m_pMadD3DDev = nullptr;
+      Log("MPMadPresenter::Stopping() release m_pMadD3DDev");
     }
 
     Log("MPMadPresenter::Stopping() stopped");
@@ -1255,7 +1345,7 @@ HRESULT MPMadPresenter::SetDeviceOsd(IDirect3DDevice9* pD3DDev)
   //CAutoLock lock(&m_dsLock);
 
   //CAutoLock cAutoLock(this);
-  if (!pD3DDev)
+  if (pD3DDev)
   {
     // release all resources
     //m_pSubPicQueue = nullptr;
@@ -1263,6 +1353,95 @@ HRESULT MPMadPresenter::SetDeviceOsd(IDirect3DDevice9* pD3DDev)
     if (m_pCallback)
       m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
   }
+  /*else
+  {
+    SetDevice(pD3DDev);
+    Log("MPMadPresenter::SetDeviceOsd() device 0x:%x", pD3DDev);
+  }*/
+  return S_OK;
+}
+
+HRESULT MPMadPresenter::SetDeviceCreation(IDirect3DDevice9* pD3DDev)
+{
+  if (m_pShutdown)
+  {
+    Log("MPMadPresenter::SetDeviceOsd shutdown");
+    return S_OK;
+  }
+
+  if (pD3DDev)
+  {
+    Com::SmartQIPtr<ISubRender> pSR = m_pMad;
+    if (!pSR)
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+
+    m_pSRCB = new CSubRenderCallback(this);
+    if (FAILED(pSR->SetCallback(m_pSRCB)))
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+
+    // IOsdRenderCallback
+    Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+    if (!pOR)
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+
+    m_pORCB = new COsdRenderCallback(this);
+    if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
+    {
+      m_pMad = nullptr;
+    }
+
+    if (m_pSRCB)
+    {
+      // nasty, but we have to let it know about our death somehow
+      static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetShutdownSub(false);
+      Log("MPMadPresenter::SetDevice() m_pSRCB");
+    }
+
+    if (m_pORCB)
+    {
+      // nasty, but we have to let it know about our death somehow
+      static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetShutdownOsd(false);
+      Log("MPMadPresenter::SetDevice() m_pORCB");
+    }
+
+    CSize screenSize;
+    MONITORINFO mi = { sizeof(MONITORINFO) };
+    if (GetMonitorInfo(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &mi)) {
+      screenSize.SetSize(mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top);
+    }
+
+    ChangeDevice(pD3DDev);
+
+    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    {
+      pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+      Log("MPMadPresenter::SetDevice() put_Owner()");
+    }
+  }
+
+  ////////CAutoLock cAutoLock(this);
+  //////if (pD3DDev)
+  //////{
+  //////  // release all resources
+  //////  //m_pSubPicQueue = nullptr;
+  //////  //m_pAllocator = nullptr;
+  //////  if (m_pCallback)
+  //////    m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
+  //////}
+  /*else
+  {
+  SetDevice(pD3DDev);
+  Log("MPMadPresenter::SetDeviceOsd() device 0x:%x", pD3DDev);
+  }*/
   return S_OK;
 }
 
@@ -1292,73 +1471,22 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
       Log("MPMadPresenter::SetDevice() shutdown");
       return hr;
     }
-
-    // Lock madVR thread while Shutdown()
-    //CAutoLock lock(&m_dsLock);
-
-    //CAutoLock cAutoLock(this);
-
     Log("MPMadPresenter::SetDevice() device 0x:%x", pD3DDev);
 
     if (!pD3DDev)
     {
-      if (m_pMadD3DDev) m_pMadD3DDev->Release();
-      m_pMadD3DDev = nullptr;
-      //__super::SetPosition(CRect(), CRect());
       if (m_pCallback)
       {
-        m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(m_pMadD3DDev));
+        m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
         Log("MPMadPresenter::SetDevice() reset subtitle device");
-
-        if (m_pSRCB)
-        {
-          // nasty, but we have to let it know about our death somehow
-          static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetShutdownSub(m_pShutdown);
-          static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
-          Log("MPMadPresenter::Stopping() m_pSRCB");
-        }
-
-        if (m_pORCB)
-        {
-          // nasty, but we have to let it know about our death somehow
-          static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetShutdownOsd(m_pShutdown);
-          static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
-          Log("MPMadPresenter::Stopping() m_pORCB");
-        }
-
-        // IOsdRenderCallback
-        Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-        if (!pOR)
-        {
-          m_pMad = nullptr;
-          return E_FAIL;
-        }
-
-        m_pORCB = new COsdRenderCallback(this);
-        if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
-        {
-          m_pMad = nullptr;
-        }
       }
       Log("MPMadPresenter::SetDevice() Shutdown() 1");
       m_deviceState.Shutdown();
       Log("MPMadPresenter::SetDevice() Shutdown() 2");
-      //return S_OK;
+      return S_OK;
     }
 
-    CSize screenSize;
-    MONITORINFO mi = { sizeof(MONITORINFO) };
-    if (GetMonitorInfo(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &mi)) {
-      screenSize.SetSize(mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top);
-    }
-
-    ChangeDevice(pD3DDev);
-
-    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-    {
-      pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-    }
-
+    //ChangeDevice(pD3DDev); // if commented -> deadlock
     //m_pMadD3DDev = static_cast<IDirect3DDevice9Ex*>(pD3DDev);
 
     if (m_pMadD3DDev)
@@ -1369,22 +1497,16 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
         if (SUCCEEDED(hr = m_pDevice->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pMPTextureOsd.p, &m_hSharedOsdHandle)))
 
           m_pInitOSDRender = false;
-    }
-    else
-    {
+
       if (m_pCallback)
       {
         m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(m_pMadD3DDev));
-        Log("MPMadPresenter::SetDevice() reset subtitle device");
+        Log("MPMadPresenter::SetDevice() set subtitle device");
       }
-      Log("MPMadPresenter::SetDevice() Shutdown() 1");
-      m_deviceState.Shutdown();
-      Log("MPMadPresenter::SetDevice() Shutdown() 2");
+      return hr;
     }
-
     Log("MPMadPresenter::SetDevice() init madVR Window");
-
-    return hr;
+    return S_OK;
   }
 }
 

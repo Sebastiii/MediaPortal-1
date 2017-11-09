@@ -150,7 +150,6 @@ HANDLE m_hFrameGrabMadVr = NULL;
 CAMEvent m_EndLoggingEvent;
 
 
-
 LONG LogWriteRegistryKeyString(HKEY hKey, LPCTSTR& lpSubKey, LPCTSTR& data)
 {  
   LONG result = RegSetValueEx(hKey, lpSubKey, 0, REG_SZ, (LPBYTE)data, _tcslen(data) * sizeof(TCHAR));
@@ -405,7 +404,6 @@ void Log(const char *fmt, ...)
     m_logQueue.push((string)msg);
   }
 };
-
 
 VMR9_SampleFormat ConvertInterlaceFlags(DWORD dwInterlaceFlags)
 {
@@ -968,6 +966,13 @@ void CloseFrameGrabbing()
 }
 // madVR frame grabber thread end
 
+//void madVRStop()
+//{
+//  static CCritSec lock;
+//  CAutoLock logLock(&lock);
+//  m_pmadVrStopping = true;
+//};
+
 BOOL MadInit(IVMR9Callback* callback, int xposition, int yposition, int width, int height, DWORD dwD3DDevice, OAHWND parent, IBaseFilter** madFilter, IMediaControl* pMediaControl)
 {
   m_RenderPrefix = _T("mad");
@@ -996,6 +1001,8 @@ BOOL MadInit(IVMR9Callback* callback, int xposition, int yposition, int width, i
 
   if (!madFilter)
     return FALSE;
+
+  m_pmadVrStopping = false;
 
   return TRUE;
 }
@@ -1026,6 +1033,7 @@ void MadStopping()
     Log("MPMadDshow::MadStopping start");
     //CAutoLock lock(&m_madPresenter->m_dsLock);
     //m_madPresenter->m_dsLock.Lock();
+    m_pmadVrStopping = true;
     m_madPresenter->m_pShutdown = true;
     Sleep(100);
     m_madPresenter->Stopping();
@@ -1045,7 +1053,8 @@ void MadVrPaused(bool paused)
 
 void MadVrRepeatFrameSend(DWORD dwD3DDevice)
 {
-  m_madPresenter->RepeatFrame(dwD3DDevice);
+  //m_madPresenter->RepeatFrame(dwD3DDevice);
+  //m_madPresenter = new MPMadPresenter(reinterpret_cast<IDirect3DDevice9*>(dwD3DDevice));
 }
 
 void MadVrGrabFrameSend()

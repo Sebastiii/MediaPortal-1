@@ -26,7 +26,9 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using MediaPortal.Configuration;
 using MediaPortal.ExtensionMethods;
 using MediaPortal.GUI.Library;
@@ -39,6 +41,7 @@ using Un4seen.Bass;
 using Un4seen.Bass.AddOn.Cd;
 using Action = MediaPortal.GUI.Library.Action;
 using MediaPortal.Player.Subtitles;
+using ActionSystem = System.Action;
 
 namespace MediaPortal.Player
 {
@@ -118,6 +121,8 @@ namespace MediaPortal.Player
 
     /// <param name="default Blu-ray Title">BdDefaultTitle</param>
     public const int BdDefaultTitle = 1000;
+
+    private static Dispatcher _dispatcher;
 
     #endregion
 
@@ -1504,6 +1509,57 @@ namespace MediaPortal.Player
       }
     }
 
+    private static void DisposePlayerInternal()
+    {
+      if (_player != null)
+      {
+        _player.Dispose();
+        _player = null; //force the object to get cleaned up
+      }
+    }
+
+    private static void InvokeOnPlayerThread(ActionSystem action, bool throwOnError = false, bool wait = true)
+    {
+      try
+      {
+        TaskCompletionSource<bool> source = new TaskCompletionSource<bool>();
+
+        _dispatcher = Dispatcher.CurrentDispatcher;
+
+        ActionSystem act = () =>
+        {
+          Log.Info("thread id: {0}", Thread.CurrentThread.ManagedThreadId);
+
+          try
+          {
+            action();
+            source.TrySetResult(true);
+          }
+          catch (Exception ex)
+          {
+            source.TrySetException(ex);
+          }
+        };
+
+        //_queue.Enqueue(act);
+
+        _dispatcher.BeginInvoke(act, DispatcherPriority.Send);
+
+        var task = source.Task;
+
+        if (wait)
+        {
+          //Task.WaitAll(task);
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Error("InvokeOnPlayerThread", ex);
+
+        if (throwOnError) throw;
+      }
+    }
+
     public static bool Play(string strFile, MediaType type, TextReader chapters, bool fromPictures, int title, bool forcePlay, bool fromExtTS)
     {
       try
@@ -1810,80 +1866,221 @@ namespace MediaPortal.Player
         _currentFileName = strFile;
         _player = _factory.Create(strFile, type);
 
-        if (_player != null)
+        try
         {
-          if (chapters != null)
+          InvokeOnPlayerThread(() =>
           {
-            LoadChapters(chapters);
-          }
-          else
-          {
-            if (!playingRemoteUrl) LoadChapters(strFile);
-          }
-          _player = CachePreviousPlayer(_player);
-          bool bResult = _player.Play(strFile);
-          if (!bResult)
-          {
-            Log.Info("g_Player: ended");
-            _player.SafeDispose();
-            _player = null;
-            _subs = null;
-            UnableToPlay(strFile, type);
-          }
-          else if (_player != null && _player.Playing)
-          {
-            _isInitialized = false;
-            _currentFilePlaying = _player.CurrentFile;
-            //if (_chapters == null)
-            //{
-            //  _chapters = _player.Chapters;
-            //}
-            if (_chaptersname == null)
-            {
-              _chaptersname = _player.ChaptersName;
-            }
-            OnStarted();
-          }
+            //create a fresh DS Player everytime we want one
+            DisposePlayerInternal();
 
-          // Needed this double check for madVR with EVR option.
-          if (AskForRefresh && (UseEVRMadVRForTV && GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.EVR))
-          {
-            // Refreshrate change done here. Blu-ray player will handle the refresh rate changes by itself
-            // Identify if it's a video
-            if (strFile.IndexOf(@"\BDMV\INDEX.BDMV") == -1 && type != MediaType.Radio)
+            _player = new VideoPlayerVMR9();
+
+            if (_player != null)
             {
-              // Make a double check on .ts because it can be recorded TV or Radio
-              if (extension == ".ts")
+              if (chapters != null)
               {
-                if (MediaInfo != null && MediaInfo.hasVideo)
-                {
-                  RefreshRateChanger.AdaptRefreshRate(strFile, (RefreshRateChanger.MediaType)(int)type);
-                }
+                LoadChapters(chapters);
               }
               else
               {
-                RefreshRateChanger.AdaptRefreshRate(strFile, (RefreshRateChanger.MediaType)(int)type);
+                if (!playingRemoteUrl) LoadChapters(strFile);
               }
+              _player = CachePreviousPlayer(_player);
+              bool bResult = _player.Play(strFile);
+              if (!bResult)
+              {
+                Log.Info("g_Player: ended");
+                _player.SafeDispose();
+                _player = null;
+                _subs = null;
+                UnableToPlay(strFile, type);
+              }
+              else if (_player != null && _player.Playing)
+              {
+                _isInitialized = false;
+                _currentFilePlaying = _player.CurrentFile;
+                //if (_chapters == null)
+                //{
+                //  _chapters = _player.Chapters;
+                //}
+                if (_chaptersname == null)
+                {
+                  _chaptersname = _player.ChaptersName;
+                }
+                OnStarted();
+              }
+
+              // Needed this double check for madVR with EVR option.
+              if (AskForRefresh && (UseEVRMadVRForTV && GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.EVR))
+              {
+                // Refreshrate change done here. Blu-ray player will handle the refresh rate changes by itself
+                // Identify if it's a video
+                if (strFile.IndexOf(@"\BDMV\INDEX.BDMV") == -1 && type != MediaType.Radio)
+                {
+                  // Make a double check on .ts because it can be recorded TV or Radio
+                  if (extension == ".ts")
+                  {
+                    if (MediaInfo != null && MediaInfo.hasVideo)
+                    {
+                      RefreshRateChanger.AdaptRefreshRate(strFile, (RefreshRateChanger.MediaType)(int)type);
+                    }
+                  }
+                  else
+                  {
+                    RefreshRateChanger.AdaptRefreshRate(strFile, (RefreshRateChanger.MediaType)(int)type);
+                  }
+                }
+              }
+
+              // Set bool to know if video if played from MyPictures
+              if (fromPictures)
+              {
+                IsPicture = true;
+              }
+
+              // Set bool to know if video if we force play
+              if (forcePlay)
+              {
+                ForcePlay = true;
+              }
+              else
+              {
+                ForcePlay = false;
+              }
+              //return bResult;
             }
-          }
 
-          // Set bool to know if video if played from MyPictures
-          if (fromPictures)
-          {
-            IsPicture = true;
-          }
+            //try
+            //{
+            //  Standby.PreventSleepAndMonitorOff();
+            //}
+            //catch
+            //{
 
-          // Set bool to know if video if we force play
-          if (forcePlay)
-          {
-            ForcePlay = true;
-          }
-          else
-          {
-            ForcePlay = false;
-          }
-          return bResult;
+            //}
+
+            //try
+            //{
+            //  if (startPositionTicks > 0)
+            //  {
+            //    _mediaPlayer.Seek(startPositionTicks);
+            //  }
+            //}
+            //catch
+            //{
+
+            //}
+
+            //if (playableItem.OriginalItem.IsVideo)
+            //{
+            //  var audioIndex = playableItem.MediaSource.DefaultAudioStreamIndex;
+            //  var subtitleIndex = playableItem.MediaSource.DefaultSubtitleStreamIndex;
+
+            //  if (audioIndex.HasValue && audioIndex.Value != -1)
+            //  {
+            //    try
+            //    {
+            //      SetAudioStreamIndexInternal(audioIndex.Value);
+            //    }
+            //    catch
+            //    {
+
+            //    }
+            //  }
+            //  try
+            //  {
+            //    SetSubtitleStreamIndexInternal(subtitleIndex ?? -1);
+            //  }
+            //  catch
+            //  {
+
+            //  }
+            //}
+
+          }, true);
+          return true;
         }
+        catch (Exception ex)
+        {
+          //OnPlaybackStopped(playableItem, null, TrackCompletionReason.Failure, null);
+          //throw;
+          Log.Error(ex);
+        }
+
+        //if (_player != null)
+        //{
+        //  if (chapters != null)
+        //  {
+        //    LoadChapters(chapters);
+        //  }
+        //  else
+        //  {
+        //    if (!playingRemoteUrl) LoadChapters(strFile);
+        //  }
+        //  _player = CachePreviousPlayer(_player);
+        //  bool bResult = _player.Play(strFile);
+        //  if (!bResult)
+        //  {
+        //    Log.Info("g_Player: ended");
+        //    _player.SafeDispose();
+        //    _player = null;
+        //    _subs = null;
+        //    UnableToPlay(strFile, type);
+        //  }
+        //  else if (_player != null && _player.Playing)
+        //  {
+        //    _isInitialized = false;
+        //    _currentFilePlaying = _player.CurrentFile;
+        //    //if (_chapters == null)
+        //    //{
+        //    //  _chapters = _player.Chapters;
+        //    //}
+        //    if (_chaptersname == null)
+        //    {
+        //      _chaptersname = _player.ChaptersName;
+        //    }
+        //    OnStarted();
+        //  }
+
+        //  // Needed this double check for madVR with EVR option.
+        //  if (AskForRefresh && (UseEVRMadVRForTV && GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.EVR))
+        //  {
+        //    // Refreshrate change done here. Blu-ray player will handle the refresh rate changes by itself
+        //    // Identify if it's a video
+        //    if (strFile.IndexOf(@"\BDMV\INDEX.BDMV") == -1 && type != MediaType.Radio)
+        //    {
+        //      // Make a double check on .ts because it can be recorded TV or Radio
+        //      if (extension == ".ts")
+        //      {
+        //        if (MediaInfo != null && MediaInfo.hasVideo)
+        //        {
+        //          RefreshRateChanger.AdaptRefreshRate(strFile, (RefreshRateChanger.MediaType)(int)type);
+        //        }
+        //      }
+        //      else
+        //      {
+        //        RefreshRateChanger.AdaptRefreshRate(strFile, (RefreshRateChanger.MediaType)(int)type);
+        //      }
+        //    }
+        //  }
+
+        //  // Set bool to know if video if played from MyPictures
+        //  if (fromPictures)
+        //  {
+        //    IsPicture = true;
+        //  }
+
+        //  // Set bool to know if video if we force play
+        //  if (forcePlay)
+        //  {
+        //    ForcePlay = true;
+        //  }
+        //  else
+        //  {
+        //    ForcePlay = false;
+        //  }
+        //  return bResult;
+        //}
       }
       finally
       {

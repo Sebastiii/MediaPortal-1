@@ -240,7 +240,7 @@ namespace MediaPortal.Player
     private int _frameCounter = 0;
     private DateTime _repaintTimer = DateTime.Now;
     private IVMRMixerBitmap9 _vmr9MixerBitmapInterface = null;
-    private IGraphBuilder _graphBuilder = null;
+    internal IGraphBuilder _graphBuilder = null;
     private bool _isVmr9Initialized = false;
     private int _threadId;
     private Vmr9PlayState currentVmr9State = Vmr9PlayState.Playing;

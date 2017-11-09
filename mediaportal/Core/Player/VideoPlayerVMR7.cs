@@ -218,6 +218,7 @@ namespace MediaPortal.Player
 
     /// <summary> video preview window interface. </summary>
     protected IVideoWindow videoWin;
+    //protected IVideoWindow videoWin2;
 
     /// <summary> interface to get information and control video. </summary>
     protected IBasicVideo2 basicVideo;
@@ -399,12 +400,12 @@ namespace MediaPortal.Player
           return false;
         }
 
-        //madVR 
-        if (videoWin != null && GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
-        {
-          DirectShowUtil.ReleaseComObject(videoWin);
-          videoWin = (IVideoWindow)VMR9Util.g_vmr9?._vmr9Filter;
-        }
+        ////madVR 
+        //if (videoWin != null && GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+        //{
+        //  DirectShowUtil.ReleaseComObject(videoWin);
+        //  //videoWin = (IVideoWindow)VMR9Util.g_vmr9?._vmr9Filter;
+        //}
 
         if (basicVideo != null)
         {

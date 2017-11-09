@@ -947,46 +947,36 @@ namespace MediaPortal.Player
         mediaSeek = (IMediaSeeking) graphBuilder;
         mediaPos = (IMediaPosition) graphBuilder;
         basicAudio = (IBasicAudio) graphBuilder;
+        //videoWin2 = graphBuilder as IVideoWindow;
+
         if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
         {
           basicVideo = VMR9Util.g_vmr9?._vmr9Filter as IBasicVideo2;
-          videoWin = (IVideoWindow)graphBuilder;
-          //videoWin = (IVideoWindow) VMR9Util.g_vmr9?._vmr9Filter;
+          videoWin = (IVideoWindow) VMR9Util.g_vmr9?._vmr9Filter;
         }
         else
         {
           videoWin = (IVideoWindow) graphBuilder;
         }
-        //IVideoWindow videoWin = graphBuilder as IVideoWindow;
+
         if (videoWin != null)
         {
-          //if (_vmr9Filter != null)
-          {
-            var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
-              ? GUIGraphicsContext.MadVrHWnd
-              : GUIGraphicsContext.form.Handle;
-
-            //if (!isInExclusiveMode)
-            //{
-            // Set _vmr9Filter put_owner only if exclusive mode is off in madVR - TODO read madVR settings to know if exclusive is enable
-            // We need to not set owner here (when exclusive mode active) to make 3D fse working and set it later
-            videoWin.put_Owner(ownerHandle);
-            Log.Error("VideoPlayer9:Failed to add VMR9 to graph");
-            Log.Error("VideoPlayer9:Failed to add VMR9 to graph");
-            Log.Error("VideoPlayer9:Failed to add VMR9 to graph");
-            //}
-            //else
-            //{
-            //  IVideoWindow videoWinBuilder = graphBuilder as IVideoWindow;
-            //  videoWinBuilder?.put_Owner(ownerHandle);
-            //}
-            videoWin.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
-            videoWin.put_MessageDrain(ownerHandle);
-
-            //videoWin.put_WindowStyleEx(WindowStyleEx.ToolWindow);
-            //videoWin.SetWindowForeground(OABool.True);
-          }
+          var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+            ? GUIGraphicsContext.MadVrHWnd
+            : GUIGraphicsContext.form.Handle;
+          videoWin.put_Owner(ownerHandle);
+          videoWin.put_WindowStyle((WindowStyle) ((int) WindowStyle.Child + (int) WindowStyle.ClipChildren + (int) WindowStyle.ClipSiblings));
+          videoWin.put_MessageDrain(ownerHandle);
         }
+        //if (videoWin2 != null)
+        //{
+        //  var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+        //    ? GUIGraphicsContext.MadVrHWnd
+        //    : GUIGraphicsContext.form.Handle;
+        //  videoWin2.put_Owner(ownerHandle);
+        //  videoWin2.put_WindowStyle((WindowStyle) ((int) WindowStyle.Child + (int) WindowStyle.ClipChildren + (int) WindowStyle.ClipSiblings));
+        //  videoWin2.put_MessageDrain(ownerHandle);
+        //}
         if (VMR9Util.g_vmr9 != null)
         {
           m_iVideoWidth = VMR9Util.g_vmr9.VideoWidth;
@@ -1620,6 +1610,14 @@ namespace MediaPortal.Player
           mediaEvt = null;
         }
 
+        //if (VMR9Util.g_vmr9?._vmr9Filter != null)
+        //{
+        //  graphBuilder.RemoveFilter(VMR9Util.g_vmr9?._vmr9Filter as DirectShowLib.IBaseFilter);
+
+        //  DirectShowUtil.FinalReleaseComObject(VMR9Util.g_vmr9?._vmr9Filter);
+        //  VMR9Util.g_vmr9._vmr9Filter = null;
+        //}
+
         if (graphBuilder != null)
         {
           DirectShowUtil.RemoveFilters(graphBuilder);
@@ -1639,11 +1637,16 @@ namespace MediaPortal.Player
         {
           DirectShowUtil.ReleaseComObject(videoWin);
         }
+        //if (videoWin2 != null)
+        //{
+        //  DirectShowUtil.ReleaseComObject(videoWin2);
+        //}
         if (basicVideo != null)
         {
           DirectShowUtil.ReleaseComObject(basicVideo);
         }
         videoWin = null;
+        //videoWin2 = null;
         mediaCtrl = null;
         mediaSeek = null;
         mediaPos = null;

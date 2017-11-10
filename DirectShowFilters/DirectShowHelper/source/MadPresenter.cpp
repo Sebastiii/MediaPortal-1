@@ -95,67 +95,6 @@ MPMadPresenter::MPMadPresenter(IVMR9Callback* pCallback, int xposition, int ypos
   Log("MPMadPresenter::Constructor() Store Device Surface");
 }
 
-MPMadPresenter::MPMadPresenter(IDirect3DDevice9* pDevice) :
-  CUnknown(NAME("MPMadPresenter"), nullptr),
-  m_pDevice(static_cast<IDirect3DDevice9Ex*>(pDevice))
-{
-  ////Set to true to use the Kodi windows creation or false if not
-  //m_pKodiWindowUse = true;
-  //Log("MPMadPresenter::Constructor() - instance 0x%x", this);
-  //m_pShutdown = false;
-  m_pDevice->GetRenderTarget(0, &m_pSurfaceDevice);
-
-  Com::SmartQIPtr<ISubRender> pSR = m_pMad;
-  if (!pSR)
-  {
-    m_pMad = nullptr;
-    return;
-  }
-
-  m_pSRCB = new CSubRenderCallback(this);
-  if (FAILED(pSR->SetCallback(m_pSRCB)))
-  {
-    m_pMad = nullptr;
-    return;
-  }
-
-  //if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-  //{
-  //  if (!pWindow)
-  //  {
-  //    m_pMad = nullptr;
-  //    return;
-  //  }
-
-  //  // Create madVR video instance
-  //  Initialize();
-  //}
-
-  // IOsdRenderCallback
-  Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-  if (!pOR)
-  {
-    m_pMad = nullptr;
-    return;
-  }
-
-  m_pORCB = new COsdRenderCallback(this);
-  if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
-  {
-    m_pMad = nullptr;
-    return;
-  }
-
-  //// Configure initial Madvr Settings
-  //ConfigureMadvr();
-
-  //SetDevice(pDevice);
-  //// Store device surface MP GUI for later
-  //m_pCallback->RestoreDeviceSurface(reinterpret_cast<LONG>(m_pSurfaceDevice));
-  //m_pInitMadVRWindowPositionDone = false;
-  Log("MPMadPresenter::Constructor() Store Device Surface");
-}
-
 bool isFullscreen(HWND window)
 {
   RECT a, b;
@@ -270,90 +209,28 @@ void MPMadPresenter::RepeatFrame(DWORD dwD3DDevice)
     return;
   }
 
-  // Create a madVR Window
-  if (!m_pKodiWindowUse) // no Kodi window
-  {
-    m_hWnd = reinterpret_cast<HWND>(m_hParent);
-    IVideoWindow *pWindow = NULL;
-    //if ((m_pMediaControl) && (SUCCEEDED(this->m_pMediaControl->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&pWindow)))) && (pWindow))
-    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-    {
-      pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-      pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-      pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
-      pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
-      //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
-    }
-  }
-  return;
+  //// Create a madVR Window
+  //if (!m_pKodiWindowUse) // no Kodi window
+  //{
+  //  m_hWnd = reinterpret_cast<HWND>(m_hParent);
+  //  IVideoWindow *pWindow = NULL;
+  //  //if ((m_pMediaControl) && (SUCCEEDED(this->m_pMediaControl->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&pWindow)))) && (pWindow))
+  //  if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+  //  {
+  //    pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+  //    pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+  //    pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+  //    pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+  //    //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+  //  }
+  //}
+  //return;
 
-  static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
-  static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
-  m_pSRCB.Release();
-  m_pORCB.Release();
-  m_pSRCB = nullptr;
-  m_pORCB = nullptr;
+  CAutoLock cAutoLock(this);
 
-  // ISubRenderCallback
-  Com::SmartQIPtr<ISubRender> pSR = m_pMad;
-  if (!pSR)
-  {
-    m_pMad = nullptr;
-    return;
-  }
-
-  m_pSRCB = new CSubRenderCallback(this);
-  if (FAILED(pSR->SetCallback(m_pSRCB)))
-  {
-    m_pMad = nullptr;
-    return;
-  }
-
-  // IOsdRenderCallback
+  // Render frame to try to fix HD4XXX GPU flickering issue
   Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-  if (!pOR)
-  {
-    m_pMad = nullptr;
-    return;
-  }
-
-  m_pORCB = new COsdRenderCallback(this);
-  if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
-  {
-    m_pMad = nullptr;
-    return;
-  }
-
-  //if (m_pDevice)
-  //{
-  //  m_pDevice->Release();
-  //  m_pDevice = nullptr;
-  //  m_pDevice = reinterpret_cast<IDirect3DDevice9Ex*>(dwD3DDevice);
-  //}
-  //else
-  //{
-  //  if (m_pSRCB)
-  //  {
-  //    // nasty, but we have to let it know about our death somehow
-  //    static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetShutdownSub(true);
-  //    static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
-  //    Log("MPMadPresenter::RepeatFrame() m_pSRCB");
-  //  }
-
-  //  if (m_pORCB)
-  //  {
-  //    // nasty, but we have to let it know about our death somehow
-  //    static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetShutdownOsd(true);
-  //    static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
-  //    Log("MPMadPresenter::RepeatFrame() m_pORCB");
-  //  }
-  //}
-
-  //////CAutoLock cAutoLock(this);
-
-  //////// Render frame to try to fix HD4XXX GPU flickering issue
-  //////Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-  //////pOR->OsdRedrawFrame();
+  pOR->OsdRedrawFrame();
 }
 
 void MPMadPresenter::GrabScreenshot()
@@ -553,6 +430,21 @@ IBaseFilter* MPMadPresenter::Initialize()
 
   if (Com::SmartQIPtr<IBaseFilter> baseFilter = m_pMad)
   {
+    // Create a madVR Window
+    if (!m_pKodiWindowUse) // no Kodi window
+    {
+      m_hWnd = reinterpret_cast<HWND>(m_hParent);
+      IVideoWindow *pWindow = NULL;
+      //if ((m_pMediaControl) && (SUCCEEDED(this->m_pMediaControl->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&pWindow)))) && (pWindow))
+      if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+      {
+        pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+        pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+        pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+        pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+        //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+      }
+    }
     ////if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
     //{
     //  // Create a madVR Window
@@ -1381,16 +1273,16 @@ void MPMadPresenter::ReinitOSD()
 
 void MPMadPresenter::ReinitOSDDevice()
 {
-    // Needed to update OSD/GUI when changing directx present parameter on resolution change.
-    if (m_pMPTextureGui) m_pMPTextureGui.Release();
-    if (m_pMPTextureOsd) m_pMPTextureOsd.Release();
-    if (m_pMadGuiVertexBuffer) m_pMadGuiVertexBuffer.Release();
-    if (m_pMadOsdVertexBuffer) m_pMadOsdVertexBuffer.Release();
-    if (m_pRenderTextureGui) m_pRenderTextureGui.Release();
-    if (m_pRenderTextureOsd) m_pRenderTextureOsd.Release();
-    m_hSharedGuiHandle = nullptr;
-    m_hSharedOsdHandle = nullptr;
-    Log("%s : ReinitOSDDevice for : %d x %d", __FUNCTION__, m_dwGUIWidth, m_dwGUIHeight);
+  // Needed to release D3D device for resetting a new device from madVR
+  if (m_pMPTextureGui) m_pMPTextureGui.Release();
+  if (m_pMPTextureOsd) m_pMPTextureOsd.Release();
+  if (m_pMadGuiVertexBuffer) m_pMadGuiVertexBuffer.Release();
+  if (m_pMadOsdVertexBuffer) m_pMadOsdVertexBuffer.Release();
+  if (m_pRenderTextureGui) m_pRenderTextureGui.Release();
+  if (m_pRenderTextureOsd) m_pRenderTextureOsd.Release();
+  m_hSharedGuiHandle = nullptr;
+  m_hSharedOsdHandle = nullptr;
+  Log("%s : ReinitOSDDevice for : %d x %d", __FUNCTION__, m_dwGUIWidth, m_dwGUIHeight);
 }
 
 HRESULT MPMadPresenter::SetupMadDeviceState()
@@ -1452,86 +1344,6 @@ HRESULT MPMadPresenter::SetDeviceOsd(IDirect3DDevice9* pD3DDev)
   return S_OK;
 }
 
-HRESULT MPMadPresenter::SetDeviceCreation(IDirect3DDevice9* pD3DDev)
-{
-  if (m_pShutdown)
-  {
-    Log("MPMadPresenter::SetDeviceOsd shutdown");
-    return S_OK;
-  }
-
-  //static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
-  //static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
-  //m_pSRCB.Release();
-  //m_pORCB.Release();
-  //m_pSRCB = nullptr;
-  //m_pORCB = nullptr;
-
-  //if (pD3DDev)
-  //{
-  //  Com::SmartQIPtr<ISubRender> pSR = m_pMad;
-  //  if (!pSR)
-  //  {
-  //    m_pMad = nullptr;
-  //    return E_FAIL;
-  //  }
-
-  //  m_pSRCB = new CSubRenderCallback(this);
-  //  if (FAILED(pSR->SetCallback(m_pSRCB)))
-  //  {
-  //    m_pMad = nullptr;
-  //    return E_FAIL;
-  //  }
-
-  //  // IOsdRenderCallback
-  //  Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-  //  if (!pOR)
-  //  {
-  //    m_pMad = nullptr;
-  //    return E_FAIL;
-  //  }
-
-  //  m_pORCB = new COsdRenderCallback(this);
-  //  if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
-  //  {
-  //    m_pMad = nullptr;
-  //  }
-
-  //  if (m_pSRCB)
-  //  {
-  //    // nasty, but we have to let it know about our death somehow
-  //    static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetShutdownSub(false);
-  //    Log("MPMadPresenter::SetDevice() m_pSRCB");
-  //  }
-
-  //  if (m_pORCB)
-  //  {
-  //    // nasty, but we have to let it know about our death somehow
-  //    static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetShutdownOsd(false);
-  //    Log("MPMadPresenter::SetDevice() m_pORCB");
-  //  }
-
-  //  CSize screenSize;
-  //  MONITORINFO mi = { sizeof(MONITORINFO) };
-  //  if (GetMonitorInfo(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &mi)) {
-  //    screenSize.SetSize(mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top);
-  //  }
-
-    ChangeDevice(pD3DDev);
-
-    //if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-    //{
-    //  pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-    //  Log("MPMadPresenter::SetDevice() put_Owner()");
-    //}
-  //}
-  //{
-  //  SetDevice(pD3DDev);
-  //  Log("MPMadPresenter::SetDeviceOsd() device 0x:%x", pD3DDev);
-  //}
-  return S_OK;
-}
-
 STDMETHODIMP MPMadPresenter::ChangeDevice(IUnknown* pDev)
 {
   CComQIPtr<IDirect3DDevice9Ex> pD3DDev = pDev;
@@ -1562,7 +1374,10 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
 
     if (!pD3DDev)
     {
-      ChangeDevice(pD3DDev); // if commented -> deadlock
+      // Change madVR rendering D3D Device
+      // if commented -> deadlock
+      ChangeDevice(pD3DDev);
+
       Log("MPMadPresenter::SetDevice() Shutdown() 1");
       m_deviceState.Shutdown();
       Log("MPMadPresenter::SetDevice() Shutdown() 2");
@@ -1574,96 +1389,17 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
         Log("MPMadPresenter::SetDevice() release m_pMadD3DDev");
       }
 
-      ////////////// IOsdRenderCallback
-      ////////////Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-      ////////////if (!pOR)
-      ////////////{
-      ////////////  m_pMad = nullptr;
-      ////////////  return S_FALSE;
-      ////////////}
-
-      //////////////m_pORCB = new COsdRenderCallback(this);
-      ////////////if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", nullptr)))
-      ////////////{
-      ////////////  m_pMad = nullptr;
-      ////////////}
-
-      ////////////if (m_pSRCB)
-      ////////////{
-      ////////////  // nasty, but we have to let it know about our death somehow
-      ////////////  static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
-      ////////////  Log("MPMadPresenter::SetDevice() - m_pSRCB");
-      ////////////  m_pSRCB.Release();
-      ////////////}
-
-      //// ISubRenderCallback
-      //Com::SmartQIPtr<ISubRender> pSR = m_pMad;
-      //if (!pSR)
-      //{
-      //  m_pMad = nullptr;
-      //  return;
-      //}
-
-      //m_pSRCB = new CSubRenderCallback(this);
-      //if (FAILED(pSR->SetCallback(m_pSRCB)))
-      //{
-      //  m_pMad = nullptr;
-      //  return;
-      //}
-
       if (m_pCallback)
       {
         m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
         Log("MPMadPresenter::SetDevice() reset subtitle device");
       }
-
-      //if (m_pSRCB)
-      //{
-      //  // nasty, but we have to let it know about our death somehow
-      //  static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(this);
-      //  Log("MPMadPresenter::Destructor() - m_pSRCB");
-      //}
-
-      //if (m_pORCB)
-      //{
-      //  // nasty, but we have to let it know about our death somehow
-      //  static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(this);
-      //  Log("MPMadPresenter::Destructor() - m_pORCB");
-      //}
       return S_OK;
     }
 
-    //////////// IOsdRenderCallback
-    //////////Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-    //////////if (!pOR)
-    //////////{
-    //////////  m_pMad = nullptr;
-    //////////  return S_FALSE;
-    //////////}
-
-    //////////m_pORCB = new COsdRenderCallback(this);
-    //////////if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
-    //////////{
-    //////////  m_pMad = nullptr;
-    //////////}
-
-    //////////// ISubRenderCallback
-    //////////Com::SmartQIPtr<ISubRender> pSR = m_pMad;
-    //////////if (!pSR)
-    //////////{
-    //////////  m_pMad = nullptr;
-    //////////  return S_FALSE;
-    //////////}
-
-    //////////m_pSRCB = new CSubRenderCallback(this);
-    //////////if (FAILED(pSR->SetCallback(m_pSRCB)))
-    //////////{
-    //////////  m_pMad = nullptr;
-    //////////  return S_FALSE;
-    //////////}
-
-    ChangeDevice(pD3DDev); // if commented -> deadlock
-    //m_pMadD3DDev = static_cast<IDirect3DDevice9Ex*>(pD3DDev);
+    // Change madVR rendering D3D Device
+    // if commented -> deadlock
+    ChangeDevice(pD3DDev);
 
     if (m_pMadD3DDev)
     {

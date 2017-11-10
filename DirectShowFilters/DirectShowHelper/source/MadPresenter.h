@@ -98,7 +98,6 @@ class MPMadPresenter : public CUnknown, public CCritSec
 
     STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev)
     {
-      return S_OK;
       Log("MPMadPresenterH::SetDeviceOSD() device 0x:%x", pD3DDev);
       if (m_pShutdownOsd || m_pmadVrStopping)
       {
@@ -114,25 +113,26 @@ class MPMadPresenter : public CUnknown, public CCritSec
           return S_OK;
         }
       }
+      return S_OK;
 
-      if (pD3DDev)
-      {
-        m_pDXRAPBackup = m_pDXRAP;
-      }
+      //if (pD3DDev)
+      //{
+      //  m_pDXRAPBackup = m_pDXRAP;
+      //}
 
-      if (!pD3DDev)
-      {
-        if (m_pDXRAP)
-        {
-          m_pDXRAP->SetDeviceOsd(pD3DDev);
-          // to see for deadlock needed to solve deadlock on stop
-          m_pDXRAP = nullptr;
-          return S_OK;
-        }
-      }
+      //if (!pD3DDev)
+      //{
+      //  if (m_pDXRAP)
+      //  {
+      //    m_pDXRAP->SetDeviceOsd(pD3DDev);
+      //    // to see for deadlock needed to solve deadlock on stop
+      //    m_pDXRAP = nullptr;
+      //    return S_OK;
+      //  }
+      //}
 
-      //CAutoLock cAutoLock(this);
-      return m_pDXRAP ? m_pDXRAP->SetDevice(pD3DDev) : m_pDXRAPBackup->SetDevice(pD3DDev);
+      ////CAutoLock cAutoLock(this);
+      //return m_pDXRAP ? m_pDXRAP->SetDevice(pD3DDev) : m_pDXRAPBackup->SetDevice(pD3DDev);
     }
   };
 
@@ -305,7 +305,6 @@ class MPMadPresenter : public CUnknown, public CCritSec
     STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev);
     STDMETHODIMP ChangeDevice(IUnknown* pDev);
     STDMETHODIMP SetDeviceOsd(IDirect3DDevice9* pD3DDev);
-    STDMETHODIMP SetDeviceCreation(IDirect3DDevice9* pD3DDev);
     // ISubRenderCallback
     STDMETHOD(Render)(REFERENCE_TIME frameStart, int left, int top, int right, int bottom, int width, int height);
     // ISubRenderCallback2

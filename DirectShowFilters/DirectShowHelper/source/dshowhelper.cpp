@@ -999,7 +999,7 @@ BOOL MadInit(IVMR9Callback* callback, int xposition, int yposition, int width, i
 
   *madFilter = m_pVMR9Filter;
 
-  m_madPresenter->RepeatFrame(dwD3DDevice);
+  //m_madPresenter->RepeatFrame(dwD3DDevice);
 
   if (!madFilter)
     return FALSE;
@@ -1056,7 +1056,6 @@ void MadVrPaused(bool paused)
 void MadVrRepeatFrameSend(DWORD dwD3DDevice)
 {
   m_madPresenter->RepeatFrame(dwD3DDevice);
-  //m_madPresenter = new MPMadPresenter(reinterpret_cast<IDirect3DDevice9*>(dwD3DDevice));
 }
 
 void MadVrGrabFrameSend()

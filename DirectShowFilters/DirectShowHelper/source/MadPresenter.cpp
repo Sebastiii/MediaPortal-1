@@ -208,24 +208,6 @@ void MPMadPresenter::RepeatFrame(DWORD dwD3DDevice)
     Log("MPMadPresenter::RepeatFrame() shutdown");
     return;
   }
-
-  //// Create a madVR Window
-  //if (!m_pKodiWindowUse) // no Kodi window
-  //{
-  //  m_hWnd = reinterpret_cast<HWND>(m_hParent);
-  //  IVideoWindow *pWindow = NULL;
-  //  //if ((m_pMediaControl) && (SUCCEEDED(this->m_pMediaControl->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&pWindow)))) && (pWindow))
-  //  if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-  //  {
-  //    pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-  //    pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-  //    pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
-  //    pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
-  //    //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
-  //  }
-  //}
-  //return;
-
   CAutoLock cAutoLock(this);
 
   // Render frame to try to fix HD4XXX GPU flickering issue
@@ -430,21 +412,21 @@ IBaseFilter* MPMadPresenter::Initialize()
 
   if (Com::SmartQIPtr<IBaseFilter> baseFilter = m_pMad)
   {
-    // Create a madVR Window
-    if (!m_pKodiWindowUse) // no Kodi window
-    {
-      m_hWnd = reinterpret_cast<HWND>(m_hParent);
-      IVideoWindow *pWindow = NULL;
-      //if ((m_pMediaControl) && (SUCCEEDED(this->m_pMediaControl->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&pWindow)))) && (pWindow))
-      if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-      {
-        pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-        pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-        pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
-        pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
-        //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
-      }
-    }
+    //////////////// Create a madVR Window
+    //////////////if (!m_pKodiWindowUse) // no Kodi window
+    //////////////{
+    //////////////  m_hWnd = reinterpret_cast<HWND>(m_hParent);
+    //////////////  IVideoWindow *pWindow = NULL;
+    //////////////  if ((m_pMediaControl) && (SUCCEEDED(this->m_pMediaControl->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&pWindow)))) && (pWindow))
+    //////////////  //if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    //////////////  {
+    //////////////    pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+    //////////////    pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+    //////////////    pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+    //////////////    pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+    //////////////    //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+    //////////////  }
+    //////////////}
     ////if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
     //{
     //  // Create a madVR Window

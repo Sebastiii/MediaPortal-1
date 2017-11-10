@@ -952,8 +952,8 @@ namespace MediaPortal.Player
         if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
         {
           basicVideo = VMR9Util.g_vmr9?._vmr9Filter as IBasicVideo2;
-          videoWin = (IVideoWindow)VMR9Util.g_vmr9?._vmr9Filter;
-          //videoWin = (IVideoWindow)graphBuilder;
+          //videoWin = (IVideoWindow)VMR9Util.g_vmr9?._vmr9Filter;
+          videoWin = (IVideoWindow)graphBuilder;
         }
         else
         {

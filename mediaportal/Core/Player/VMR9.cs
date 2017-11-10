@@ -946,42 +946,22 @@ namespace MediaPortal.Player
           Size client = GUIGraphicsContext.form.ClientSize;
           MadInit(_scene, xposition, yposition, client.Width, client.Height, (uint) upDevice.ToInt32(),
             (uint) GUIGraphicsContext.ActiveForm.ToInt32(), ref _vmr9Filter, graphBuilder);
-          //if (!UseMadVideoRenderer3D)
-          //{
-          //  bool enableExclusiveMode = UseMadVideoRenderer; // set to true for now
-          //  bool isInExclusiveMode = _vmr9Filter != null && enableExclusiveMode;
-          //  if (GUIGraphicsContext.Fullscreen)
-          //  {
-          //    GoFullscreen(true);
-          //  }
-          //  IVideoWindow videoWin = graphBuilder as IVideoWindow;
-          //  if (videoWin != null)
-          //  {
-          //    if (_vmr9Filter != null)
-          //    {
-          //      var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
-          //        ? GUIGraphicsContext.MadVrHWnd
-          //        : GUIGraphicsContext.form.Handle;
+          if (!UseMadVideoRenderer3D)
+          {
+            IVideoWindow videoWin = graphBuilder as IVideoWindow;
+            if (videoWin != null)
+            {
+              var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+                ? GUIGraphicsContext.MadVrHWnd
+                : GUIGraphicsContext.form.Handle;
 
-          //      //if (!isInExclusiveMode)
-          //      //{
-          //      // Set _vmr9Filter put_owner only if exclusive mode is off in madVR - TODO read madVR settings to know if exclusive is enable
-          //      // We need to not set owner here (when exclusive mode active) to make 3D fse working and set it later
-          //      videoWin.put_Owner(ownerHandle);
-          //      //}
-          //      //else
-          //      //{
-          //      //  IVideoWindow videoWinBuilder = graphBuilder as IVideoWindow;
-          //      //  videoWinBuilder?.put_Owner(ownerHandle);
-          //      //}
-          //      videoWin.put_WindowStyle((WindowStyle)((int) WindowStyle.Child + (int) WindowStyle.ClipChildren + (int) WindowStyle.ClipSiblings));
-          //      videoWin.put_MessageDrain(ownerHandle);
-
-          //      //videoWin.put_WindowStyleEx(WindowStyleEx.ToolWindow);
-          //      //videoWin.SetWindowForeground(OABool.True);
-          //    }
-          //  }
-          //}
+              videoWin.put_Owner(ownerHandle);
+              videoWin.put_WindowStyle((WindowStyle)((int) WindowStyle.Child + (int) WindowStyle.ClipChildren + (int) WindowStyle.ClipSiblings));
+              videoWin.put_MessageDrain(ownerHandle);
+              //videoWin.put_WindowStyleEx(WindowStyleEx.ToolWindow);
+              //videoWin.SetWindowForeground(OABool.True);
+            }
+          }
           hr = new HResult(graphBuilder.AddFilter(_vmr9Filter, "madVR"));
           Log.Info("VMR9: added madVR Renderer to graph");
         }

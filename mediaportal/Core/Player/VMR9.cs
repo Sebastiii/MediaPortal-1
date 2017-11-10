@@ -946,22 +946,22 @@ namespace MediaPortal.Player
           Size client = GUIGraphicsContext.form.ClientSize;
           MadInit(_scene, xposition, yposition, client.Width, client.Height, (uint) upDevice.ToInt32(),
             (uint) GUIGraphicsContext.ActiveForm.ToInt32(), ref _vmr9Filter, graphBuilder);
-          if (!UseMadVideoRenderer3D)
-          {
-            IVideoWindow videoWin = graphBuilder as IVideoWindow;
-            if (videoWin != null)
-            {
-              var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
-                ? GUIGraphicsContext.MadVrHWnd
-                : GUIGraphicsContext.form.Handle;
+          //if (!UseMadVideoRenderer3D)
+          //{
+          //  IVideoWindow videoWin = graphBuilder as IVideoWindow;
+          //  if (videoWin != null)
+          //  {
+          //    var ownerHandle = GUIGraphicsContext.MadVrHWnd != IntPtr.Zero
+          //      ? GUIGraphicsContext.MadVrHWnd
+          //      : GUIGraphicsContext.form.Handle;
 
-              videoWin.put_Owner(ownerHandle);
-              videoWin.put_WindowStyle((WindowStyle)((int) WindowStyle.Child + (int) WindowStyle.ClipChildren + (int) WindowStyle.ClipSiblings));
-              videoWin.put_MessageDrain(ownerHandle);
-              //videoWin.put_WindowStyleEx(WindowStyleEx.ToolWindow);
-              //videoWin.SetWindowForeground(OABool.True);
-            }
-          }
+          //    videoWin.put_Owner(ownerHandle);
+          //    videoWin.put_WindowStyle((WindowStyle)((int) WindowStyle.Child + (int) WindowStyle.ClipChildren + (int) WindowStyle.ClipSiblings));
+          //    videoWin.put_MessageDrain(ownerHandle);
+          //    //videoWin.put_WindowStyleEx(WindowStyleEx.ToolWindow);
+          //    //videoWin.SetWindowForeground(OABool.True);
+          //  }
+          //}
           hr = new HResult(graphBuilder.AddFilter(_vmr9Filter, "madVR"));
           Log.Info("VMR9: added madVR Renderer to graph");
         }

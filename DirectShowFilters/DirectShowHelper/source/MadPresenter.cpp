@@ -83,7 +83,7 @@ MPMadPresenter::MPMadPresenter(IVMR9Callback* pCallback, int xposition, int ypos
   m_pMediaControl(pMediaControl)
 {
   //Set to true to use the Kodi windows creation or false if not
-  m_pKodiWindowUse = true;
+  m_pKodiWindowUse = false;
   Log("MPMadPresenter::Constructor() - instance 0x%x", this);
   m_pKodiWindowUse ? m_Xposition = 0 : m_Xposition = xposition;
   m_pKodiWindowUse ? m_Yposition = 0 : m_Yposition = yposition;
@@ -1230,7 +1230,7 @@ void MPMadPresenter::ReinitOSD()
   }
 }
 
-void MPMadPresenter::ReinitOSDDevice()
+void MPMadPresenter::ReinitD3DDevice()
 {
   // Needed to release D3D device for resetting a new device from madVR
   if (m_pMPTextureGui) m_pMPTextureGui.Release();
@@ -1310,10 +1310,9 @@ STDMETHODIMP MPMadPresenter::ChangeDevice(IUnknown* pDev)
 
   CAutoLock cAutoLock(this);
   HRESULT hr = S_FALSE;
-  if (m_pMadD3DDev != pD3DDev) {
-    //ClearCache();
+  if (m_pMadD3DDev != pD3DDev)
+  {
     m_pMadD3DDev = pD3DDev;
-    //hr = __super::ChangeDevice(pDev);
     return S_OK;
   }
   return hr;
@@ -1337,9 +1336,9 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
       // if commented -> deadlock
       ChangeDevice(pD3DDev);
 
-      Log("MPMadPresenter::SetDevice() Shutdown() 1");
+      // Release deviceState
       m_deviceState.Shutdown();
-      Log("MPMadPresenter::SetDevice() Shutdown() 2");
+      Log("MPMadPresenter::SetDevice() Shutdown()");
 
       if (m_pMadD3DDev)
       {
@@ -1351,7 +1350,7 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
       if (m_pCallback)
       {
         m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
-        Log("MPMadPresenter::SetDevice() reset subtitle device");
+        Log("MPMadPresenter::SetDevice() reset C# subtitle device");
       }
       return S_OK;
     }

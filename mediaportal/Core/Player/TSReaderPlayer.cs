@@ -845,6 +845,10 @@ namespace MediaPortal.Player
                 //DirectShowUtil.DisconnectAllPins(_graphBuilder, VMR9Util.g_vmr9._vmr9Filter);
                 Log.Info("TSReaderPlayer: Cleanup VMR9");
               }
+              if (_videoWin != null)
+              {
+                DirectShowUtil.ReleaseComObject(_videoWin);
+              }
               VMR9Util.g_vmr9.Vmr9MediaCtrl(_mediaCtrl);
             }
             VMR9Util.g_vmr9.Enable(false);

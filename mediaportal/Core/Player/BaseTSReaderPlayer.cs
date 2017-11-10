@@ -610,6 +610,8 @@ namespace MediaPortal.Player
 
       _basicVideo = _graphBuilder as IBasicVideo2;
       _videoWin = _graphBuilder as IVideoWindow;
+      //_basicVideo = VMR9Util.g_vmr9?._vmr9Filter as IBasicVideo2;
+      //_videoWin = (IVideoWindow)VMR9Util.g_vmr9?._vmr9Filter;
 
       int hr = _mediaEvt.SetNotifyWindow(GUIGraphicsContext.ActiveForm, WM_GRAPHNOTIFY, IntPtr.Zero);
       if (hr < 0)

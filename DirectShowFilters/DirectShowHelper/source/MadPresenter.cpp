@@ -390,15 +390,14 @@ void MPMadPresenter::MadVrScreenResize(int x, int y, int width, int height, bool
       // for using no Kodi madVR window way uncomment out this line
       SetWindowPos(m_hWnd, nullptr, x, y, width, height, SWP_ASYNCWINDOWPOS);
     }
-
-    // Needed to update OSD/GUI when changing directx present parameter on resolution change.
-    if (displayChange)
-    {
-      m_pReInitOSD = true;
-      m_dwGUIWidth = width;
-      m_dwGUIHeight = height;
-      Log("%s : done : %d x %d", __FUNCTION__, width, height);
-    }
+  }
+  // Needed to update OSD/GUI when changing directx present parameter on resolution change.
+  if (displayChange)
+  {
+    m_pReInitOSD = true;
+    m_dwGUIWidth = width;
+    m_dwGUIHeight = height;
+    Log("%s : done : %d x %d", __FUNCTION__, width, height);
   }
 }
 
@@ -419,11 +418,11 @@ IBaseFilter* MPMadPresenter::Initialize()
       if (!m_pKodiWindowUse) // no Kodi window
       {
         m_hWnd = reinterpret_cast<HWND>(m_hParent);
-        pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-        pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-        //pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
-        pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
-        //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+        ////pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+        ////pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+        //////pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+        ////pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+        //////pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
       }
       else if (InitMadvrWindow(m_hWnd) && m_pKodiWindowUse) // Kodi window
       {
@@ -1270,25 +1269,56 @@ HRESULT MPMadPresenter::SetupMadDeviceState()
 
 HRESULT MPMadPresenter::SetDeviceOsd(IDirect3DDevice9* pD3DDev)
 {
-  if (m_pShutdown)
-  {
-    Log("MPMadPresenter::SetDeviceOsd shutdown");
+  { // Scope for autolock for the local variable (lock, which when deleted releases the lock)
+    HRESULT hr = S_FALSE;
+
+    if (m_pShutdown)
+    {
+      Log("MPMadPresenter::SetDeviceOsd() shutdown");
+      return hr;
+    }
+    Log("MPMadPresenter::SetDeviceOsd() device 0x:%x", pD3DDev);
+
+    if (!pD3DDev)
+    {
+      // Change madVR rendering D3D Device
+      // if commented -> deadlock
+      ChangeDevice(pD3DDev);
+
+      // Release deviceState
+      m_deviceState.Shutdown();
+      Log("MPMadPresenter::SetDeviceOsd() Shutdown()");
+
+      if (m_pMadD3DDev)
+      {
+        m_pMadD3DDev->Release();
+        m_pMadD3DDev = nullptr;
+        Log("MPMadPresenter::SetDeviceOsd() release m_pMadD3DDev");
+      }
+
+      if (m_pCallback)
+      {
+        m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
+        Log("MPMadPresenter::SetDeviceOsd() reset C# subtitle device");
+      }
+      return S_OK;
+    }
+
+    // Change madVR rendering D3D Device
+    // if commented -> deadlock
+    ChangeDevice(pD3DDev);
+
+    if (m_pMadD3DDev)
+    {
+      m_deviceState.SetDevice(m_pMadD3DDev);
+      if (SUCCEEDED(hr = m_pDevice->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pMPTextureGui.p, &m_hSharedGuiHandle)))
+        if (SUCCEEDED(hr = m_pDevice->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pMPTextureOsd.p, &m_hSharedOsdHandle)))
+          m_pInitOSDRender = false;
+      return hr;
+    }
+    Log("MPMadPresenter::SetDeviceOsd() init madVR Window");
     return S_OK;
   }
-
-  // Lock madVR thread while Shutdown()
-  //CAutoLock lock(&m_dsLock);
-
-  //CAutoLock cAutoLock(this);
-  if (pD3DDev)
-  {
-    // release all resources
-    //m_pSubPicQueue = nullptr;
-    //m_pAllocator = nullptr;
-    if (m_pCallback)
-      m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
-  }
-  return S_OK;
 }
 
 STDMETHODIMP MPMadPresenter::ChangeDevice(IUnknown* pDev)
@@ -1306,66 +1336,24 @@ STDMETHODIMP MPMadPresenter::ChangeDevice(IUnknown* pDev)
   return hr;
 }
 
-HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
+HRESULT MPMadPresenter::SetDeviceSub(IDirect3DDevice9* pD3DDev)
 {
-  { // Scope for autolock for the local variable (lock, which when deleted releases the lock)
-    HRESULT hr = S_FALSE;
-
-    if (m_pShutdown)
-    {
-      Log("MPMadPresenter::SetDevice() shutdown");
-      return hr;
-    }
-    Log("MPMadPresenter::SetDevice() device 0x:%x", pD3DDev);
-
-    if (!pD3DDev)
-    {
-      // Change madVR rendering D3D Device
-      // if commented -> deadlock
-      ChangeDevice(pD3DDev);
-
-      // Release deviceState
-      m_deviceState.Shutdown();
-      Log("MPMadPresenter::SetDevice() Shutdown()");
-
-      if (m_pMadD3DDev)
-      {
-        m_pMadD3DDev->Release();
-        m_pMadD3DDev = nullptr;
-        Log("MPMadPresenter::SetDevice() release m_pMadD3DDev");
-      }
-
-      if (m_pCallback)
-      {
-        m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
-        Log("MPMadPresenter::SetDevice() reset C# subtitle device");
-      }
-      return S_OK;
-    }
-
-    // Change madVR rendering D3D Device
-    // if commented -> deadlock
-    ChangeDevice(pD3DDev);
-
-    if (m_pMadD3DDev)
-    {
-      m_deviceState.SetDevice(m_pMadD3DDev);
-
-      if (SUCCEEDED(hr = m_pDevice->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pMPTextureGui.p, &m_hSharedGuiHandle)))
-        if (SUCCEEDED(hr = m_pDevice->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pMPTextureOsd.p, &m_hSharedOsdHandle)))
-
-          m_pInitOSDRender = false;
-
-      if (m_pCallback)
-      {
-        m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(m_pMadD3DDev));
-        Log("MPMadPresenter::SetDevice() set subtitle device");
-      }
-      return hr;
-    }
-    Log("MPMadPresenter::SetDevice() init madVR Window");
+  if (m_pShutdown)
+  {
+    Log("MPMadPresenter::SetDeviceSub shutdown");
     return S_OK;
   }
+
+  // Lock madVR thread while Shutdown()
+  //CAutoLock lock(&m_dsLock);
+
+  //CAutoLock cAutoLock(this);
+  if (pD3DDev)
+  {
+    if (m_pCallback)
+      m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
+  }
+  return S_OK;
 }
 
 HRESULT MPMadPresenter::Render(REFERENCE_TIME frameStart, int left, int top, int right, int bottom, int width, int height)

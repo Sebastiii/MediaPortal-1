@@ -49,6 +49,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
   class COsdRenderCallback : public CUnknown, public IOsdRenderCallback, public CCritSec
   {
     MPMadPresenter* m_pDXRAP;
+    MPMadPresenter* m_pDXRAPBackup;
     bool m_pShutdownOsd = false;
 
   public: COsdRenderCallback(MPMadPresenter* pDXRAP) : CUnknown(_T("COsdRender"), NULL) , m_pDXRAP(pDXRAP) {}
@@ -114,6 +115,11 @@ class MPMadPresenter : public CUnknown, public CCritSec
         }
       }
 
+      if (pD3DDev)
+      {
+        m_pDXRAPBackup = m_pDXRAP;
+      }
+
       if (!pD3DDev)
       {
         if (m_pDXRAP)
@@ -126,7 +132,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
       }
 
       //CAutoLock cAutoLock(this);
-      return m_pDXRAP ? m_pDXRAP->SetDevice(pD3DDev) : E_UNEXPECTED;
+      return m_pDXRAP ? m_pDXRAP->SetDevice(pD3DDev) : m_pDXRAPBackup->SetDevice(pD3DDev);
     }
   };
 
@@ -177,12 +183,21 @@ class MPMadPresenter : public CUnknown, public CCritSec
           return S_OK;
         }
       }
+
+      if (pD3DDev)
+      {
+        if (m_pDXRAPSUB)
+        {
+          m_pDXRAPSUBBackup = m_pDXRAPSUB;
+        }
+      }
       
       if (!pD3DDev)
       {
         if (m_pDXRAPSUB)
         {
           m_pDXRAPSUB->SetDevice(pD3DDev);
+          m_pDXRAPSUB->ReinitOSDDevice();
           // to see for deadlock needed to solve deadlock on stop
           m_pDXRAPSUBBackup = m_pDXRAPSUB;
           m_pDXRAPSUB = nullptr;
@@ -192,11 +207,14 @@ class MPMadPresenter : public CUnknown, public CCritSec
 
       if (pD3DDev)
       {
-        m_pDXRAPSUB = m_pDXRAPSUBBackup;
+        if (!m_pDXRAPSUB)
+        {
+          m_pDXRAPSUB = m_pDXRAPSUBBackup;
+        }
       }
 
       //CAutoLock cAutoLock(this); // TODO fix possible deadlock on stop need to understand the situation
-      return m_pDXRAPSUB ? m_pDXRAPSUB->SetDevice(pD3DDev) : E_UNEXPECTED;
+      return m_pDXRAPSUB ? m_pDXRAPSUB->SetDevice(pD3DDev) : m_pDXRAPSUBBackup->SetDevice(pD3DDev);
     }
 
     STDMETHODIMP Render(REFERENCE_TIME rtStart, int left, int top, int right, int bottom, int width, int height)
@@ -315,6 +333,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
     HRESULT SetupOSDVertex(IDirect3DVertexBuffer9* pVertextBuf);
     HRESULT SetupOSDVertex3D(IDirect3DVertexBuffer9* pVertextBuf);
     void ReinitOSD();
+    void ReinitOSDDevice();
     HRESULT SetupMadDeviceState();
 
     OAHWND m_hParent = reinterpret_cast<OAHWND>(nullptr);

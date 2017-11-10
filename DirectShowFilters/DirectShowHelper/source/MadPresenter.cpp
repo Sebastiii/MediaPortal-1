@@ -275,8 +275,8 @@ void MPMadPresenter::RepeatFrame(DWORD dwD3DDevice)
   {
     m_hWnd = reinterpret_cast<HWND>(m_hParent);
     IVideoWindow *pWindow = NULL;
-    if ((m_pMediaControl) && (SUCCEEDED(this->m_pMediaControl->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&pWindow)))) && (pWindow))
-    //if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    //if ((m_pMediaControl) && (SUCCEEDED(this->m_pMediaControl->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&pWindow)))) && (pWindow))
+    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
     {
       pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
       pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
@@ -1367,13 +1367,30 @@ void MPMadPresenter::ReinitOSD()
     m_hSharedOsdHandle = nullptr;
     m_pDevice->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pMPTextureGui.p, &m_hSharedGuiHandle);
     m_pDevice->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pMPTextureOsd.p, &m_hSharedOsdHandle);
-    m_pMadD3DDev->CreateVertexBuffer(sizeof(VID_FRAME_VERTEX) * 4, D3DUSAGE_WRITEONLY, D3DFVF_VID_FRAME_VERTEX, D3DPOOL_DEFAULT, &m_pMadGuiVertexBuffer.p, NULL);
-    m_pMadD3DDev->CreateVertexBuffer(sizeof(VID_FRAME_VERTEX) * 4, D3DUSAGE_WRITEONLY, D3DFVF_VID_FRAME_VERTEX, D3DPOOL_DEFAULT, &m_pMadOsdVertexBuffer.p, NULL);
-    m_pMadD3DDev->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pRenderTextureGui.p, &m_hSharedGuiHandle);
-    m_pMadD3DDev->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pRenderTextureOsd.p, &m_hSharedOsdHandle);
+    if (m_pMadD3DDev)
+    {
+      m_pMadD3DDev->CreateVertexBuffer(sizeof(VID_FRAME_VERTEX) * 4, D3DUSAGE_WRITEONLY, D3DFVF_VID_FRAME_VERTEX, D3DPOOL_DEFAULT, &m_pMadGuiVertexBuffer.p, NULL);
+      m_pMadD3DDev->CreateVertexBuffer(sizeof(VID_FRAME_VERTEX) * 4, D3DUSAGE_WRITEONLY, D3DFVF_VID_FRAME_VERTEX, D3DPOOL_DEFAULT, &m_pMadOsdVertexBuffer.p, NULL);
+      m_pMadD3DDev->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pRenderTextureGui.p, &m_hSharedGuiHandle);
+      m_pMadD3DDev->CreateTexture(m_dwGUIWidth, m_dwGUIHeight, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pRenderTextureOsd.p, &m_hSharedOsdHandle);
+    }
 
     Log("%s : ReinitOSD for : %d x %d", __FUNCTION__, m_dwGUIWidth, m_dwGUIHeight);
   }
+}
+
+void MPMadPresenter::ReinitOSDDevice()
+{
+    // Needed to update OSD/GUI when changing directx present parameter on resolution change.
+    if (m_pMPTextureGui) m_pMPTextureGui.Release();
+    if (m_pMPTextureOsd) m_pMPTextureOsd.Release();
+    if (m_pMadGuiVertexBuffer) m_pMadGuiVertexBuffer.Release();
+    if (m_pMadOsdVertexBuffer) m_pMadOsdVertexBuffer.Release();
+    if (m_pRenderTextureGui) m_pRenderTextureGui.Release();
+    if (m_pRenderTextureOsd) m_pRenderTextureOsd.Release();
+    m_hSharedGuiHandle = nullptr;
+    m_hSharedOsdHandle = nullptr;
+    Log("%s : ReinitOSDDevice for : %d x %d", __FUNCTION__, m_dwGUIWidth, m_dwGUIHeight);
 }
 
 HRESULT MPMadPresenter::SetupMadDeviceState()
@@ -1549,26 +1566,101 @@ HRESULT MPMadPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
       Log("MPMadPresenter::SetDevice() Shutdown() 1");
       m_deviceState.Shutdown();
       Log("MPMadPresenter::SetDevice() Shutdown() 2");
+
+      if (m_pMadD3DDev)
+      {
+        m_pMadD3DDev->Release();
+        m_pMadD3DDev = nullptr;
+        Log("MPMadPresenter::SetDevice() release m_pMadD3DDev");
+      }
+
+      ////////////// IOsdRenderCallback
+      ////////////Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+      ////////////if (!pOR)
+      ////////////{
+      ////////////  m_pMad = nullptr;
+      ////////////  return S_FALSE;
+      ////////////}
+
+      //////////////m_pORCB = new COsdRenderCallback(this);
+      ////////////if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", nullptr)))
+      ////////////{
+      ////////////  m_pMad = nullptr;
+      ////////////}
+
+      ////////////if (m_pSRCB)
+      ////////////{
+      ////////////  // nasty, but we have to let it know about our death somehow
+      ////////////  static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
+      ////////////  Log("MPMadPresenter::SetDevice() - m_pSRCB");
+      ////////////  m_pSRCB.Release();
+      ////////////}
+
+      //// ISubRenderCallback
+      //Com::SmartQIPtr<ISubRender> pSR = m_pMad;
+      //if (!pSR)
+      //{
+      //  m_pMad = nullptr;
+      //  return;
+      //}
+
+      //m_pSRCB = new CSubRenderCallback(this);
+      //if (FAILED(pSR->SetCallback(m_pSRCB)))
+      //{
+      //  m_pMad = nullptr;
+      //  return;
+      //}
+
       if (m_pCallback)
       {
         m_pCallback->SetSubtitleDevice(reinterpret_cast<LONG>(pD3DDev));
         Log("MPMadPresenter::SetDevice() reset subtitle device");
       }
-      if (m_pSRCB)
-      {
-        // nasty, but we have to let it know about our death somehow
-        static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(this);
-        Log("MPMadPresenter::Destructor() - m_pSRCB");
-      }
 
-      if (m_pORCB)
-      {
-        // nasty, but we have to let it know about our death somehow
-        static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(this);
-        Log("MPMadPresenter::Destructor() - m_pORCB");
-      }
+      //if (m_pSRCB)
+      //{
+      //  // nasty, but we have to let it know about our death somehow
+      //  static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(this);
+      //  Log("MPMadPresenter::Destructor() - m_pSRCB");
+      //}
+
+      //if (m_pORCB)
+      //{
+      //  // nasty, but we have to let it know about our death somehow
+      //  static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(this);
+      //  Log("MPMadPresenter::Destructor() - m_pORCB");
+      //}
       return S_OK;
     }
+
+    //////////// IOsdRenderCallback
+    //////////Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+    //////////if (!pOR)
+    //////////{
+    //////////  m_pMad = nullptr;
+    //////////  return S_FALSE;
+    //////////}
+
+    //////////m_pORCB = new COsdRenderCallback(this);
+    //////////if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
+    //////////{
+    //////////  m_pMad = nullptr;
+    //////////}
+
+    //////////// ISubRenderCallback
+    //////////Com::SmartQIPtr<ISubRender> pSR = m_pMad;
+    //////////if (!pSR)
+    //////////{
+    //////////  m_pMad = nullptr;
+    //////////  return S_FALSE;
+    //////////}
+
+    //////////m_pSRCB = new CSubRenderCallback(this);
+    //////////if (FAILED(pSR->SetCallback(m_pSRCB)))
+    //////////{
+    //////////  m_pMad = nullptr;
+    //////////  return S_FALSE;
+    //////////}
 
     ChangeDevice(pD3DDev); // if commented -> deadlock
     //m_pMadD3DDev = static_cast<IDirect3DDevice9Ex*>(pD3DDev);

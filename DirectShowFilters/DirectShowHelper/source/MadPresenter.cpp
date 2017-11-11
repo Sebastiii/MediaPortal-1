@@ -394,7 +394,11 @@ void MPMadPresenter::MadVrScreenResize(int x, int y, int width, int height, bool
   // Needed to update OSD/GUI when changing directx present parameter on resolution change.
   if (displayChange)
   {
-    //m_pReInitOSD = true; //TODO is it needed to enable back for IVideoWin madVR object
+    if (m_pMadD3DDev)
+    {
+      // Needed to be set to true only if madVR device is ready
+      m_pReInitOSD = true;
+    }
     m_dwGUIWidth = width;
     m_dwGUIHeight = height;
     Log("%s : done : %d x %d", __FUNCTION__, width, height);

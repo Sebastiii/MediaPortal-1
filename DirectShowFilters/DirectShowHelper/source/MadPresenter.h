@@ -97,48 +97,49 @@ class MPMadPresenter : public CUnknown, public CCritSec
 
     STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev)
     {
-      Log("MPMadPresenterH::SetDeviceOsd() device 0x:%x", pD3DDev);
-      if (m_pShutdownOsd || m_pmadVrStopping)
-      {
+      { // Scope for autolock for the local variable (lock, which when deleted releases the lock)
+        CAutoLock cAutoLock(this); // TODO fix possible deadlock on stop need to understand the situation
+        Log("MPMadPresenterH::SetDeviceOsd() device 0x:%x", pD3DDev);
+        if (m_pShutdownOsd || m_pmadVrStopping)
+        {
+          if (!pD3DDev)
+          {
+            if (m_pDXRAP)
+            {
+              m_pDXRAP->SetDeviceOsd(pD3DDev);
+              m_pDXRAP->ReinitD3DDevice();
+              // to see for deadlock needed to solve deadlock on stop
+              m_pDXRAP = nullptr;
+              Log("MPMadPresenterH::SetDeviceOsd() destroy");
+            }
+            return S_OK;
+          }
+        }
+
+        if (pD3DDev)
+        {
+          if (m_pDXRAP)
+          {
+            m_pDXRAPOSDBackup = m_pDXRAP;
+          }
+          if (!m_pDXRAP)
+          {
+            m_pDXRAP = m_pDXRAPOSDBackup;
+          }
+        }
+
         if (!pD3DDev)
         {
           if (m_pDXRAP)
           {
             m_pDXRAP->SetDeviceOsd(pD3DDev);
             m_pDXRAP->ReinitD3DDevice();
-            // to see for deadlock needed to solve deadlock on stop
             m_pDXRAP = nullptr;
-            Log("MPMadPresenterH::SetDeviceOsd() destroy");
+            return S_OK;
           }
-          return S_OK;
         }
+        return m_pDXRAP ? m_pDXRAP->SetDeviceOsd(pD3DDev) : E_UNEXPECTED;
       }
-
-      if (pD3DDev)
-      {
-        if (m_pDXRAP)
-        {
-          m_pDXRAPOSDBackup = m_pDXRAP;
-        }
-        if (!m_pDXRAP)
-        {
-          m_pDXRAP = m_pDXRAPOSDBackup;
-        }
-      }
-
-      if (!pD3DDev)
-      {
-        if (m_pDXRAP)
-        {
-          m_pDXRAP->SetDeviceOsd(pD3DDev);
-          m_pDXRAP->ReinitD3DDevice();
-          m_pDXRAP = nullptr;
-          return S_OK;
-        }
-      }
-
-      //CAutoLock cAutoLock(this); // TODO fix possible deadlock on stop need to understand the situation
-      return m_pDXRAP ? m_pDXRAP->SetDeviceOsd(pD3DDev) : E_UNEXPECTED;
     }
   };
 
@@ -173,48 +174,49 @@ class MPMadPresenter : public CUnknown, public CCritSec
 
     STDMETHODIMP SetDevice(IDirect3DDevice9* pD3DDev)
     {
-      Log("MPMadPresenterH::SetDeviceSub() device 0x:%x", pD3DDev);
-      if (m_pShutdownSub || m_pmadVrStopping)
-      {
+      { // Scope for autolock for the local variable (lock, which when deleted releases the lock)
+        CAutoLock cAutoLock(this); // TODO fix possible deadlock on stop need to understand the situation
+        Log("MPMadPresenterH::SetDeviceSub() device 0x:%x", pD3DDev);
+        if (m_pShutdownSub || m_pmadVrStopping)
+        {
+          if (!pD3DDev)
+          {
+            if (m_pDXRAPSUB)
+            {
+              m_pDXRAPSUB->SetDeviceSub(pD3DDev);
+              m_pDXRAPSUB->ReinitD3DDevice();
+              // to see for deadlock needed to solve deadlock on stop
+              m_pDXRAPSUB = nullptr;
+              Log("MPMadPresenterH::SetDeviceSub() destroy");
+            }
+            return S_OK;
+          }
+        }
+
+        if (pD3DDev)
+        {
+          if (m_pDXRAPSUB)
+          {
+            m_pDXRAPSUBBackup = m_pDXRAPSUB;
+          }
+          if (!m_pDXRAPSUB)
+          {
+            m_pDXRAPSUB = m_pDXRAPSUBBackup;
+          }
+        }
+
         if (!pD3DDev)
         {
           if (m_pDXRAPSUB)
           {
             m_pDXRAPSUB->SetDeviceSub(pD3DDev);
             m_pDXRAPSUB->ReinitD3DDevice();
-            // to see for deadlock needed to solve deadlock on stop
             m_pDXRAPSUB = nullptr;
-            Log("MPMadPresenterH::SetDeviceSub() destroy");
+            return S_OK;
           }
-          return S_OK;
         }
+        return m_pDXRAPSUB ? m_pDXRAPSUB->SetDeviceSub(pD3DDev) : E_UNEXPECTED;
       }
-
-      if (pD3DDev)
-      {
-        if (m_pDXRAPSUB)
-        {
-          m_pDXRAPSUBBackup = m_pDXRAPSUB;
-        }
-        if (!m_pDXRAPSUB)
-        {
-          m_pDXRAPSUB = m_pDXRAPSUBBackup;
-        }
-      }
-
-      if (!pD3DDev)
-      {
-        if (m_pDXRAPSUB)
-        {
-          m_pDXRAPSUB->SetDeviceSub(pD3DDev);
-          m_pDXRAPSUB->ReinitD3DDevice();
-          m_pDXRAPSUB = nullptr;
-          return S_OK;
-        }
-      }
-
-      //CAutoLock cAutoLock(this); // TODO fix possible deadlock on stop need to understand the situation
-      return m_pDXRAPSUB ? m_pDXRAPSUB->SetDeviceSub(pD3DDev) : E_UNEXPECTED;
     }
 
     STDMETHODIMP Render(REFERENCE_TIME rtStart, int left, int top, int right, int bottom, int width, int height)

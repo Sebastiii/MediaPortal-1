@@ -394,7 +394,7 @@ void MPMadPresenter::MadVrScreenResize(int x, int y, int width, int height, bool
   // Needed to update OSD/GUI when changing directx present parameter on resolution change.
   if (displayChange)
   {
-    m_pReInitOSD = true;
+    //m_pReInitOSD = true; //TODO is it needed to enable back for IVideoWin madVR object
     m_dwGUIWidth = width;
     m_dwGUIHeight = height;
     Log("%s : done : %d x %d", __FUNCTION__, width, height);
@@ -418,20 +418,20 @@ IBaseFilter* MPMadPresenter::Initialize()
       if (!m_pKodiWindowUse) // no Kodi window
       {
         m_hWnd = reinterpret_cast<HWND>(m_hParent);
-        ////pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-        ////pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-        //////pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
-        ////pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
-        //////pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+        //////pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+        //////pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+        ////////pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+        //////pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+        ////////pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
       }
       else if (InitMadvrWindow(m_hWnd) && m_pKodiWindowUse) // Kodi window
       {
         m_pCallback->DestroyHWnd(m_hWnd);
-        pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-        pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-        //pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
-        pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
-        //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+        //////pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+        //////pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+        ////////pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+        //////pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+        ////////pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
         Log("%s : Create DSPlayer window - hWnd: %i", __FUNCTION__, m_hWnd);
         Log("MPMadPresenter::Initialize() send DestroyHWnd value on C# side");
       }
@@ -1285,10 +1285,6 @@ HRESULT MPMadPresenter::SetDeviceOsd(IDirect3DDevice9* pD3DDev)
       // if commented -> deadlock
       ChangeDevice(pD3DDev);
 
-      // Release deviceState
-      m_deviceState.Shutdown();
-      Log("MPMadPresenter::SetDeviceOsd() Shutdown()");
-
       if (m_pMadD3DDev)
       {
         m_pMadD3DDev->Release();
@@ -1344,10 +1340,6 @@ HRESULT MPMadPresenter::SetDeviceSub(IDirect3DDevice9* pD3DDev)
     return S_OK;
   }
 
-  // Lock madVR thread while Shutdown()
-  //CAutoLock lock(&m_dsLock);
-
-  //CAutoLock cAutoLock(this);
   if (pD3DDev)
   {
     if (m_pCallback)
@@ -1380,13 +1372,6 @@ HRESULT MPMadPresenter::RenderEx3(REFERENCE_TIME rtStart, REFERENCE_TIME rtStop,
       Log("%s : shutdown", __FUNCTION__);
       return S_FALSE;
     }
-
-    // Lock madVR thread while Shutdown()
-    //CAutoLock lock(&m_dsLock);
-
-    //CAutoLock cAutoLock(this);
-
-    //Log("%s", __FUNCTION__);
 
     HRESULT hr = S_FALSE;
 
@@ -1423,6 +1408,8 @@ HRESULT MPMadPresenter::RenderEx3(REFERENCE_TIME rtStart, REFERENCE_TIME rtStop,
       m_pMadVRFrameCount = m_pCallback->ReduceMadvrFrame();
       Log("%s : reduce madVR frame to : %i", __FUNCTION__, m_pMadVRFrameCount);
 
+      // Authorize OSD placement
+      m_pReInitOSD = true;
     }
     m_deviceState.Store();
     SetupMadDeviceState();

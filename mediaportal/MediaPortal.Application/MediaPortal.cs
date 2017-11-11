@@ -1620,9 +1620,7 @@ public class MediaPortalApp : D3D, IRender
         // handle display changes
         case WM_DISPLAYCHANGE:
           Screen screen = Screen.FromControl(this);
-          if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR && AppActive &&
-              (!Equals(screen.Bounds.Size.Width, GUIGraphicsContext.currentScreen.Bounds.Width) ||
-               !Equals(screen.Bounds.Size.Height, GUIGraphicsContext.currentScreen.Bounds.Height)) ||
+          if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR && AppActive ||
               GUIGraphicsContext.ForcedRefreshRate3D)
           {
             NeedRecreateSwapChain = true;
@@ -1646,7 +1644,7 @@ public class MediaPortalApp : D3D, IRender
             {
               if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
               {
-                break;
+                //break;
               }
             }
             SetBounds(GUIGraphicsContext.currentScreen.Bounds.X, GUIGraphicsContext.currentScreen.Bounds.Y, GUIGraphicsContext.currentScreen.Bounds.Width, GUIGraphicsContext.currentScreen.Bounds.Height);

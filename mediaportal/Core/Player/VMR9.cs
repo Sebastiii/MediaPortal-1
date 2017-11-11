@@ -925,8 +925,6 @@ namespace MediaPortal.Player
               videoWinMadVr.put_Owner(ownerHandle);
               videoWinMadVr.put_WindowStyle((WindowStyle)((int)WindowStyle.Child + (int)WindowStyle.ClipChildren + (int)WindowStyle.ClipSiblings));
               videoWinMadVr.put_MessageDrain(ownerHandle);
-              videoWinMadVr.put_WindowStyleEx(WindowStyleEx.ToolWindow);
-              videoWinMadVr.SetWindowForeground(OABool.True);
             }
           }
           Log.Info("VMR9: added madVR Renderer to graph");

@@ -422,20 +422,20 @@ IBaseFilter* MPMadPresenter::Initialize()
       if (!m_pKodiWindowUse) // no Kodi window
       {
         m_hWnd = reinterpret_cast<HWND>(m_hParent);
-        //////pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-        //////pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-        ////////pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
-        //////pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
-        ////////pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+        pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+        pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+        //pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+        pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+        //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
       }
       else if (InitMadvrWindow(m_hWnd) && m_pKodiWindowUse) // Kodi window
       {
         m_pCallback->DestroyHWnd(m_hWnd);
-        //////pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
-        //////pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-        ////////pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
-        //////pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
-        ////////pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
+        pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd));
+        pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+        //pWindow->put_Visible(reinterpret_cast<OAHWND>(m_hWnd));
+        pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd));
+        //pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
         Log("%s : Create DSPlayer window - hWnd: %i", __FUNCTION__, m_hWnd);
         Log("MPMadPresenter::Initialize() send DestroyHWnd value on C# side");
       }
@@ -533,7 +533,7 @@ void MPMadPresenter::ConfigureMadvr()
     pMadVrCmd->SendCommandBool("disableSeekbar", true);
 
   if (Com::SmartQIPtr<IMadVRDirect3D9Manager> manager = m_pMad)
-    manager->ConfigureDisplayModeChanger(true, true);
+    manager->ConfigureDisplayModeChanger(false, true);
 
   //// TODO implement IMadVRSubclassReplacement
   //if (Com::SmartQIPtr<IMadVRSubclassReplacement> pSubclassReplacement = m_pMad)

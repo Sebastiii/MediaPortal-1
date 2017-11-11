@@ -2519,6 +2519,13 @@ public class MediaPortalApp : D3D, IRender
     _moveMouseCursorPositionRefresh = D3D._lastCursorPosition;
     _restoreLoadedScreen = false;
 
+    if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR && GUIGraphicsContext.InVmr9Render)
+    {
+      // Force VideoWindow to be refreshed with madVR when switching from video size like 16:9 to 4:3
+      GUIGraphicsContext.UpdateVideoWindow = true;
+      GUIGraphicsContext.VideoWindowChanged();
+    }
+
     // enable event handlers
     if (GUIGraphicsContext.DX9Device != null)
     {

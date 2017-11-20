@@ -775,7 +775,7 @@ void MediaControlStopThread()
 HRESULT MPMadPresenter::Stopping()
 {
   { // Scope for autolock for the local variable (lock, which when deleted releases the lock)
-    //CAutoLock lock(this);
+    CAutoLock lock(this);
     StopEvent = false;
 
     if (m_pSRCB)
@@ -834,7 +834,7 @@ HRESULT MPMadPresenter::Stopping()
       return E_FAIL;
     }
 
-    if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", nullptr)))
+    if (pOR && FAILED(pOR->OsdSetRenderCallback("MP-GUI", nullptr)))
     {
       m_pMad = nullptr;
       return E_FAIL;
@@ -848,7 +848,7 @@ HRESULT MPMadPresenter::Stopping()
       return E_FAIL;
     }
 
-    if (FAILED(pSR->SetCallback(nullptr)))
+    if (pSR && (FAILED(pSR->SetCallback(nullptr))))
     {
       m_pMad = nullptr;
       return E_FAIL;

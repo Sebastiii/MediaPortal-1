@@ -109,8 +109,8 @@ class MPMadPresenter : public CUnknown, public CCritSec
               m_pDXRAP = nullptr;
               Log("MPMadPresenterH::SetDeviceOsd() destroy");
             }
-            return S_OK;
           }
+          return S_OK;
         }
 
         CAutoLock cAutoLock(this); // TODO fix possible deadlock on stop need to understand the situation
@@ -172,8 +172,8 @@ class MPMadPresenter : public CUnknown, public CCritSec
               m_pDXRAPSUB = nullptr;
               Log("MPMadPresenterH::SetDeviceSub() destroy");
             }
-            return S_OK;
           }
+          return S_OK;
         }
 
         CAutoLock cAutoLock(this); // TODO fix possible deadlock on stop need to understand the situation

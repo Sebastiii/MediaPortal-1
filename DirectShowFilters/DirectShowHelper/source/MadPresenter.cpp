@@ -607,35 +607,6 @@ HRESULT MPMadPresenter::Shutdown()
       }
     }
 
-    // IOsdRenderCallback
-    Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-    if (!pOR)
-    {
-      m_pMad = nullptr;
-      return E_FAIL;
-    }
-
-    if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", nullptr)))
-    {
-      m_pMad = nullptr;
-      return E_FAIL;
-    }
-    pOR.Release(); // WIP release
-
-    Com::SmartQIPtr<ISubRender> pSR = m_pMad;
-    if (!pSR)
-    {
-      m_pMad = nullptr;
-      return E_FAIL;
-    }
-
-    if (FAILED(pSR->SetCallback(nullptr)))
-    {
-      m_pMad = nullptr;
-      return E_FAIL;
-    }
-    pSR.Release(); // WIP release
-
     if (m_pDevice != nullptr)
     {
       m_pDevice->Release();
@@ -854,6 +825,35 @@ HRESULT MPMadPresenter::Stopping()
       Sleep(10);
       // Wait that the stop event is finished
     }
+
+    // IOsdRenderCallback
+    Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+    if (!pOR)
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+
+    if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", nullptr)))
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+    pOR.Release(); // WIP release
+
+    Com::SmartQIPtr<ISubRender> pSR = m_pMad;
+    if (!pSR)
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+
+    if (FAILED(pSR->SetCallback(nullptr)))
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+    pSR.Release(); // WIP release
 
     if (Com::SmartQIPtr<IMadVRSettings> m_pSettings = m_pMad)
     {

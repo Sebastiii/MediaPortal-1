@@ -405,8 +405,6 @@ void MPMadPresenter::MadVr3D(bool Enable)
 
 IBaseFilter* MPMadPresenter::Initialize()
 {
-  CAutoLock cAutoLock(this);
-
   if (Com::SmartQIPtr<IBaseFilter> baseFilter = m_pMad)
   {
     if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
@@ -441,69 +439,72 @@ IBaseFilter* MPMadPresenter::Initialize()
 
 STDMETHODIMP MPMadPresenter::CreateRenderer(IUnknown** ppRenderer)
 {
-  CheckPointer(ppRenderer, E_POINTER);
-
-  if (m_pMad)
   {
-    return E_UNEXPECTED;
-  }
+    CAutoLock lock(this);
+    CheckPointer(ppRenderer, E_POINTER);
 
-  m_pMad.CoCreateInstance(CLSID_madVR, GetOwner());
-  if (!m_pMad)
-  {
-    return E_FAIL;
-  }
+    if (m_pMad)
+    {
+      return E_UNEXPECTED;
+    }
 
-  Com::SmartQIPtr<ISubRender> pSR = m_pMad;
-  if (!pSR)
-  {
-    m_pMad = nullptr;
-    return E_FAIL;
-  }
+    m_pMad.CoCreateInstance(CLSID_madVR, GetOwner());
+    if (!m_pMad)
+    {
+      return E_FAIL;
+    }
 
-  m_pSRCB = new CSubRenderCallback(this);
-  if (FAILED(pSR->SetCallback(m_pSRCB)))
-  {
-    m_pMad = nullptr;
-    return E_FAIL;
-  }
-
-  if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-  {
-    if (!pWindow)
+    Com::SmartQIPtr<ISubRender> pSR = m_pMad;
+    if (!pSR)
     {
       m_pMad = nullptr;
       return E_FAIL;
     }
 
-    // Create madVR video instance
-    Initialize();
+    m_pSRCB = new CSubRenderCallback(this);
+    if (FAILED(pSR->SetCallback(m_pSRCB)))
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+
+    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+    {
+      if (!pWindow)
+      {
+        m_pMad = nullptr;
+        return E_FAIL;
+      }
+
+      // Create madVR video instance
+      Initialize();
+    }
+
+    // IOsdRenderCallback
+    Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+    if (!pOR)
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+
+    m_pORCB = new COsdRenderCallback(this);
+    if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+    pOR.Release(); // WIP release
+
+    // Configure initial Madvr Settings
+    ConfigureMadvr();
+
+    //CDSRendererCallback::Get()->Register(this);
+
+    (*ppRenderer = reinterpret_cast<IUnknown*>(static_cast<INonDelegatingUnknown*>(this)))->AddRef();
+
+    return S_OK;
   }
-
-  // IOsdRenderCallback
-  Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-  if (!pOR)
-  {
-    m_pMad = nullptr;
-    return E_FAIL;
-  }
-
-  m_pORCB = new COsdRenderCallback(this);
-  if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
-  {
-    m_pMad = nullptr;
-    return E_FAIL;
-  }
-  pOR.Release(); // WIP release
-
-  // Configure initial Madvr Settings
-  ConfigureMadvr();
-
-  //CDSRendererCallback::Get()->Register(this);
-
-  (*ppRenderer = reinterpret_cast<IUnknown*>(static_cast<INonDelegatingUnknown*>(this)))->AddRef();
-
-  return S_OK;
 }
 
 STDMETHODIMP MPMadPresenter::SetGrabEvent(HANDLE pGrabEvent)

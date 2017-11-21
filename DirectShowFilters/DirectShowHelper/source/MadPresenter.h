@@ -80,7 +80,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
       {
         return S_OK;
       }
-      //CAutoLock cAutoLock(this);
+      CAutoLock cAutoLock(this);
       return m_pDXRAP ? m_pDXRAP->ClearBackground(name, frameStart, fullOutputRect, activeVideoRect) : E_UNEXPECTED;
     }
 
@@ -90,7 +90,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
       {
         return S_OK;
       }
-      //CAutoLock cAutoLock(this);
+      CAutoLock cAutoLock(this);
       return m_pDXRAP ? m_pDXRAP->RenderOsd(name, frameStart, fullOutputRect, activeVideoRect) : E_UNEXPECTED;
     }
 
@@ -189,7 +189,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
       {
         return S_OK;
       }
-      //CAutoLock cAutoLock(this);
+      CAutoLock cAutoLock(this);
       return m_pDXRAPSUB ? m_pDXRAPSUB->Render(rtStart, left, top, right, bottom, width, height) : E_UNEXPECTED;
     }
 
@@ -199,7 +199,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
       {
         return S_OK;
       }
-      //CAutoLock cAutoLock(this);
+      CAutoLock cAutoLock(this);
       return m_pDXRAPSUB ? m_pDXRAPSUB->Render(frameStart, left, top, right, bottom, width, height) : E_UNEXPECTED;
     }
 
@@ -209,7 +209,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
       {
         return S_OK;
       }
-      //CAutoLock cAutoLock(this);
+      CAutoLock cAutoLock(this);
       return m_pDXRAPSUB ? m_pDXRAPSUB->Render(frameStart, croppedVideoRect.left, croppedVideoRect.top, croppedVideoRect.right, croppedVideoRect.bottom, viewportRect.top, viewportRect.right) : E_UNEXPECTED;
     }
 
@@ -219,7 +219,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
       {
         return S_OK;
       }
-      //CAutoLock cAutoLock(this);
+      CAutoLock cAutoLock(this);
       return m_pDXRAPSUB ? m_pDXRAPSUB->RenderEx3(std::move(frameStart), std::move(frameStop), std::move(avgTimePerFrame), std::move(croppedVideoRect), std::move(originalVideoRect), std::move(viewportRect), std::move(videoStretchFactor), xOffsetInPixels) : E_UNEXPECTED;
     }
   };

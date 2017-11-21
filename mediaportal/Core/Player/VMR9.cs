@@ -165,7 +165,7 @@ namespace MediaPortal.Player
     [DllImport("dshowhelper.dll", CallingConvention = CallingConvention.Cdecl)]
     private static extern unsafe bool MadInit(IVMR9PresentCallback callback, int xposition, int yposition,
                                               int width, int height, uint dwD3DDevice, uint parent,
-                                              ref IBaseFilter madFilter, IGraphBuilder mPMediaControl);
+                                              ref IBaseFilter madFilter, IGraphBuilder mPGraphbuilder);
 
     [DllImport("dshowhelper.dll", CallingConvention = CallingConvention.Cdecl)]
     private static extern unsafe void MadDeinit();

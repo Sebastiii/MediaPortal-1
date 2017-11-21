@@ -308,7 +308,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
     IDirect3DDevice9Ex* m_pDevice = nullptr;
     IDirect3DDevice9Ex* m_pMadD3DDev = nullptr;
 
-    IGraphBuilder* m_pMediaControl = nullptr;
+    IGraphBuilder* m_pGraphbuilder = nullptr;
 
     Com::SmartPtr<IUnknown> m_pMad = nullptr;
 

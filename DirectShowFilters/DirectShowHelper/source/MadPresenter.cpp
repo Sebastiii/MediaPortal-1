@@ -77,14 +77,14 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
   return -1;  // Failure
 }
 
-MPMadPresenter::MPMadPresenter(IVMR9Callback* pCallback, int xposition, int yposition, int width, int height, OAHWND parent, IDirect3DDevice9* pDevice, IGraphBuilder* pMediaControl) :
+MPMadPresenter::MPMadPresenter(IVMR9Callback* pCallback, int xposition, int yposition, int width, int height, OAHWND parent, IDirect3DDevice9* pDevice, IGraphBuilder* pGraphbuilder) :
   CUnknown(NAME("MPMadPresenter"), nullptr),
   m_pCallback(pCallback),
   m_dwGUIWidth(width),
   m_dwGUIHeight(height),
   m_hParent(parent),
   m_pDevice(static_cast<IDirect3DDevice9Ex*>(pDevice)),
-  m_pMediaControl(pMediaControl)
+  m_pGraphbuilder(pGraphbuilder)
 {
   //Set to true to use the Kodi windows creation or false if not
   m_pKodiWindowUse = false;
@@ -97,7 +97,7 @@ MPMadPresenter::MPMadPresenter(IVMR9Callback* pCallback, int xposition, int ypos
   m_pCallback->RestoreDeviceSurface(reinterpret_cast<LONG>(m_pSurfaceDevice));
   m_pInitMadVRWindowPositionDone = false;
   m_pKodiWindowUse ? g_hWnd = reinterpret_cast<HWND>(m_hParent) : g_hWnd = nullptr;
-  mediaControlGraph = m_pMediaControl;
+  mediaControlGraph = m_pGraphbuilder;
   StopEvent = false;
   Log("MPMadPresenter::Constructor() Store Device Surface");
 }
@@ -166,20 +166,25 @@ void MPMadPresenter::SetMadVrPaused(bool paused)
   // TODO why it deadlock ?
   //CAutoLock cAutoLock(this);
 
-  /*if (m_pMediaControl)
+  IMediaControl *m_pControl = nullptr;
+  if ((mediaControlGraph) && (SUCCEEDED(mediaControlGraph->QueryInterface(__uuidof(IMediaControl), reinterpret_cast<LPVOID*>(&m_pControl)))) && (m_pControl))
   {
-    if (paused)
+    if (m_pControl)
     {
-      int counter = 0;
-      OAFilterState state = -1;
-      m_pMediaControl->GetState(100, &state);
-      if (state != State_Paused)
+      if (paused)
       {
-        m_pMediaControl->Pause();
-        Log("MPMadPresenter:::SetMadVrPaused() pause");
+        int counter = 0;
+        OAFilterState state = -1;
+        m_pControl->GetState(100, &state);
+        if (state != State_Paused)
+        {
+          m_pControl->Pause();
+          Log("MPMadPresenter:::SetMadVrPaused() pause");
+        }
       }
+      m_pControl->Release();
     }
-  }*/
+  }
 }
 
 void MPMadPresenter::RepeatFrame()
@@ -732,23 +737,11 @@ void MPMadPresenter::SetDsWndVisible(bool bVisible)
 UINT CALLBACK MediaControlThreadProc()
 {
   IMediaControl *m_pControl = nullptr;
-  //IMediaSeeking *m_pMediaSeek = nullptr;
-  //Assuming that you have valid media control interface and media seeking interface    using QueryInterface
-
   if ((mediaControlGraph) && (SUCCEEDED(mediaControlGraph->QueryInterface(__uuidof(IMediaControl), reinterpret_cast<LPVOID*>(&m_pControl)))) && (m_pControl))
   if (m_pControl)
   {
-    long long m_pStart = 0;
     m_pControl->Pause();
     m_pControl->GetState(1000, nullptr);
-
-    //if ((mediaControlGraph) && (SUCCEEDED(mediaControlGraph->QueryInterface(__uuidof(IMediaSeeking), reinterpret_cast<LPVOID*>(&m_pMediaSeek)))) && (m_pMediaSeek))
-    //{
-    //  m_pMediaSeek->SetPositions(&m_pStart, AM_SEEKING_AbsolutePositioning, nullptr, AM_SEEKING_NoPositioning);
-    //  m_pMediaSeek->Release();
-    //}
-    //m_pControl->Run();
-    //m_pControl->GetState(1000, nullptr);
 
     m_pControl->Stop();
     m_pControl->GetState(1000, nullptr);
@@ -884,30 +877,35 @@ HRESULT MPMadPresenter::Stopping()
       m_pORCB.Release();
     Log("MPMadPresenter::Stopping() m_pORCB release 2");
 
-    //if (m_pMediaControl)
+    //IMediaControl *m_pControl = nullptr;
+    //if ((mediaControlGraph) && (SUCCEEDED(mediaControlGraph->QueryInterface(__uuidof(IMediaControl), reinterpret_cast<LPVOID*>(&m_pControl)))) && (m_pControl))
     //{
-    //  Log("MPMadPresenter::Stopping() m_pMediaControl stop 1");
-    //  int counter = 0;
-    //  OAFilterState state = -1;
-    //  m_pMediaControl->Stop();
-    //  m_pMediaControl->GetState(100, &state);
-    //  while (state != State_Stopped)
+    //  if (m_pControl)
     //  {
-    //    Log("MPMadPresenter::Stopping() m_pMediaControl: graph still running");
-    //    Sleep(100);
-    //    m_pMediaControl->GetState(10, &state);
-    //    counter++;
-    //    if (counter >= 30)
+    //    Log("MPMadPresenter::Stopping() m_pMediaControl stop 1");
+    //    int counter = 0;
+    //    OAFilterState state = -1;
+    //    m_pControl->Stop();
+    //    m_pControl->GetState(100, &state);
+    //    while (state != State_Stopped)
     //    {
-    //      if (state != State_Stopped)
+    //      Log("MPMadPresenter::Stopping() m_pMediaControl: graph still running");
+    //      Sleep(100);
+    //      m_pControl->GetState(10, &state);
+    //      counter++;
+    //      if (counter >= 30)
     //      {
-    //        Log("MPMadPresenter::Stopping() m_pMediaControl: graph still running");
+    //        if (state != State_Stopped)
+    //        {
+    //          Log("MPMadPresenter::Stopping() m_pMediaControl: graph still running");
+    //        }
+    //        break;
     //      }
-    //      break;
     //    }
+    //    m_pControl->Release();
+    //    m_pControl = nullptr;
+    //    Log("MPMadPresenter::Stopping() m_pMediaControl stop 2");
     //  }
-    //  m_pMediaControl = nullptr;
-    //  Log("MPMadPresenter::Stopping() m_pMediaControl stop 2");
     //}
 
     if (m_pMadD3DDev != nullptr)

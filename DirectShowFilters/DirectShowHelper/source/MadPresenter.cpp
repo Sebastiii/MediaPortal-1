@@ -123,7 +123,8 @@ MPMadPresenter::~MPMadPresenter()
     Log("MPMadPresenter::Destructor() - m_pMad release 1");
     if (m_pMad)
     {
-      m_pMad.Release();
+      m_pMad.FullRelease();
+      m_pMad = nullptr;
     }
     Log("MPMadPresenter::Destructor() - m_pMad release 2");
 
@@ -778,54 +779,6 @@ HRESULT MPMadPresenter::Stopping()
     CAutoLock lock(this);
     StopEvent = false;
 
-    if (m_pSRCB)
-    {
-      // nasty, but we have to let it know about our death somehow
-      static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetShutdownSub(m_pShutdown);
-      static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
-      Log("MPMadPresenter::Stopping() m_pSRCB");
-    }
-
-    if (m_pORCB)
-    {
-      // nasty, but we have to let it know about our death somehow
-      static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetShutdownOsd(m_pShutdown);
-      static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
-      Log("MPMadPresenter::Stopping() m_pORCB");
-    }
-
-    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-    {
-      // set visible and autoshow to false, otherwise video might flicker on desktop when changing owner to NULL
-      pWindow->put_Visible(OAFALSE);
-      pWindow->put_AutoShow(OAFALSE);
-      // Set owner to NULL
-      pWindow->put_Owner(NULL);
-      pWindow.Release();
-    }
-
-    IVideoWindow* m_pWindow = nullptr;
-    if ((mediaControlGraph) && (SUCCEEDED(mediaControlGraph->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&m_pWindow)))) && (m_pWindow))
-    {
-      // set visible and autoshow to false, otherwise video might flicker on desktop when changing owner to NULL
-      m_pWindow->put_Visible(OAFALSE);
-      m_pWindow->put_AutoShow(OAFALSE);
-      // Set owner to NULL
-      m_pWindow->put_Owner(NULL);
-      m_pWindow->Release();
-    }
-
-    Log("MPMadPresenter::Stopping() start to stop instance - 1");
-
-    // Start mediacontrol stop in a thread
-    MediaControlStopThread();
-
-    while(!StopEvent)
-    {
-      Sleep(10);
-      // Wait that the stop event is finished
-    }
-
     // IOsdRenderCallback
     Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
     if (!pOR)
@@ -854,6 +807,33 @@ HRESULT MPMadPresenter::Stopping()
       return E_FAIL;
     }
     pSR.Release(); // WIP release
+
+    if (m_pSRCB)
+    {
+      // nasty, but we have to let it know about our death somehow
+      static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetShutdownSub(true);
+      static_cast<CSubRenderCallback*>(static_cast<ISubRenderCallback*>(m_pSRCB))->SetDXRAPSUB(nullptr);
+      Log("MPMadPresenter::Stopping() m_pSRCB");
+    }
+
+    if (m_pORCB)
+    {
+      // nasty, but we have to let it know about our death somehow
+      static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetShutdownOsd(true);
+      static_cast<COsdRenderCallback*>(static_cast<IOsdRenderCallback*>(m_pORCB))->SetDXRAP(nullptr);
+      Log("MPMadPresenter::Stopping() m_pORCB");
+    }
+
+    Log("MPMadPresenter::Stopping() start to stop instance - 1");
+
+    // Start mediacontrol stop in a thread
+    MediaControlStopThread();
+
+    while (!StopEvent)
+    {
+      Sleep(10);
+      // Wait that the stop event is finished
+    }
 
     if (Com::SmartQIPtr<IMadVRSettings> m_pSettings = m_pMad)
     {
@@ -929,9 +909,6 @@ HRESULT MPMadPresenter::Stopping()
     //  m_pMediaControl = nullptr;
     //  Log("MPMadPresenter::Stopping() m_pMediaControl stop 2");
     //}
-
-    // Release
-    m_deviceState.Shutdown();
 
     if (m_pMadD3DDev != nullptr)
     {

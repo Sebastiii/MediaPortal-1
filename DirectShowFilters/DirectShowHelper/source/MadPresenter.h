@@ -104,6 +104,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
           {
             if (m_pDXRAP)
             {
+              //m_pDXRAP->ReinitD3DDevice();
               m_pDXRAP->SetDeviceOsd(pD3DDev);
               // to see for deadlock needed to solve deadlock on stop
               m_pDXRAP = nullptr;
@@ -167,6 +168,7 @@ class MPMadPresenter : public CUnknown, public CCritSec
           {
             if (m_pDXRAPSUB)
             {
+              //m_pDXRAPSUB->ReinitD3DDevice();
               m_pDXRAPSUB->SetDeviceSub(pD3DDev);
               // to see for deadlock needed to solve deadlock on stop
               m_pDXRAPSUB = nullptr;

@@ -732,7 +732,7 @@ void MPMadPresenter::SetDsWndVisible(bool bVisible)
 UINT CALLBACK MediaControlThreadProc()
 {
   IMediaControl *m_pControl = nullptr;
-  IMediaSeeking *m_pMediaSeek = nullptr;
+  //IMediaSeeking *m_pMediaSeek = nullptr;
   //Assuming that you have valid media control interface and media seeking interface    using QueryInterface
 
   if ((mediaControlGraph) && (SUCCEEDED(mediaControlGraph->QueryInterface(__uuidof(IMediaControl), reinterpret_cast<LPVOID*>(&m_pControl)))) && (m_pControl))
@@ -742,13 +742,13 @@ UINT CALLBACK MediaControlThreadProc()
     m_pControl->Pause();
     m_pControl->GetState(1000, nullptr);
 
-    if ((mediaControlGraph) && (SUCCEEDED(mediaControlGraph->QueryInterface(__uuidof(IMediaSeeking), reinterpret_cast<LPVOID*>(&m_pMediaSeek)))) && (m_pMediaSeek))
-    {
-      m_pMediaSeek->SetPositions(&m_pStart, AM_SEEKING_AbsolutePositioning, nullptr, AM_SEEKING_NoPositioning);
-      m_pMediaSeek->Release();
-    }
-    m_pControl->Run();
-    m_pControl->GetState(1000, nullptr);
+    //if ((mediaControlGraph) && (SUCCEEDED(mediaControlGraph->QueryInterface(__uuidof(IMediaSeeking), reinterpret_cast<LPVOID*>(&m_pMediaSeek)))) && (m_pMediaSeek))
+    //{
+    //  m_pMediaSeek->SetPositions(&m_pStart, AM_SEEKING_AbsolutePositioning, nullptr, AM_SEEKING_NoPositioning);
+    //  m_pMediaSeek->Release();
+    //}
+    //m_pControl->Run();
+    //m_pControl->GetState(1000, nullptr);
 
     m_pControl->Stop();
     m_pControl->GetState(1000, nullptr);

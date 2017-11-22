@@ -407,31 +407,6 @@ IBaseFilter* MPMadPresenter::Initialize()
 {
   if (Com::SmartQIPtr<IBaseFilter> baseFilter = m_pMad)
   {
-    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-    {
-      // Create a madVR Window
-      if (!m_pKodiWindowUse) // no Kodi window
-      {
-        m_hWnd = reinterpret_cast<HWND>(m_hParent);
-        VERIFY(SUCCEEDED(pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd))));
-        VERIFY(SUCCEEDED(pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN)));
-        VERIFY(SUCCEEDED(pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd))));
-      }
-      else if (InitMadvrWindow(m_hWnd) && m_pKodiWindowUse) // Kodi window
-      {
-        m_pCallback->DestroyHWnd(m_hWnd);
-        VERIFY(SUCCEEDED(pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd))));
-        VERIFY(SUCCEEDED(pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN)));
-        VERIFY(SUCCEEDED(pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd))));
-        Log("%s : Create DSPlayer window - hWnd: %i", __FUNCTION__, m_hWnd);
-        Log("MPMadPresenter::Initialize() send DestroyHWnd value on C# side");
-      }
-      else
-      {
-        return nullptr;
-      }
-      pWindow.Release(); // WIP release
-    }
     return baseFilter;
   }
   return nullptr;
@@ -454,53 +429,6 @@ STDMETHODIMP MPMadPresenter::CreateRenderer(IUnknown** ppRenderer)
       return E_FAIL;
     }
 
-    Com::SmartQIPtr<ISubRender> pSR = m_pMad;
-    if (!pSR)
-    {
-      m_pMad = nullptr;
-      return E_FAIL;
-    }
-
-    m_pSRCB = new CSubRenderCallback(this);
-    if (FAILED(pSR->SetCallback(m_pSRCB)))
-    {
-      m_pMad = nullptr;
-      return E_FAIL;
-    }
-
-    if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-    {
-      if (!pWindow)
-      {
-        m_pMad = nullptr;
-        return E_FAIL;
-      }
-
-      // Create madVR video instance
-      Initialize();
-    }
-
-    // IOsdRenderCallback
-    Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
-    if (!pOR)
-    {
-      m_pMad = nullptr;
-      return E_FAIL;
-    }
-
-    m_pORCB = new COsdRenderCallback(this);
-    if (FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
-    {
-      m_pMad = nullptr;
-      return E_FAIL;
-    }
-    pOR.Release(); // WIP release
-
-    // Configure initial Madvr Settings
-    ConfigureMadvr();
-
-    //CDSRendererCallback::Get()->Register(this);
-
     (*ppRenderer = reinterpret_cast<IUnknown*>(static_cast<INonDelegatingUnknown*>(this)))->AddRef();
 
     return S_OK;
@@ -509,6 +437,69 @@ STDMETHODIMP MPMadPresenter::CreateRenderer(IUnknown** ppRenderer)
 
 STDMETHODIMP MPMadPresenter::SetGrabEvent(HANDLE pGrabEvent)
 {
+  // ISubRenderCallback
+  if (m_pMad)
+  {
+    Com::SmartQIPtr<ISubRender> pSR = m_pMad;
+    if (!pSR)
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+
+    m_pSRCB = new CSubRenderCallback(this);
+    if (pSR && FAILED(pSR->SetCallback(m_pSRCB)))
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+    pSR.Release(); // WIP release
+  }
+
+  // IOsdRenderCallback
+  if (m_pMad)
+  {
+    Com::SmartQIPtr<IMadVROsdServices> pOR = m_pMad;
+    if (!pOR)
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+
+    m_pORCB = new COsdRenderCallback(this);
+    if (pOR && FAILED(pOR->OsdSetRenderCallback("MP-GUI", m_pORCB)))
+    {
+      m_pMad = nullptr;
+      return E_FAIL;
+    }
+    pOR.Release(); // WIP release
+  }
+
+  if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+  {
+    // Create a madVR Window
+    if (!m_pKodiWindowUse) // no Kodi window
+    {
+      m_hWnd = reinterpret_cast<HWND>(m_hParent);
+      VERIFY(SUCCEEDED(pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd))));
+      VERIFY(SUCCEEDED(pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN)));
+      VERIFY(SUCCEEDED(pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd))));
+    }
+    else if (InitMadvrWindow(m_hWnd) && m_pKodiWindowUse) // Kodi window
+    {
+      m_pCallback->DestroyHWnd(m_hWnd);
+      VERIFY(SUCCEEDED(pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd))));
+      VERIFY(SUCCEEDED(pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN)));
+      VERIFY(SUCCEEDED(pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd))));
+      Log("%s : Create DSPlayer window - hWnd: %i", __FUNCTION__, m_hWnd);
+      Log("MPMadPresenter::Initialize() send DestroyHWnd value on C# side");
+    }
+    pWindow.Release(); // WIP release
+  }
+
+  // Configure initial Madvr Settings
+  ConfigureMadvr();
+
   m_pGrabEvent = pGrabEvent;
   return S_OK;
 }
@@ -554,17 +545,19 @@ void MPMadPresenter::ConfigureMadvr()
     manager.Release(); // WIP release
   }
 
-  //// TODO implement IMadVRSubclassReplacement
-  //if (Com::SmartQIPtr<IMadVRSubclassReplacement> pSubclassReplacement = m_pMad)
-  //{
-  //  pSubclassReplacement->DisableSubclassing();
-  //}
+  // TODO implement IMadVRSubclassReplacement
+  if (Com::SmartQIPtr<IMadVRSubclassReplacement> pSubclassReplacement = m_pMad)
+  {
+    pSubclassReplacement->DisableSubclassing();
+    pSubclassReplacement.Release(); // WIP release
+  }
 
-  //if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
-  //{
-  //  pWindow->SetWindowPosition(0, 0, m_dwGUIWidth, m_dwGUIHeight);
-  //  pWindow->put_Owner(m_hParent);
-  //}
+  if (Com::SmartQIPtr<IVideoWindow> pWindow = m_pMad)
+  {
+    pWindow->SetWindowPosition(m_Xposition, m_Yposition, m_dwGUIWidth, m_dwGUIHeight);
+    //pWindow->put_Owner(m_hParent);
+    pWindow.Release(); // WIP release
+  }
 
   if (Com::SmartQIPtr<IMadVRSettings> m_pSettings = m_pMad)
   {

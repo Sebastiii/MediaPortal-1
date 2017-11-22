@@ -980,9 +980,8 @@ BOOL MadInit(IVMR9Callback* callback, int xposition, int yposition, int width, i
 
   Com::SmartPtr<IUnknown> pRenderer;
   m_madPresenter->CreateRenderer(&pRenderer);
-  // Commented out this line initialize is done on CreateRenderer
-  //m_pVMR9Filter = m_madPresenter->Initialize();
   m_pVMR9Filter = Com::SmartQIPtr<IBaseFilter>(pRenderer).Detach();
+  m_pVMR9Filter = m_madPresenter->Initialize();
 
   // Start and init frame grabbing for the new method from madVR but we run into performance issue (so disable it for now)
   //InitFrameGrabbing();

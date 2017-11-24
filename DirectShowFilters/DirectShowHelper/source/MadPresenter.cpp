@@ -133,9 +133,13 @@ MPMadPresenter::~MPMadPresenter()
     {
       DeInitMadvrWindow();
     }
+    else if (mediaControlGraph)
+    {
+      mediaControlGraph->Release();
+    }
 
-    //DestroyWindow(reinterpret_cast<HWND>(pWnd));
-    //DestroyWindow(reinterpret_cast<HWND>(m_pVideoWnd));
+    DestroyWindow(reinterpret_cast<HWND>(pWnd));
+    DestroyWindow(reinterpret_cast<HWND>(m_pVideoWnd));
 
     Log("MPMadPresenter::Destructor() - instance 0x%x", this);
   }
@@ -407,6 +411,11 @@ IBaseFilter* MPMadPresenter::Initialize()
 {
   if (Com::SmartQIPtr<IBaseFilter> baseFilter = m_pMad)
   {
+    HRESULT hr = mediaControlGraph->AddFilter(baseFilter, _T("madVR Renderer"));
+    if (FAILED(hr))
+    {
+      return nullptr;
+    }
     return baseFilter;
   }
   return nullptr;
@@ -481,9 +490,26 @@ STDMETHODIMP MPMadPresenter::SetGrabEvent(HANDLE pGrabEvent)
     if (!m_pKodiWindowUse) // no Kodi window
     {
       m_hWnd = reinterpret_cast<HWND>(m_hParent);
-      VERIFY(SUCCEEDED(pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd))));
-      VERIFY(SUCCEEDED(pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN)));
-      VERIFY(SUCCEEDED(pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd))));
+      m_pVideoWnd = CWnd::FromHandle(m_hWnd);
+      IVideoWindow *m_pControl = nullptr;
+      if ((mediaControlGraph) && (SUCCEEDED(mediaControlGraph->QueryInterface(__uuidof(IVideoWindow), reinterpret_cast<LPVOID*>(&m_pControl)))) && (m_pControl))
+      {
+        if (m_pControl)
+        {
+          VERIFY(SUCCEEDED(m_pControl->put_Owner(reinterpret_cast<OAHWND>(m_hWnd))));
+          VERIFY(SUCCEEDED(m_pControl->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN)));
+          VERIFY(SUCCEEDED(m_pControl->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd))));
+          //VERIFY(SUCCEEDED(pWindow->put_Owner(reinterpret_cast<OAHWND>(m_hWnd))));
+          //VERIFY(SUCCEEDED(pWindow->put_WindowStyle(WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN)));
+          //VERIFY(SUCCEEDED(pWindow->put_MessageDrain(reinterpret_cast<OAHWND>(m_hWnd))));
+        }
+      }
+
+      for (pWnd = m_pVideoWnd->GetWindow(GW_CHILD); pWnd; pWnd = pWnd->GetNextWindow()) {
+        // 1. lets WM_SETCURSOR through (not needed as of now)
+        // 2. allows CMouse::CursorOnWindow() to work with m_pVideoWnd
+        pWnd->EnableWindow(FALSE);
+      }
     }
     else if (InitMadvrWindow(m_hWnd) && m_pKodiWindowUse) // Kodi window
     {
@@ -571,6 +597,8 @@ void MPMadPresenter::ConfigureMadvr()
     }
     m_pSettings.Release(); // WIP release
   }
+
+  SetWindowPos(m_hWnd, m_hWnd, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
 HRESULT MPMadPresenter::Shutdown()

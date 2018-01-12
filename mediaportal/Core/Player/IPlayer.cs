@@ -324,7 +324,7 @@ namespace MediaPortal.Player
     /// <summary>
     /// Method to stop playing
     /// </summary>
-    public virtual void Stop() { }
+    public virtual void Stop() {}
 
     /// <summary>
     /// Method to stop playing
@@ -753,5 +753,13 @@ namespace MediaPortal.Player
     public abstract void Dispose();
 
     #endregion
+
+    public virtual void AudioRendererRebuild()
+    {
+    }
+
+    public virtual void AudioRendererMediaControlStop()
+    {
+    }
   }
 }

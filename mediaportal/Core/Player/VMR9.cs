@@ -1775,35 +1775,35 @@ namespace MediaPortal.Player
       }
     }
 
-    public void Vmr9MadVrRelease()
-    {
-      lock (_syncRoot)
-      {
-        try
-        {
-          if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
-          {
-            if (g_vmr9?._vmr9Filter != null && _graphBuilder != null)
-            {
-              Log.Debug("VMR9: Vmr9MadVrRelease 1");
-              _commandNotify?.Set();
-              _graphBuilder?.RemoveFilter(g_vmr9?._vmr9Filter as DirectShowLib.IBaseFilter);
-              DirectShowUtil.CleanUpInterface(g_vmr9?._vmr9Filter);
-              _graphBuilder = null;
-              for (int i = 0; i < 20; ++i)
-              {
-                GUIWindowManager.MadVrProcess();
-              }
-              Log.Debug("VMR9: Vmr9MadVrRelease 2");
-            }
-          }
-        }
-        catch (Exception ex)
-        {
-          Log.Error("VMR9: Error while Vmr9MadVrRelease : {0}", ex);
-        }
-      }
-    }
+    //public void Vmr9MadVrRelease()
+    //{
+    //  lock (_syncRoot)
+    //  {
+    //    try
+    //    {
+    //      if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
+    //      {
+    //        if (g_vmr9?._vmr9Filter != null && _graphBuilder != null)
+    //        {
+    //          Log.Debug("VMR9: Vmr9MadVrRelease 1");
+    //          _commandNotify?.Set();
+    //          _graphBuilder?.RemoveFilter(g_vmr9?._vmr9Filter as DirectShowLib.IBaseFilter);
+    //          DirectShowUtil.CleanUpInterface(g_vmr9?._vmr9Filter);
+    //          _graphBuilder = null;
+    //          for (int i = 0; i < 20; ++i)
+    //          {
+    //            GUIWindowManager.MadVrProcess();
+    //          }
+    //          Log.Debug("VMR9: Vmr9MadVrRelease 2");
+    //        }
+    //      }
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //      Log.Error("VMR9: Error while Vmr9MadVrRelease : {0}", ex);
+    //    }
+    //  }
+    //}
 
     public void RestoreGuiForMadVr()
     {

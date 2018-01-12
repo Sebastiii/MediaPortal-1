@@ -238,6 +238,7 @@ namespace MediaPortal.GUI.Library
     protected internal static bool _loadSkinDone = false;
     private static bool isSkinXMLLoading = false;
     private static int FocusID { get; set; }
+    private static int FocusIDPrevious { get; set; }
 
     //-1=default from topbar.xml 
     // 0=flase from skin.xml
@@ -475,7 +476,7 @@ namespace MediaPortal.GUI.Library
 
       // if windows supports delayed loading then do nothing else load the xml file now
       // Why we need to force to load dialogProgress now to avoid error in some plugin like GuiRSS
-      if (SupportsDelayedLoad)// && !skinFileName.ToLowerInvariant().Contains("dialogprogress.xml")) // WIP testing regression for missing some part of GUI Text.
+      if (SupportsDelayedLoad && !skinFileName.ToLowerInvariant().Contains("dialogprogress.xml"))
       {
         return true;
       }
@@ -1507,6 +1508,12 @@ namespace MediaPortal.GUI.Library
     /// <returns>id of control or -1 if no control has the focus</returns>
     public virtual int GetFocusControlIdRender()
     {
+      if (FocusIDPrevious != FocusID)
+      {
+        FocusID = GetFocusControlId();
+        FocusIDPrevious = FocusID;
+        return FocusID;
+      }
       return FocusID;
     }
 

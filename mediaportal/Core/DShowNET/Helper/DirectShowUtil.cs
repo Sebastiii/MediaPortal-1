@@ -124,14 +124,14 @@ namespace DShowNET.Helper
         HResult hr = new HResult(graphBuilder.EnumFilters(out enumFilters));
 
         Log.Info("DirectShowUtil: Attach volume handler device to audio renderer: " + strFilterName);
-        //if (VolumeHandler.Instance._mixer != null)
-        //{
-        //  VolumeHandler.Instance._mixer.ChangeAudioDevice(strFilterName, false);
-        //  if (!VolumeHandler.Instance._mixer.DetectedDevice())
-        //  {
-        //    return null;
-        //  }
-        //}
+        if (VolumeHandler.Instance._mixer != null)
+        {
+          VolumeHandler.Instance._mixer.ChangeAudioDevice(strFilterName, false);
+          if (!VolumeHandler.Instance._mixer.DetectedDevice())
+          {
+            return null;
+          }
+        }
         GUIGraphicsContext.CurrentAudioRenderer = strFilterName;
 
         Log.Info("DirectShowUtils: First try to insert new audio renderer {0} ", strFilterName);
@@ -1769,8 +1769,8 @@ namespace DShowNET.Helper
       RemoveFilters(graphBuilder, String.Empty);
 
       Log.Info("Playback stopped and reverting volume OSD back to default device.");
-      //if (VolumeHandler.Instance._mixer != null) VolumeHandler.Instance._mixer.ChangeAudioDevice(string.Empty, true);
-      //GUIGraphicsContext.CurrentAudioRenderer = "";
+      if (VolumeHandler.Instance._mixer != null) VolumeHandler.Instance._mixer.ChangeAudioDevice(string.Empty, true);
+      GUIGraphicsContext.CurrentAudioRenderer = "";
     }
 
     public static void RemoveFilters(IGraphBuilder graphBuilder, string filterName)

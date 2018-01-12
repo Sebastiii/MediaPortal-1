@@ -3984,18 +3984,18 @@ namespace MediaPortal.Player
               {
                 GUIGraphicsContext.DX9Device.PresentationParameters.BackBufferWidth = client.Width;
                 GUIGraphicsContext.DX9Device.PresentationParameters.BackBufferHeight = client.Height;
-                // load resources
-                GUIGraphicsContext.Load();
+                //// load resources
+                //GUIGraphicsContext.Load();
 
-                GUIFontManager.LoadFonts(GUIGraphicsContext.GetThemedSkinFile(@"\fonts.xml"));
-                GUIFontManager.InitializeDeviceObjects();
+                //GUIFontManager.LoadFonts(GUIGraphicsContext.GetThemedSkinFile(@"\fonts.xml"));
+                //GUIFontManager.InitializeDeviceObjects();
 
-                // restart window manager
-                GUIWindowManager.PreInit();
+                //// restart window manager
+                //GUIWindowManager.PreInit();
 
-                // Don't resize to avoid wrong dialog opened
-                GUIWindowManager.OnResize();
-                //GUIWindowManager.OnDeviceRestored();
+                //// Don't resize to avoid wrong dialog opened
+                //GUIWindowManager.OnResize();
+                ////GUIWindowManager.OnDeviceRestored();
 
                 // send C++ displayChange
                 if (!GUIGraphicsContext.ForceMadVRRefresh3D)

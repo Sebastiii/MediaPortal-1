@@ -631,7 +631,7 @@ namespace MediaPortal
           GUIGraphicsContext.Vmr9Active)
       {
         GUIGraphicsContext.ForceMadVRRefresh3D = true;
-        return;
+        //return;
       }
 
       // disable event handlers
@@ -670,8 +670,8 @@ namespace MediaPortal
         GUIFontManager.Dispose();
         GUITextureManager.Dispose();
         // Don't need to resize when using madVR
-        if (GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR ||
-            !GUIGraphicsContext.Vmr9Active)
+        //if (GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR ||
+        //    !GUIGraphicsContext.Vmr9Active)
         {
           if (GUIGraphicsContext.DX9Device != null)
           {

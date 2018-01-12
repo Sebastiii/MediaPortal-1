@@ -148,6 +148,7 @@ namespace MediaPortal
     protected int                  MouseTimeOutFullscreen;   // Mouse activity timeout while in Fullscreen in seconds
     protected KeyPressEventArgs    PreviousKeyEvent;
     protected bool                 IsToggleMiniTV;           // madVR check to know if we need to do a resize when Toggle
+    protected bool                 _forceMpAlive;            // workaround to force form to refresh
 
     #endregion
 
@@ -162,6 +163,7 @@ namespace MediaPortal
     private readonly bool              _doNotWaitForVSync;        // debug setting
     private readonly bool              _showCursorWhenFullscreen; // should the mouse cursor be shown in full screen?
     private readonly bool              _reduceFrameRate;          // reduce frame rate when not in focus?
+    protected readonly bool            _useFcuBlackScreenFix;     // workaround for FCU edition to fix blackscreen on resolution change
     private bool                       _miniTvMode;               // 
     private bool                       _isClosing;                //
     private bool                       _isLoaded;                 //
@@ -257,6 +259,7 @@ namespace MediaPortal
         _alwaysOnTop             = xmlreader.GetValueAsBool("general", "alwaysontop", false);
         _reduceFrameRate         = xmlreader.GetValueAsBool("gui", "reduceframerate", false);
         _doNotWaitForVSync       = xmlreader.GetValueAsBool("debug", "donotwaitforvsync", false);
+        _useFcuBlackScreenFix    = xmlreader.GetValueAsBool("general", "usefcublackscreenfix", false);
       }
 
       _useExclusiveDirectXMode = !UseEnhancedVideoRenderer && _useExclusiveDirectXMode;
@@ -587,6 +590,19 @@ namespace MediaPortal
       Log.Info("D3D: Screen size: {0}x{1}", GUIGraphicsContext.currentScreen.Bounds.Width,
         GUIGraphicsContext.currentScreen.Bounds.Height);
 
+      // Needed this double check on first start
+      if (GUIGraphicsContext.DX9Device != null)
+      {
+        // Get Size
+        Size client = GUIGraphicsContext.form.ClientSize;
+        if (GUIGraphicsContext.DX9Device.PresentationParameters.BackBufferWidth != client.Width ||
+            GUIGraphicsContext.DX9Device.PresentationParameters.BackBufferHeight != client.Height)
+        {
+          // reset device if necessary
+          RecreateSwapChain(false);
+        }
+      }
+
       // if we do ToggleFullscreen when using madVR (needed to resize OSD)
       if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR)
       {
@@ -631,7 +647,7 @@ namespace MediaPortal
           GUIGraphicsContext.Vmr9Active)
       {
         GUIGraphicsContext.ForceMadVRRefresh3D = true;
-        //return;
+        return;
       }
 
       // disable event handlers
@@ -670,8 +686,8 @@ namespace MediaPortal
         GUIFontManager.Dispose();
         GUITextureManager.Dispose();
         // Don't need to resize when using madVR
-        //if (GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR ||
-        //    !GUIGraphicsContext.Vmr9Active)
+        if (GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR ||
+            !GUIGraphicsContext.Vmr9Active)
         {
           if (GUIGraphicsContext.DX9Device != null)
           {
@@ -913,7 +929,7 @@ namespace MediaPortal
       {
         try
         {
-          if (GUIGraphicsContext.DX9Device != null)
+          if (GUIGraphicsContext.DX9Device != null && !GUIGraphicsContext.DX9Device.Disposed)
           {
             // Check device
             GUIGraphicsContext.DX9Device.Present();
@@ -975,12 +991,15 @@ namespace MediaPortal
     /// </summary>
     protected void GetStats()
     {
-      FrameStatsLine1 = String.Format("last {0} fps ({1}x{2}), {3}",
-                                      GUIGraphicsContext.CurrentFPS.ToString("f2"),
-                                      GUIGraphicsContext.DX9Device.PresentationParameters.BackBufferWidth,
-                                      GUIGraphicsContext.DX9Device.PresentationParameters.BackBufferHeight,
-                                      GUIGraphicsContext.DX9Device.PresentationParameters.BackBufferFormat
-                                      );
+      if (GUIGraphicsContext.DX9Device != null)
+      {
+        FrameStatsLine1 = String.Format("last {0} fps ({1}x{2}), {3}",
+          GUIGraphicsContext.CurrentFPS.ToString("f2"),
+          GUIGraphicsContext.DX9Device.PresentationParameters.BackBufferWidth,
+          GUIGraphicsContext.DX9Device.PresentationParameters.BackBufferHeight,
+          GUIGraphicsContext.DX9Device.PresentationParameters.BackBufferFormat
+          );
+      }
 
       FrameStatsLine2 = String.Format("");
 
@@ -1107,7 +1126,7 @@ namespace MediaPortal
       var dialogMenu = (GUIDialogMenu)GUIWindowManager.GetWindow((int)GUIWindow.Window.WINDOW_DIALOG_MENU);
 
       // only minimize if visible and lost focus in windowed mode or if in fullscreen mode or if exiting to tray
-      if (IsVisible && ((Windowed && _lostFocus) || (!Windowed && MinimizeOnFocusLoss)) || ExitToTray)
+      if (IsVisible && ((Windowed && (_lostFocus && MinimizeOnFocusLoss) || (!Windowed && MinimizeOnFocusLoss)) || ExitToTray))
       {
         if (dialogMenu != null && (GUIWindowManager.RoutedWindow == (int)GUIWindow.Window.WINDOW_DIALOG_MENU || GUIWindowManager.RoutedWindow == (int)GUIWindow.Window.WINDOW_DIALOG_OK))
         {
@@ -1175,6 +1194,51 @@ namespace MediaPortal
       }
     }
 
+    /// <summary>
+    /// Focus Mediaportal is visible.
+    /// </summary>
+    protected void ForceMpAlive()
+    {
+      if (!_forceMpAlive)
+      {
+        return;
+      }
+      if (_useFcuBlackScreenFix)
+      {
+        Log.Debug("D3D: ForceMPAlive start.");
+        if (GUIGraphicsContext.form != null && GUIGraphicsContext.ActiveForm != IntPtr.Zero)
+        {
+          // Make MediaPortal window normal ( if minimized )
+          if (GUIGraphicsContext.form.WindowState == FormWindowState.Minimized)
+          {
+            Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.ShowNormal);
+            Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.Minimize);
+            this.WindowState = FormWindowState.Normal;
+            this.WindowState = FormWindowState.Minimized;
+            Log.Debug("D3D: ForceMPAlive Minimize.");
+          }
+          else
+          {
+            Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.Minimize);
+            Win32API.ShowWindow(GUIGraphicsContext.ActiveForm, Win32API.ShowWindowFlags.ShowNormal);
+            this.WindowState = FormWindowState.Minimized;
+            this.WindowState = FormWindowState.Normal;
+            Log.Debug("D3D: ForceMPAlive ShowNormal.");
+          }
+
+          // Make Mediaportal window focused
+          if (Win32API.SetForegroundWindow(GUIGraphicsContext.ActiveForm, true))
+          {
+            Log.Debug("D3D: ForceMPAlive Successfully switched focus.");
+          }
+
+          // Bring MP to front
+          GUIGraphicsContext.form.BringToFront();
+          _forceMpAlive = false;
+          Log.Debug("D3D: ForceMPAlive done.");
+        }
+      }
+    }
 
     /// <summary>
     /// Message Loop - Handles ANSI and Unicode Messages and dispatch them
@@ -1361,11 +1425,45 @@ namespace MediaPortal
       }
 
       Log.Debug("D3D: BuildPresentParams()");
-      var size = windowed ? GUIGraphicsContext.form.ClientSize : CalcMaxClientArea();
-      _presentParams.BackBufferWidth  = windowed ? size.Width  : GUIGraphicsContext.currentScreen.Bounds.Width;
-      _presentParams.BackBufferHeight = windowed ? size.Height : GUIGraphicsContext.currentScreen.Bounds.Height;
+
+      Screen screen = Screen.FromControl(this);
+      var size = new Size(screen.Bounds.Width, screen.Bounds.Height);
+
+      if (windowed)
+      {
+        size = GUIGraphicsContext.form.ClientSize;
+        var sizeMaxClient = CalcMaxClientArea();
+        
+        int backupSizeWidth = 0;
+        int backupSizeHeight = 0;
+  
+        using (Settings xmlreader = new MPSettings())
+        {
+          backupSizeWidth = xmlreader.GetValueAsInt("gui", "backupsizewidth", 0);
+          backupSizeHeight = xmlreader.GetValueAsInt("gui", "backupsizeheight", 0);
+        }        
+        if (backupSizeWidth != 0 && backupSizeHeight != 0)
+        {
+          size.Width = backupSizeWidth;
+          size.Height = backupSizeHeight;
+        }
+        // Sanity check and replace with sensible size values if necessary
+        if (size.Width < 256 || size.Height < 256 || size.Width > sizeMaxClient.Width || size.Height > sizeMaxClient.Height)
+        {
+          Log.Debug("D3D: BuildPresentParams(), invalid size {0} x {1} changed to {2} x {3}",  size.Width, size.Height, sizeMaxClient.Width, sizeMaxClient.Height);
+          size.Width = sizeMaxClient.Width;
+          size.Height = sizeMaxClient.Height;
+        }
+      }
+            
+      _presentParams.BackBufferWidth  = size.Width;
+      _presentParams.BackBufferHeight = size.Height;
       _presentParams.BackBufferFormat = Format.Unknown;
  
+      Log.Info("D3D: BuildPresentParams ClientSize from: {0}x{1}", GUIGraphicsContext.form.ClientSize.Width, GUIGraphicsContext.form.ClientSize.Height);
+      Log.Info("D3D: BuildPresentParams screen from: {0}x{1}", screen.Bounds.Width, screen.Bounds.Height);
+      Log.Info("D3D: BuildPresentParams size from: {0}x{1}", size.Width, size.Height);
+
       if (OSInfo.OSInfo.Win7OrLater())
       {
         if (!_doNotWaitForVSync)
@@ -1402,7 +1500,15 @@ namespace MediaPortal
       _presentParams.ForceNoMultiThreadedFlag  = false;
 
       GUIGraphicsContext.DirectXPresentParameters = _presentParams;
-      Log.Info("D3D: Back Buffer Size set to: {0}x{1}", _presentParams.BackBufferWidth, _presentParams.BackBufferHeight);
+      Log.Info("D3D: Back Buffer, size: {0}x{1}, windowed:{2}, count:{3}", _presentParams.BackBufferWidth, _presentParams.BackBufferHeight, windowed, _presentParams.BackBufferCount);
+      Log.Debug("D3D: BuildPresentParams(), windowed:{0}, BW:{1}, BH:{2}, SW:{3}, SH:{4}, BBC:{5}", 
+                windowed, 
+                GUIGraphicsContext.currentScreen.Bounds.Width, 
+                GUIGraphicsContext.currentScreen.Bounds.Height,
+                size.Width,
+                size.Height,
+                _presentParams.BackBufferCount
+                );
       Windowed = windowed;
 
       // enable event handlers
@@ -1515,8 +1621,11 @@ namespace MediaPortal
         if (_showCursorWhenFullscreen && !Windowed)
         {
           var ourCursor = Cursor;
-          GUIGraphicsContext.DX9Device.SetCursor(ourCursor, true);
-          GUIGraphicsContext.DX9Device.ShowCursor(true);
+          if (GUIGraphicsContext.DX9Device != null)
+          {
+            GUIGraphicsContext.DX9Device.SetCursor(ourCursor, true);
+            GUIGraphicsContext.DX9Device.ShowCursor(true);
+          }
         }
 
         // Setup the event handlers for our device
@@ -1613,22 +1722,6 @@ namespace MediaPortal
     /// </summary>
     private void CreateDirectX9ExDevice()
     {
-      // This part need to be checked for restoring correct BackBuffer
-      int backupSizeWidth = 0;
-      int backupSizeHeight = 0;
-
-      using (Settings xmlreader = new MPSettings())
-      {
-        backupSizeWidth = xmlreader.GetValueAsInt("gui", "backupsizewidth", 0);
-        backupSizeHeight = xmlreader.GetValueAsInt("gui", "backupsizeheight", 0);
-      }
-
-      if ((backupSizeWidth != 0) && (backupSizeHeight != 0) && Windowed)
-      {
-        _presentParams.BackBufferWidth = backupSizeWidth;
-        _presentParams.BackBufferHeight = backupSizeHeight;
-      }
-
       var param = new D3DPRESENT_PARAMETERS
                     {
                       BackBufferWidth            = (uint)_presentParams.BackBufferWidth,
@@ -1647,6 +1740,17 @@ namespace MediaPortal
                       PresentationInterval       = (uint)_presentParams.PresentationInterval,
                     };
 
+      Log.Debug("D3D: CreateDirectX9ExDevice() - Info, Adapter: {0}, DevType: {1}, BBW: {2}, BBH: {3}, BBC: {4}, Hz: {5}, PI: {6}, Wind: {7}, Flags: ({8})", 
+                 AdapterInfo.AdapterOrdinal,
+                 _deviceType,
+                 param.BackBufferWidth, 
+                 param.BackBufferHeight, 
+                 param.BackBufferCount, 
+                 param.FullScreen_RefreshRateInHz,
+                 param.PresentationInterval,
+                 param.Windowed,
+                 (_createFlags | CreateFlags.MultiThreaded | CreateFlags.FpuPreserve)
+                 );
 
       IDirect3D9Ex direct3D9Ex;
       Direct3D.Direct3DCreate9Ex(32, out direct3D9Ex);
@@ -1660,6 +1764,8 @@ namespace MediaPortal
                                           IntPtr.Zero,
                                           out dev);
 
+      Log.Debug("D3D: CreateDirectX9ExDevice(), hr: {0}", hr);
+
       if (hr == 0)
       {
         GUIGraphicsContext.DX9Device = new Device(dev);
@@ -1667,10 +1773,22 @@ namespace MediaPortal
       }
       else
       {
-        Log.Error("D3D: Could not create device");
+        Log.Error("D3D: CreateDirectX9ExDevice(), could not create device, hr: {0}", hr);
         // ReSharper disable LocalizableElement
         MessageBox.Show("Direct3D device could not be created.", "MediaPortal", MessageBoxButtons.OK, MessageBoxIcon.Error);
         // ReSharper restore LocalizableElement
+        
+        // Reset backup values to sensible values in case this has caused the error
+        using (var xmlWriter = new MPSettings())
+        {
+          Log.Debug("D3D: Reset 'backupsize' values after error");
+          var size = CalcMaxClientArea();          
+          xmlWriter.SetValue("gui", "lastlocationx", 0);
+          xmlWriter.SetValue("gui", "lastlocationy", 0);
+          xmlWriter.SetValue("gui", "backupsizewidth", size.Width);
+          xmlWriter.SetValue("gui", "backupsizeheight", size.Height);
+        }
+        
         try
         {
           Close();
@@ -1767,7 +1885,9 @@ namespace MediaPortal
             g_Player.PlayDVD(fileName);
             if (g_Player.Playing)
             {
-              g_Player.Player.SetResumeState(null);
+              // send resume thread async
+              var msg = new GUIMessage(GUIMessage.MessageType.GUI_MSG_SET_RESUME_STATE, 0, 0, 0, 0, 0, null);
+              GUIWindowManager.SendThreadMessage(msg);
             }
           }
         }
@@ -2345,6 +2465,10 @@ namespace MediaPortal
           MinimizeToTray();
           _firstTimeWindowDisplayed = false;
         }
+
+        // Workaround FCU
+        ForceMpAlive();
+
         // Set Cursor.Position to avoid mouse cursor show up itself (for ex on video)
         Log.Debug("D3D: Force mouse cursor to false");
         ShowMouseCursor(false);
@@ -2698,10 +2822,23 @@ namespace MediaPortal
       using (var xmlWriter = new MPSettings())
       {
         var backupSize = ClientSize;
-        xmlWriter.SetValue("gui", "lastlocationx", Location.X);
-        xmlWriter.SetValue("gui", "lastlocationy", Location.Y);
-        xmlWriter.SetValue("gui", "backupsizewidth", backupSize.Width);
-        xmlWriter.SetValue("gui", "backupsizeheight", backupSize.Height);
+        var sizeMaxClient = CalcMaxClientArea();
+        Log.Debug("D3D: Dispose() ClientSize: {0}x{1}, MaxClientSize: {2}x{3}", backupSize.Width, backupSize.Height, sizeMaxClient.Width, sizeMaxClient.Height);
+        
+        if (backupSize.Width < 256 || backupSize.Height < 256 || backupSize.Width > sizeMaxClient.Width || backupSize.Height > sizeMaxClient.Height)
+        {
+          xmlWriter.SetValue("gui", "lastlocationx", 0);
+          xmlWriter.SetValue("gui", "lastlocationy", 0);
+          xmlWriter.SetValue("gui", "backupsizewidth", sizeMaxClient.Width);
+          xmlWriter.SetValue("gui", "backupsizeheight", sizeMaxClient.Height);
+        }
+        else
+        {
+          xmlWriter.SetValue("gui", "lastlocationx", Location.X);
+          xmlWriter.SetValue("gui", "lastlocationy", Location.Y);
+          xmlWriter.SetValue("gui", "backupsizewidth", backupSize.Width);
+          xmlWriter.SetValue("gui", "backupsizeheight", backupSize.Height);
+        }
       }
 
       CleanupEnvironment();

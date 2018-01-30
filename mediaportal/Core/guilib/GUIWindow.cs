@@ -228,6 +228,7 @@ namespace MediaPortal.GUI.Library
     protected int _defaultControlId = 0;
     protected List<CPosition> _listPositions = new List<CPosition>();
     protected string _windowXmlFileName = "";
+    protected string _windowXmlFileNameRestore = "";
     protected bool _isOverlayAllowed = true;
     protected int _isOverlayAllowedCondition = 0;
     protected int _isOverlayAllowedOriginalCondition = GUIInfoManager.SYSTEM_ALWAYS_TRUE;
@@ -258,7 +259,7 @@ namespace MediaPortal.GUI.Library
 
     private VisualEffect _showAnimation = new VisualEffect(); // for dialogs
     private VisualEffect _closeAnimation = new VisualEffect();
-    public static SynchronizationContext _mainThreadContext = SynchronizationContext.Current;
+    public readonly static SynchronizationContext _mainThreadContext = SynchronizationContext.Current;
 
     #endregion
 
@@ -495,23 +496,32 @@ namespace MediaPortal.GUI.Library
 
     public bool LoadSkin()
     {
-      if (Thread.CurrentThread.Name != "MPMain" && Thread.CurrentThread.Name != "Config Main")
-      {
-        if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR &&
-            GUIGraphicsContext.InVmr9Render && GUIGraphicsContext.Vmr9Active)
-        {
-          return LoadSkinBool();
-        }
-        if (!GUIWindow._loadSkinDone)
-        {
-          GUIWindow._loadSkinDone = true;
-          if (!isSkinXMLLoading)
-          {
-            int result = GUIWindowManager.SendThreadCallbackSkin(LoadSkinThreaded, 0, 0, null);
-          }
-        }
-        return _loadSkinResult;
-      }
+      //if (Thread.CurrentThread.Name != "MPMain" && Thread.CurrentThread.Name != "Config Main")
+      //{
+      //  //if (GUIGraphicsContext.VideoRenderer == GUIGraphicsContext.VideoRendererType.madVR &&
+      //  //    GUIGraphicsContext.InVmr9Render && GUIGraphicsContext.Vmr9Active)
+      //  //{
+      //  //  return LoadSkinBool();
+      //  //}
+      //  //if (!GUIWindow._loadSkinDone)
+      //  {
+      //    //GUIWindow._loadSkinDone = true;
+      //    //if (!isSkinXMLLoading)
+      //    {
+      //      GUIWindowManager.SendThreadCallbackSkin((p1, p2, result) =>
+      //      {
+      //        _loadSkinDone = true;
+      //        _loadSkinResult = LoadSkinBool();
+      //        return 0;
+      //      }, 0, 0, null);
+
+      //      Log.Debug("LoadSkin() callback done with return value : {0}", _loadSkinResult);
+      //      _loadSkinDone = false;
+      //      return _loadSkinResult;
+      //    }
+      //  }
+      //  return _loadSkinResult;
+      //}
       return LoadSkinBool();
     }
 
@@ -530,7 +540,7 @@ namespace MediaPortal.GUI.Library
     public bool LoadSkinBool()
     {
       // don't alert loadskin in wrong thread for madVR (madVR works in non MP main thread)
-      if (GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR)
+      //if (GUIGraphicsContext.VideoRenderer != GUIGraphicsContext.VideoRendererType.madVR)
       {
         // add thread check to log calls not running in main thread/GUI
         String threadName = Thread.CurrentThread.Name;
@@ -549,7 +559,10 @@ namespace MediaPortal.GUI.Library
       }
 
       if (isSkinXMLLoading)
+      {
         Log.Error("LoadSkin: Running already so skipping");
+        return false;
+      }
 
       isSkinXMLLoading = true;
       _lastSkin = GUIGraphicsContext.Skin;
@@ -1271,6 +1284,12 @@ namespace MediaPortal.GUI.Library
         Dispose();
 
         LoadSkin();
+
+        // needed when this call is done from a thread
+        if (_windowAllocated)
+        {
+          return;
+        }
 
         HashSet<int> faultyControl = new HashSet<int>();
         // tell every control we're gonna alloc the resources next

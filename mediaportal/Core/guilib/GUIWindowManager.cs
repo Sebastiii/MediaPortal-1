@@ -318,6 +318,10 @@ namespace MediaPortal.GUI.Library
     /// <returns>Return value of callback( param1, param2, data )</returns>
     public static int SendThreadCallbackAndWait(Callback callback, int param1, int param2, object data)
     {
+      if (Thread.CurrentThread.Name == null)
+      {
+        Thread.CurrentThread.Name = "SendThreadCallbackAndWait";
+      }
       CallbackEnv env = new CallbackEnv();
       env.callback = callback;
       env.param1 = param1;
@@ -359,6 +363,10 @@ namespace MediaPortal.GUI.Library
 
     public static int SendThreadCallbackSkin(Callback callback, int param1, int param2, object data)
     {
+      if (Thread.CurrentThread.Name == null)
+      {
+        Thread.CurrentThread.Name = "SendThreadCallbackSkin";
+      }
       CallbackEnv env = new CallbackEnv();
       env.callback = callback;
       env.param1 = param1;
@@ -375,7 +383,7 @@ namespace MediaPortal.GUI.Library
       }
 
       Log.Debug("SendThreadCallbackAndWait - Waitone");
-      env.finished.WaitOne(200);
+      env.finished.WaitOne(25000);
 
       return env.result;
     }

@@ -34,18 +34,26 @@ namespace Cornerstone.Tools.Search {
         }
 
         private void Init() {
-            directory = new RAMDirectory();
-            analyzer = new StandardAnalyzer();
-            writer = new IndexWriter(directory, analyzer);
+
+            try
+            {
+                directory = new RAMDirectory();
+                analyzer = new StandardAnalyzer();
+                writer = new IndexWriter(directory, analyzer);
 
 
-            int i = 0;
-            string[] fieldList = new string[SearchFields.Count];
-            foreach (DBField currField in SearchFields) {
-                fieldList[i++] = currField.FieldName;
+                int i = 0;
+                string[] fieldList = new string[SearchFields.Count];
+                foreach (DBField currField in SearchFields)
+                {
+                    fieldList[i++] = currField.FieldName;
+                }
+
+                parser = new MultiFieldQueryParser(fieldList, analyzer);
             }
-
-            parser = new MultiFieldQueryParser(fieldList, analyzer);
+            catch (Exception)
+            {
+            }
         }
 
         public override void BuildIndex(List<T> items) {

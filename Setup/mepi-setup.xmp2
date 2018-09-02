@@ -179,9 +179,9 @@ public class Script
     <UpdateUrl>http://moving-pictures.googlecode.com/svn/trunk/Setup/update.xml</UpdateUrl>
     <Version>
       <Major>1</Major>
-      <Minor>5</Minor>
+      <Minor>8</Minor>
       <Build>1</Build>
-      <Revision>1487</Revision>
+      <Revision>3</Revision>
     </Version>
     <ExtensionDescription>Moving Pictures is a movie management plug-in that focuses on ease of use and flexibility. Point it to your movies collection and Moving Pictures will automatically load media rich details about your movies as quickly as possible with as little user interaction as possible. Once imported you can browse your collection via an easy to use but highly customizable interface.</ExtensionDescription>
     <VersionDescription>This release improves bluray support, fixes the missing delete buttons, fixes installer issues, and updates Dutch language support.</VersionDescription>
@@ -189,7 +189,7 @@ public class Script
     <OnlineLocation>http://moving-pictures.googlecode.com/files/moving-pictures-1.5.1-setup.mpei</OnlineLocation>
     <ReleaseDate>2013-02-25T15:05:53</ReleaseDate>
     <Tags>movie,movies,video,moving,pictures,movingpictures,film,films</Tags>
-    <Location>moving-pictures-setup.mpe1</Location>
+    <Location>moving-pictures-setup-[Version].mpe1</Location>
     <Params>
       <Items>
         <SectionParam Name="Icon">
@@ -235,7 +235,7 @@ public class Script
         <Param1 />
         <UpdateOption>OverwriteIfOlder</UpdateOption>
         <LocalFileName>..\MovingPictures\Resources\Images\icon_large.png</LocalFileName>
-        <ZipFileName>Installer{CopyFile}\{b9596a81-f5c9-4fe6-9ae3-15113e8d4640}-icon_large.png</ZipFileName>
+        <ZipFileName>Installer{CopyFile}\{f0dc75ef-e30c-4ff2-9ea2-8d44f724cd7b}-icon_large.png</ZipFileName>
         <DestinationFilename />
       </FileItem>
     </Items>

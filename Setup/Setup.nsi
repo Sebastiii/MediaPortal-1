@@ -148,20 +148,7 @@ Section "DefaultWide Skin Support" SEC0002
     ${If} ${FileExists} $SKIN_DIR\DefaultWide\*.*
         SetOverwrite ifnewer
 
-		${If} $DEFAULT_SKIN_VERSION == "OLD"
-
-        SetOutPath $SKIN_DIR\DefaultWide
-        File "..\MovingPictures\Resources\skins\DefaultWide-1.2\*.*"
-
-        SetOutPath $SKIN_DIR\DefaultWide\Media
-        File "..\MovingPictures\Resources\skins\DefaultWide-1.2\Media\*.*"  
-        
-        SetOutPath $SKIN_DIR\DefaultWide\Media\Categories
-        File "..\MovingPictures\Resources\skins\DefaultWide-1.2\Media\Categories\*.*"  
-		
-		${Else}
-
-        SetOutPath $SKIN_DIR\DefaultWide
+		SetOutPath $SKIN_DIR\DefaultWide
         File "..\MovingPictures\Resources\skins\DefaultWide\*.*"
 
         SetOutPath $SKIN_DIR\DefaultWide\Media
@@ -170,10 +157,6 @@ Section "DefaultWide Skin Support" SEC0002
         SetOutPath $SKIN_DIR\DefaultWide\Media\Categories
         File "..\MovingPictures\Resources\skins\DefaultWide\Media\Categories\*.*"  
 
-		
-		${EndIf}
-		
-
     ${EndIf}
 SectionEnd
 
@@ -181,19 +164,7 @@ Section "Default Skin Support" SEC0003
     ${If} ${FileExists} $SKIN_DIR\Default\*.*
         SetOverwrite ifnewer
 
-		${If} $DEFAULT_SKIN_VERSION == "OLD"
-		
-        SetOutPath $SKIN_DIR\Default
-        File "..\MovingPictures\Resources\skins\Default-1.2\*.*"
 
-        SetOutPath $SKIN_DIR\Default\Media
-        File "..\MovingPictures\Resources\skins\Default-1.2\Media\*.*"  
-        
-        SetOutPath $SKIN_DIR\Default\Media\Categories
-        File "..\MovingPictures\Resources\skins\Default-1.2\Media\Categories\*.*"  
-		
-		${Else}
-		
 		SetOutPath $SKIN_DIR\Default
         File "..\MovingPictures\Resources\skins\Default\*.*"
 
@@ -203,7 +174,6 @@ Section "Default Skin Support" SEC0003
         SetOutPath $SKIN_DIR\Default\Media\Categories
         File "..\MovingPictures\Resources\skins\Default\Media\Categories\*.*"  
 		
-		${EndIf}
 
     ${EndIf}
 SectionEnd
@@ -489,7 +459,7 @@ Function determineDefaultSkinVer
     check_point_ver:
 	    IntCmp $R4 ${MP_13B_POINT} success fail success 
     fail:
-        strcpy $DEFAULT_SKIN_VERSION "OLD"
+        strcpy $DEFAULT_SKIN_VERSION "NEW"
         Goto done
     success:
 	    strcpy $DEFAULT_SKIN_VERSION "NEW"

@@ -1472,6 +1472,20 @@
               <ZipFileName>Installer{CopyFile}\{78946977-912f-4fe3-97ac-22703755e602}-watched_percentage_100.png</ZipFileName>
               <DestinationFilename>%Skin%\Titan\Media\watched_percentage_100.png</DestinationFilename>
             </FileItem>
+            <FileItem InstallType="CopyFile" SystemFile="false" Modified="false">
+              <Param1 />
+              <UpdateOption>OverwriteIfOlder</UpdateOption>
+              <LocalFileName>..\MovingPictures\Resources\skins\Titan\Media\panel_myfilms_menu.png</LocalFileName>
+              <ZipFileName>Installer{CopyFile}\{5f23cdf6-9127-4517-8d54-20dbfd7b891f}-panel_myfilms_menu.png</ZipFileName>
+              <DestinationFilename>%Skin%\Titan\Media\panel_myfilms_menu.png</DestinationFilename>
+            </FileItem>
+            <FileItem InstallType="CopyFile" SystemFile="false" Modified="false">
+              <Param1 />
+              <UpdateOption>OverwriteIfOlder</UpdateOption>
+              <LocalFileName>..\MovingPictures\Resources\skins\Titan\Media\starblack_rating.png</LocalFileName>
+              <ZipFileName>Installer{CopyFile}\{d0ef505e-b537-45f2-8816-1e7eca96e976}-starblack_rating.png</ZipFileName>
+              <DestinationFilename>%Skin%\Titan\Media\starblack_rating.png</DestinationFilename>
+            </FileItem>
           </Items>
         </Files>
       </GroupItem>
@@ -1836,8 +1850,8 @@ public class Script
     <Version>
       <Major>1</Major>
       <Minor>8</Minor>
-      <Build>1</Build>
-      <Revision>2</Revision>
+      <Build>2</Build>
+      <Revision>3</Revision>
     </Version>
     <ExtensionDescription>Moving Pictures is a movie management plug-in that focuses on ease of use and flexibility. Point it to your movies collection and Moving Pictures will automatically load media rich details about your movies as quickly as possible with as little user interaction as possible. Once imported you can browse your collection via an easy to use but highly customizable interface.</ExtensionDescription>
     <VersionDescription>* Added automatic backup and restore of corrupt databases. When a corrupt database is detected on startup it will revert to the last known good one if it exists. Corrupt databases are also backed up but never restored.
@@ -3341,6 +3355,20 @@ public class Script
         <LocalFileName>..\MovingPictures\Resources\skins\Titan\Media\watched_percentage_100.png</LocalFileName>
         <ZipFileName>Installer{CopyFile}\{78946977-912f-4fe3-97ac-22703755e602}-watched_percentage_100.png</ZipFileName>
         <DestinationFilename>%Skin%\Titan\Media\watched_percentage_100.png</DestinationFilename>
+      </FileItem>
+      <FileItem InstallType="CopyFile" SystemFile="false" Modified="false">
+        <Param1 />
+        <UpdateOption>OverwriteIfOlder</UpdateOption>
+        <LocalFileName>..\MovingPictures\Resources\skins\Titan\Media\panel_myfilms_menu.png</LocalFileName>
+        <ZipFileName>Installer{CopyFile}\{5f23cdf6-9127-4517-8d54-20dbfd7b891f}-panel_myfilms_menu.png</ZipFileName>
+        <DestinationFilename>%Skin%\Titan\Media\panel_myfilms_menu.png</DestinationFilename>
+      </FileItem>
+      <FileItem InstallType="CopyFile" SystemFile="false" Modified="false">
+        <Param1 />
+        <UpdateOption>OverwriteIfOlder</UpdateOption>
+        <LocalFileName>..\MovingPictures\Resources\skins\Titan\Media\starblack_rating.png</LocalFileName>
+        <ZipFileName>Installer{CopyFile}\{d0ef505e-b537-45f2-8816-1e7eca96e976}-starblack_rating.png</ZipFileName>
+        <DestinationFilename>%Skin%\Titan\Media\starblack_rating.png</DestinationFilename>
       </FileItem>
       <FileItem InstallType="CopyFile" SystemFile="true" Modified="true">
         <Param1 />

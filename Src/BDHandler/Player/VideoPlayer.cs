@@ -140,7 +140,7 @@ namespace MediaPortal.Plugins.BDHandler.Player
             }
             catch (Exception ex)
             {
-              Log.Error("movieplayer: {0}", ex.Message);
+              BDHandlerCore.LogError("movieplayer: {0}", ex.Message);
             }
           }
 

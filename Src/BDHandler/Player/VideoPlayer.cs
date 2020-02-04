@@ -130,6 +130,25 @@ namespace MediaPortal.Plugins.BDHandler.Player
         /// </summary>
         protected override void OnInitialized()
         {
+          // Init LAV Splitter
+          streamLAVSelection = false;
+          using (Settings xmlreader = new MPSettings())
+          {
+            try
+            {
+              streamLAVSelection = xmlreader.GetValueAsBool("movieplayer", "streamlavselection", false);
+            }
+            catch (Exception ex)
+            {
+              Log.Error("movieplayer: {0}", ex.Message);
+            }
+          }
+
+          if (streamLAVSelection)
+          {
+            return;
+          }
+
           // AUDIO
           CultureInfo audioCulture = GetCultureInfoFromSettings("movieplayer", "audiolanguage");
           string selectedAudioLanguage = string.Empty;

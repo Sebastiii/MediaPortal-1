@@ -272,16 +272,16 @@ public class Script
     <Version>
       <Major>0</Major>
       <Minor>9</Minor>
-      <Build>7</Build>
-      <Revision>41</Revision>
+      <Build>9</Build>
+      <Revision>00</Revision>
     </Version>
     <ExtensionDescription>This process plugin wraps around the internal player factory and detects bluray media playback. When the user is trying to playback any file in a bluray structure the structure will be scanned and the user gets prompted to select a feature (corresponding to a mpls playlist). This will make it possible to playback bluray content that utilizes seamless branching (spanning one feature across multiple m2ts files). Because this plugin is wrapped around the internal player this will work by default in My Videos and others plugins like Moving Pictures.</ExtensionDescription>
-    <VersionDescription>MP 1.2.1 Final</VersionDescription>
+    <VersionDescription>MP 1.19 Final</VersionDescription>
     <DevelopmentStatus>Stable</DevelopmentStatus>
     <OnlineLocation>http://code.google.com/p/mp-bdhandler/files/BDHandler.mpe1</OnlineLocation>
-    <ReleaseDate>2011-09-19T11:00:00</ReleaseDate>
+    <ReleaseDate>2018-02-13T11:00:00</ReleaseDate>
     <Tags>bluray;handler</Tags>
-    <Location>..\MPEI\BDHandler1.14.0Final_madVR([Version]).mpe1</Location>
+    <Location>..\MPEI\BDHandler_([Version])_madVR.mpe1</Location>
     <Params>
       <Items>
         <SectionParam Name="Icon">

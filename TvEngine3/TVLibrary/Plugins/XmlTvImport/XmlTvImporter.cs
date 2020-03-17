@@ -331,14 +331,18 @@ namespace TvEngine
 
               if (isZip)
               {
+                bool RenameFileInZIp = (layer.GetSetting("xmlTvRenameFileInZip", "false").Value == "true");
                 try
                 {
                   string newLoc = layer.GetSetting("xmlTv", "").Value + @"\";
                   Log.Info("extracting zip file {0} to location {1}", path, newLoc);
                   ZipFile zip = new ZipFile(path);
                   zip.ExtractAll(newLoc, true);
-                  sourceFileName = newLoc + (zip.EntryFileNames[0]);
-                  destinationFileName = newLoc + "tvguide.xml";
+                  if(RenameFileInZIp == true)
+                   {
+                      sourceFileName = newLoc + (zip.EntryFileNames[0]);
+                      destinationFileName = newLoc + "tvguide.xml";
+                   }
                 }
                 catch (Exception ex2)
                 {
@@ -378,7 +382,7 @@ namespace TvEngine
           {
             try
             {
-              Log.Info("renaming file: {0} with new filename: {1}", sourceFileName, destinationFileName);
+              Log.Debug("renaming file: {0} with new filename: {1}", sourceFileName, destinationFileName);
               if (File.Exists(destinationFileName))
               {
                 File.Delete(destinationFileName);
@@ -387,7 +391,7 @@ namespace TvEngine
             }
             catch (Exception ex)
             {
-              Log.Info("Error renaming file: " + ex.Message);
+              Log.Error("Error renaming file: " + ex.Message);
             }
           }
         }

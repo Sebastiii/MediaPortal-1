@@ -674,6 +674,10 @@ Section "MediaPortal core files (required)" SecCore
   File "${git_MP}\LastFMLibrary\bin\${BUILD_TYPE}\LastFMLibrary.dll"
   ; MediaPortal.exe
   
+  ; libbluray
+  ;SetOutPath "$MPdir.Base\lib"
+  ;File /nonfatal /r /x .git "${MEDIAPORTAL.BASE}\lib\*"
+
   ; protocol implementations for MPUrlSourceSplitter.ax
   File "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter*"
   File "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter_Parser*"
@@ -681,14 +685,7 @@ Section "MediaPortal core files (required)" SecCore
   File "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter_libcurl*"
   File "${git_DirectShowFilters}\bin_Win32\avcodec-mpurlsourcesplitter-54.dll"
   File "${git_DirectShowFilters}\bin_Win32\avformat-mpurlsourcesplitter-54.dll"
-  File "${git_DirectShowFilters}\bin_Win32\avutil-mpurlsourcesplitter-51.dll" 
-  File "${git_DirectShowFilters}\bin_Win32\crashrpt.dll"
-  File "${git_DirectShowFilters}\bin_Win32\dbghelp.dll"
-  File "${git_DirectShowFilters}\bin_Win32\sendrpt.exe"
-  
-  ; libbluray
-  ;SetOutPath "$MPdir.Base\lib"
-  ;File /nonfatal /r /x .git "${MEDIAPORTAL.BASE}\lib\*"
+  File "${git_DirectShowFilters}\bin_Win32\avutil-mpurlsourcesplitter-51.dll"   
 
   #---------------------------------------------------------------------------
   # FILTER REGISTRATION
@@ -786,13 +783,13 @@ SectionEnd
 		Delete  "$MPdir.Base\mpaudiorenderer.ax"
 	${EndIf}
   ${EndIf}
-  ; filter for URL/IPTV support
-  !insertmacro UnInstallLib REGDLL NOTSHARED REBOOT_NOTPROTECTED "$INSTDIR\\MPUrlSourceSplitter.ax"
   ; Delete filter to be able to be registered with an updated version
   Delete  "$MPdir.Base\TsReader.ax"
   Delete  "$MPdir.Base\cccp.ax"
   Delete  "$MPdir.Base\DVBSub3.ax"
   Delete  "$MPdir.Base\BDReader.ax"
+  ; filter for URL/IPTV support
+  !insertmacro UnInstallLib REGDLL NOTSHARED REBOOT_NOTPROTECTED "$INSTDIR\\MPUrlSourceSplitter.ax"
 
 ### AUTO-GENERATED   UNINSTALLATION CODE ###
   !include "${git_MP}\Setup\uninstall.nsh"

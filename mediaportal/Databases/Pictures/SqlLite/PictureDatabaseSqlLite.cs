@@ -1,6 +1,6 @@
 #region Copyright (C) 2005-2020 Team MediaPortal
 
-// Copyright (C) 2005-2020 Team MediaPortal
+// Copyright (C) 2005-2017 Team MediaPortal
 // http://www.team-mediaportal.com
 // 
 // MediaPortal is free software: you can redistribute it and/or modify
@@ -413,7 +413,7 @@ namespace MediaPortal.Picture.Database
 
         ExifMetadata.Metadata exifData;
 
-        // We need the date nevertheless for database view / sorting
+        // we need the date nevertheless for database view / sorting
         if (!GetExifDetails(strPicture, ref iRotation, ref strDateTaken, out exifData))
         {
           try

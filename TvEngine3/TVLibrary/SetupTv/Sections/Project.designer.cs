@@ -118,10 +118,10 @@ namespace SetupTv.Sections
       this.linkLabelSourceforge.AutoSize = true;
       this.linkLabelSourceforge.Location = new System.Drawing.Point(18, 160);
       this.linkLabelSourceforge.Name = "linkLabelSourceforge";
-      this.linkLabelSourceforge.Size = new System.Drawing.Size(213, 13);
+      this.linkLabelSourceforge.Size = new System.Drawing.Size(223, 13);
       this.linkLabelSourceforge.TabIndex = 7;
       this.linkLabelSourceforge.TabStop = true;
-      this.linkLabelSourceforge.Text = "http://sourceforge.net/projects/mediaportal";
+      this.linkLabelSourceforge.Text = "https://sourceforge.net/projects/mediaportal/";
       this.linkLabelSourceforge.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel4_LinkClicked);
       // 
       // labelSourceForge
@@ -138,10 +138,10 @@ namespace SetupTv.Sections
       this.linkLabelOnlineDocumentation.AutoSize = true;
       this.linkLabelOnlineDocumentation.Location = new System.Drawing.Point(18, 120);
       this.linkLabelOnlineDocumentation.Name = "linkLabelOnlineDocumentation";
-      this.linkLabelOnlineDocumentation.Size = new System.Drawing.Size(162, 13);
+      this.linkLabelOnlineDocumentation.Size = new System.Drawing.Size(201, 13);
       this.linkLabelOnlineDocumentation.TabIndex = 5;
       this.linkLabelOnlineDocumentation.TabStop = true;
-      this.linkLabelOnlineDocumentation.Text = "http://wiki.team-mediaportal.com";
+      this.linkLabelOnlineDocumentation.Text = "https://www.team-mediaportal.com/wiki/";
       this.linkLabelOnlineDocumentation.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel3_LinkClicked);
       // 
       // labelOnlineDocumentation
@@ -176,10 +176,10 @@ namespace SetupTv.Sections
       this.linkLabelForums.AutoSize = true;
       this.linkLabelForums.Location = new System.Drawing.Point(18, 80);
       this.linkLabelForums.Name = "linkLabelForums";
-      this.linkLabelForums.Size = new System.Drawing.Size(170, 13);
+      this.linkLabelForums.Size = new System.Drawing.Size(175, 13);
       this.linkLabelForums.TabIndex = 3;
       this.linkLabelForums.TabStop = true;
-      this.linkLabelForums.Text = "http://forum.team-mediaportal.com";
+      this.linkLabelForums.Text = "https://forum.team-mediaportal.com";
       this.linkLabelForums.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel2_LinkClicked);
       // 
       // labelForums
@@ -196,10 +196,10 @@ namespace SetupTv.Sections
       this.linkLabelHomepage.AutoSize = true;
       this.linkLabelHomepage.Location = new System.Drawing.Point(18, 40);
       this.linkLabelHomepage.Name = "linkLabelHomepage";
-      this.linkLabelHomepage.Size = new System.Drawing.Size(168, 13);
+      this.linkLabelHomepage.Size = new System.Drawing.Size(173, 13);
       this.linkLabelHomepage.TabIndex = 1;
       this.linkLabelHomepage.TabStop = true;
-      this.linkLabelHomepage.Text = "http://www.team-mediaportal.com";
+      this.linkLabelHomepage.Text = "https://www.team-mediaportal.com";
       this.linkLabelHomepage.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
       // 
       // labelHomepage
@@ -240,7 +240,7 @@ namespace SetupTv.Sections
       this.labelVersion3.ForeColor = System.Drawing.Color.Red;
       this.labelVersion3.Location = new System.Drawing.Point(14, 33);
       this.labelVersion3.Name = "labelVersion3";
-      this.labelVersion3.Size = new System.Drawing.Size(174, 13);
+      this.labelVersion3.Size = new System.Drawing.Size(164, 13);
       this.labelVersion3.TabIndex = 2;
       this.labelVersion3.Text = "(Snapshot-Build for is testing only!!!)";
       // 

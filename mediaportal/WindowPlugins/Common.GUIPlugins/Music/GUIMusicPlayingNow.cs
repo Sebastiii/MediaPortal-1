@@ -288,7 +288,7 @@ namespace MediaPortal.GUI.Music
       // Do last.fm updates
       if (g_Player.IsMusic && _lookupSimilarTracks && g_Player.CurrentPosition >= 10.0 && lstSimilarTracks.Count == 0)
       {
-        Log.Debug("GUIMusicPlayingNow: Do Last.FM lookup for similar trracks");
+        Log.Debug("GUIMusicPlayingNow: Do Last.FM lookup for similar tracks");
         UpdateSimilarTracks(CurrentTrackFileName);
       }
     }
@@ -1192,56 +1192,65 @@ namespace MediaPortal.GUI.Music
     {
       if (tag == null) return;
 
-      if (lstSimilarTracks != null)
+      lstSimilarTracks.Clear();
+
+      List<LastFMSimilarTrack> tracks;
+      try
       {
-        lstSimilarTracks.Clear();
-
-        List<LastFMSimilarTrack> tracks;
-        try
-        {
-          Log.Debug("GUIMusicPlayingNow: Calling Last.FM to get similar Tracks");
-          tracks = LastFMLibrary.GetSimilarTracks(tag.Title, tag.Artist);
-        }
-        catch (Exception ex)
-        {
-          Log.Error("Error getting similar tracks in now playing");
-          Log.Error(ex);
-          return;
-        }
-
-        Log.Debug("GUIMusicPlayingNow: Number of similar tracks returned from Last.FM: {0}", tracks.Count);
-
-        var dbTracks = GetSimilarTracksInDatabase(tracks);
-
-        for (var i = 0; i < 3; i++)
-        {
-          if (dbTracks.Count > 0)
-          {
-            var trackNo = Randomizer.Next(0, dbTracks.Count);
-            var song = dbTracks[trackNo];
-
-            var t = song.ToMusicTag();
-            var item = new GUIListItem
-            {
-              AlbumInfoTag = song,
-              MusicTag = tag,
-              IsFolder = false,
-              Label = song.Title,
-              Path = song.FileName
-            };
-            item.AlbumInfoTag = song;
-            item.MusicTag = t;
-
-            GUIMusicBaseWindow.SetTrackLabels(ref item, MusicSort.SortMethod.Album);
-            dbTracks.RemoveAt(trackNo); // remove song after adding to playlist to prevent the same sone being added twice
-
-            if (g_Player.currentFileName != filename) return; // track has changed since request so ignore
-
-            lstSimilarTracks.Add(item);
-          }
-        }
-        Log.Debug("GUIMusicPlayingNow: Tracks returned after matching Last.FM results with database tracks: {0}", lstSimilarTracks.Count);
+        Log.Debug("GUIMusicPlayingNow: Calling Last.FM to get similar Tracks");
+        tracks = LastFMLibrary.GetSimilarTracks(tag.Title, tag.Artist);
       }
+      catch (LastFMException ex)
+      {
+        if (ex.LastFMError == MediaPortal.LastFM.LastFMException.LastFMErrorCode.InvalidParameters && ex.Message == "Track not found")
+        {
+          Log.Debug("LastFMException {0}", ex.Message);
+        }
+        else
+        {
+          Log.Error("LastFMException {0}", ex.Message);
+        }
+        return;
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Error getting similar tracks in now playing");
+        Log.Error(ex);
+        return;
+      }
+
+      Log.Debug("GUIMusicPlayingNow: Number of similar tracks returned from Last.FM: {0}", tracks.Count);
+
+      var dbTracks = GetSimilarTracksInDatabase(tracks);
+
+      for (var i = 0; i < 3; i++)
+      {
+        if (dbTracks.Count > 0)
+        {
+          var trackNo = Randomizer.Next(0, dbTracks.Count);
+          var song = dbTracks[trackNo];
+
+          var t = song.ToMusicTag();
+          var item = new GUIListItem
+                       {
+                         AlbumInfoTag = song,
+                         MusicTag = tag,
+                         IsFolder = false,
+                         Label = song.Title,
+                         Path = song.FileName
+                       };
+          item.AlbumInfoTag = song;
+          item.MusicTag = t;
+
+          GUIMusicBaseWindow.SetTrackLabels(ref item, MusicSort.SortMethod.Album);
+          dbTracks.RemoveAt(trackNo); // remove song after adding to playlist to prevent the same sone being added twice
+
+          if (g_Player.currentFileName != filename) return; // track has changed since request so ignore
+
+          lstSimilarTracks.Add(item);
+        }
+      }
+      Log.Debug("GUIMusicPlayingNow: Tracks returned after matching Last.FM results with database tracks: {0}", lstSimilarTracks.Count);
     }
 
     /// <summary>

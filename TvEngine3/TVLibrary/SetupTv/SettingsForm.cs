@@ -195,8 +195,8 @@ namespace SetupTv
         AddSection(EpgSection);
         AddChildSection(EpgSection, new TvEpgGrabber());
         AddChildSection(EpgSection, new RadioEpgGrabber());
-        AddChildSection(EpgSection, new EpgGenreMap());
 
+        AddSection(new EpgGenreMap());
         AddSection(new ScanSettings());
         AddSection(new TvRecording());
         AddSection(new TvTimeshifting());

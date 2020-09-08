@@ -197,15 +197,11 @@
     <Compile Include="AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Itunes\ConfigurationForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Itunes\ConfigurationForm.cs" />
     <Compile Include="Itunes\ITunesPlugin.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Winamp\ConfigurationForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Winamp\ConfigurationForm.cs" />
     <Compile Include="Winamp\WinampController.cs">
       <SubType>Code</SubType>
     </Compile>

@@ -219,9 +219,7 @@
     <Compile Include="GUIBasicHome.cs" />
     <Compile Include="GUIHome.cs" />
     <Compile Include="GUIHomeBaseWindow.cs" />
-    <Compile Include="GUIHomeSetupForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="GUIHomeSetupForm.cs" />
     <Compile Include="GUIHomeSetupForm.Designer.cs">
       <DependentUpon>GUIHomeSetupForm.cs</DependentUpon>
     </Compile>

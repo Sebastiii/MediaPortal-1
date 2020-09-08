@@ -271,9 +271,7 @@
     <Compile Include="Sections\Radio.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="Subdialogs\DlgWol.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Subdialogs\DlgWol.cs" />
     <Compile Include="Subdialogs\DlgWol.Designer.cs">
       <DependentUpon>DlgWol.cs</DependentUpon>
     </Compile>
@@ -407,33 +405,19 @@
     <Compile Include="Sections\TVZoom.Designer.cs">
       <DependentUpon>TVZoom.cs</DependentUpon>
     </Compile>
-    <Compile Include="SettingsForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="SettingsForm.cs" />
     <Compile Include="SettingsForm.Designer.cs">
       <DependentUpon>SettingsForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Subdialogs\DlgSkinSettings.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Subdialogs\DlgAddGenre.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Subdialogs\DlgMpcSubs.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Subdialogs\DlgConfigModeHint.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Subdialogs\DlgSkinSettings.cs" />
+    <Compile Include="Subdialogs\DlgAddGenre.cs" />
+    <Compile Include="Subdialogs\DlgMpcSubs.cs" />
+    <Compile Include="Subdialogs\DlgConfigModeHint.cs" />
     <Compile Include="Subdialogs\DlgConfigModeHint.Designer.cs">
       <DependentUpon>DlgConfigModeHint.cs</DependentUpon>
     </Compile>
-    <Compile Include="Subdialogs\EditShareForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Subdialogs\ParameterForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Subdialogs\EditShareForm.cs" />
+    <Compile Include="Subdialogs\ParameterForm.cs" />
     <Compile Include="SectionSettings.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -542,12 +526,8 @@
     <Compile Include="Sections\MusicShares.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="Subdialogs\DlgMovieConflicts.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Subdialogs\DlgProgress.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Subdialogs\DlgMovieConflicts.cs" />
+    <Compile Include="Subdialogs\DlgProgress.cs" />
     <Compile Include="Sections\GuiOSD.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -557,9 +537,7 @@
     <Compile Include="Sections\MusicImport.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="Subdialogs\DlgMovieList.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Subdialogs\DlgMovieList.cs" />
     <Compile Include="Sections\DVD.cs">
       <SubType>UserControl</SubType>
     </Compile>

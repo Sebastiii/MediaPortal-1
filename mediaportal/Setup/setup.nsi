@@ -595,10 +595,10 @@ Section "MediaPortal core files (required)" SecCore
   ${EndIf}
   ; NuGet binaries MediaInfo
   SetOutPath "$MPdir.Base\"
-  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.0\build\native\x86\MediaInfo.dll"
-  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.0\build\native\x86\libcrypto-1_1.dll"
-  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.0\build\native\x86\libcurl.dll"
-  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.0\build\native\x86\libssl-1_1.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.1\build\native\x86\MediaInfo.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.1\build\native\x86\libcrypto-1_1.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.1\build\native\x86\libcurl.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.1\build\native\x86\libssl-1_1.dll"
   File "${git_ROOT}\Packages\MediaInfo.Wrapper.20.9.2\lib\net40\MediaInfo.Wrapper.dll"
   ; NuGet binaries Sqlite
   SetOutPath "$MPdir.Base\"
@@ -607,6 +607,9 @@ Section "MediaPortal core files (required)" SecCore
   SetOutPath "$MPdir.Base\"
   File "${git_ROOT}\Packages\MetadataExtractor.2.4.3\lib\net35\MetadataExtractor.dll"
   File "${git_ROOT}\Packages\XmpCore.6.1.10\lib\net35\XmpCore.dll"
+  ; NuGet binaries UnidecodeSharp
+  SetOutPath "$MPdir.Base\"
+  File "${git_ROOT}\Packages\UnidecodeSharpFork.1.0.1\lib\UnidecodeSharpFork.dll"
   ; Bass Core
   SetOutPath "$MPdir.Base\"
   File "${git_MP}\core\bin\${BUILD_TYPE}\Bass.Net.dll"
@@ -629,7 +632,7 @@ Section "MediaPortal core files (required)" SecCore
   File "${git_ROOT}\Packages\BASSCombined.2.4.15\content\x86\plugins\bass*.dll"
   ; taglib-sharp
   SetOutPath "$MPdir.Base\"
-  File "${git_ROOT}\Packages\MediaPortal.TagLib.2.2.0.2\lib\net40\TagLibSharp.dll"
+  File "${git_ROOT}\Packages\MediaPortal.TagLib.2.3.0\lib\net40\TagLibSharp.dll"
   ; SharpLibHid
   SetOutPath "$MPdir.Base\"
   File "${git_ROOT}\Packages\SharpLibHid.1.4.4\lib\net40\SharpLibHid.dll"

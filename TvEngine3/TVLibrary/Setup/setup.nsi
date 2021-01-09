@@ -569,6 +569,7 @@ ${MementoSection} "MediaPortal TV Server" SecServer
   File "${git_DirectShowFilters}\MPIPTVSource\bin\${BUILD_TYPE}\MPIPTV_RTP.dll"
   File "${git_DirectShowFilters}\MPIPTVSource\bin\${BUILD_TYPE}\MPIPTV_RTSP.dll"
   File "${git_DirectShowFilters}\MPIPTVSource\bin\${BUILD_TYPE}\MPIPTV_UDP.dll"
+  File "${git_DirectShowFilters}\MPIPTVSource\bin\${BUILD_TYPE}\MPIPTVSource.ax"
 
   ; protocol implementations for MPUrlSourceSplitter.ax
   File "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter*"
@@ -583,6 +584,7 @@ ${MementoSection} "MediaPortal TV Server" SecServer
   File "${git_DirectShowFilters}\bin_Win32\crashrpt.dll"
   File "${git_DirectShowFilters}\bin_Win32\dbghelp.dll"
   File "${git_DirectShowFilters}\bin_Win32\sendrpt.exe"
+  File "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter.ax"
 
   File "${git_DirectShowFilters}\StreamingServer\bin\${BUILD_TYPE}\StreamingServer.dll"
   
@@ -613,8 +615,8 @@ ${MementoSection} "MediaPortal TV Server" SecServer
   !insertmacro InstallLib REGDLL NOTSHARED NOREBOOT_NOTPROTECTED "${git_DirectShowFilters}\MPWriter\bin\${BUILD_TYPE}\mpFileWriter.ax" "$INSTDIR\mpFileWriter.ax" "$INSTDIR"
   !insertmacro InstallLib REGDLL NOTSHARED NOREBOOT_NOTPROTECTED "${git_DirectShowFilters}\bin\Release\PDMpgMux.ax" "$INSTDIR\PDMpgMux.ax" "$INSTDIR"
   ; filter for IPTV support
-  ;!insertmacro InstallLib REGDLL NOTSHARED NOREBOOT_NOTPROTECTED "${git_DirectShowFilters}\MPIPTVSource\bin\${BUILD_TYPE}\MPIPTVSource.ax" "$INSTDIR\MPIPTVSource.ax" "$INSTDIR"
-  !insertmacro InstallLib REGDLL NOTSHARED NOREBOOT_NOTPROTECTED "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter.ax" "$INSTDIR\MPUrlSourceSplitter.ax" "$INSTDIR"
+  !insertmacro InstallLib REGDLL NOTSHARED NOREBOOT_NOTPROTECTED "${git_DirectShowFilters}\MPIPTVSource\bin\${BUILD_TYPE}\MPIPTVSource.ax" "$INSTDIR\MPIPTVSource.ax" "$INSTDIR"
+  ;!insertmacro InstallLib REGDLL NOTSHARED NOREBOOT_NOTPROTECTED "${git_DirectShowFilters}\bin_Win32\MPUrlSourceSplitter.ax" "$INSTDIR\MPUrlSourceSplitter.ax" "$INSTDIR"
 
   #---------------------------------------------------------------------------
   # SERVICE INSTALLATION

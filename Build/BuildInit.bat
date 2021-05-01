@@ -15,6 +15,7 @@ if not "%ProgramFiles(x86)%".=="". set progpath=%ProgramFiles(x86)%
 
 REM Define MSbuild path
 if not defined MSBUILD_PATH set MSBUILD_PATH=%progpath%\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe
+if not exist "%MSBUILD_PATH%" set MSBUILD_PATH=%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe
 if not exist "%MSBUILD_PATH%" set MSBUILD_PATH=%progpath%\Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin\MSBuild.exe
 if not exist "%MSBUILD_PATH%" set MSBUILD_PATH=%progpath%\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\bin\MSBuild.exe
 if not exist "%MSBUILD_PATH%" set MSBUILD_PATH=%progpath%\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\bin\MSBuild.exe
@@ -54,4 +55,4 @@ REM copy BuildReport resources
 xcopy /I /Y .\BuildReport\_BuildReport_Files .\_BuildReport_Files
 
 REM Download NuGet packages
-@"%MSBUILD_PATH%" RestorePackages.targets
+REM @"%MSBUILD_PATH%" RestorePackages.targets

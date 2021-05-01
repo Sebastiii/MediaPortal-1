@@ -87,7 +87,9 @@
     <Compile Include="PowerScheduler.cs" />
     <Compile Include="PowerSchedulerClientPlugin.cs" />
     <Compile Include="PowerSchedulerFactory.cs" />
-    <Compile Include="Setup\PowerSchedulerSetup.cs" />
+    <Compile Include="Setup\PowerSchedulerSetup.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Setup\PowerSchedulerSetup.designer.cs">
       <DependentUpon>PowerSchedulerSetup.cs</DependentUpon>
     </Compile>

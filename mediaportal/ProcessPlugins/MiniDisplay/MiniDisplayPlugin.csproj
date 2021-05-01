@@ -161,7 +161,9 @@
     </Compile>
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="MiniDisplay.cs" />
-    <Compile Include="SetupForm.cs" />
+    <Compile Include="SetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="MiniDisplay.lcd.gif" />

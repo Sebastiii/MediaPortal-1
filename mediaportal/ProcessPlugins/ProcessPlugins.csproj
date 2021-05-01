@@ -240,7 +240,9 @@
     </Compile>
     <Compile Include="LastFMScrobbler\LastFMScrobbler.cs" />
     <Compile Include="MusicDBReorg\MusicDBReorg.cs" />
-    <Compile Include="MusicDBReorg\MusicDBReorgSettings.cs" />
+    <Compile Include="MusicDBReorg\MusicDBReorgSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MusicDBReorg\MusicDBReorgSettings.Designer.cs">
       <DependentUpon>MusicDBReorgSettings.cs</DependentUpon>
     </Compile>

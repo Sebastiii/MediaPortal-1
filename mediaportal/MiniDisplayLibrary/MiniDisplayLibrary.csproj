@@ -120,25 +120,33 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\Futaba\MDM166A\FutabaMDM166A.cs" />
-    <Compile Include="MiniDisplayPlugin\Drivers\Futaba\MDM166A\FutabaMDM166A_AdvancedSetupForm.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\Futaba\MDM166A\FutabaMDM166A_AdvancedSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\Futaba\MDM166A\FutabaMDM166A_AdvancedSetupForm.Designer.cs">
       <DependentUpon>FutabaMDM166A_AdvancedSetupForm.cs</DependentUpon>
     </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\iMON\SoundGraphImon.cs" />
     <Compile Include="MiniDisplayPlugin\Drivers\iMON\SoundGraphDisplay.cs" />
-    <Compile Include="MiniDisplayPlugin\Drivers\iMON\SoundGraphImonChooseDisplayTypeForm.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\iMON\SoundGraphImonChooseDisplayTypeForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\iMON\SoundGraphImonChooseDisplayTypeForm.Designer.cs">
       <DependentUpon>SoundGraphImonChooseDisplayTypeForm.cs</DependentUpon>
     </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\iMON\SoundGraphImonLcd.cs" />
     <Compile Include="MiniDisplayPlugin\Drivers\iMON\SoundGraphImonVfd.cs" />
-    <Compile Include="MiniDisplayPlugin\Drivers\iMON\SoundGraphImonSettingsForm.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\iMON\SoundGraphImonSettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\iMON\SoundGraphImonSettingsForm.designer.cs">
       <DependentUpon>SoundGraphImonSettingsForm.cs</DependentUpon>
     </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\SharpLibDisplay\SharpLibDisplay.cs" />
     <Compile Include="MiniDisplayPlugin\Drivers\SharpLibDisplay\SharpLibDisplaySettings.cs" />
-    <Compile Include="MiniDisplayPlugin\Drivers\SharpLibDisplay\SharpLibDisplaySettingsForm.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\SharpLibDisplay\SharpLibDisplaySettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\SharpLibDisplay\SharpLibDisplaySettingsForm.designer.cs">
       <DependentUpon>SharpLibDisplaySettingsForm.cs</DependentUpon>
     </Compile>
@@ -155,66 +163,100 @@
     <Compile Include="MiniDisplayPlugin\Drivers\CFontz.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MiniDisplayPlugin\Drivers\CFontz_AdvancedSetupForm.cs" />
-    <Compile Include="MiniDisplayPlugin\Drivers\DebugForm.cs" />
-    <Compile Include="MiniDisplayPlugin\Drivers\DebugForm_AdvancedSetupForm.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\CFontz_AdvancedSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MiniDisplayPlugin\Drivers\DebugForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MiniDisplayPlugin\Drivers\DebugForm_AdvancedSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\GenericSerial.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MiniDisplayPlugin\Drivers\GenericSerial_AdvancedSetupForm.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\GenericSerial_AdvancedSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\iMON-Legacy\iMONDisplay.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\iMON-Legacy\iMONLCDg.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MiniDisplayPlugin\Drivers\iMON-Legacy\iMONLCDg_AdvancedSetupForm.cs" />
-    <Compile Include="MiniDisplayPlugin\Drivers\iMON-Legacy\iMONLCDg_FontEdit.cs" />
-    <Compile Include="MiniDisplayPlugin\Drivers\iMON-Legacy\iMONLCDg_IconEdit.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\iMON-Legacy\iMONLCDg_AdvancedSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MiniDisplayPlugin\Drivers\iMON-Legacy\iMONLCDg_FontEdit.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MiniDisplayPlugin\Drivers\iMON-Legacy\iMONLCDg_IconEdit.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\IOWarrior.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MiniDisplayPlugin\Drivers\IOWarrior_AdvancedSetupForm.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\IOWarrior_AdvancedSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\ISession.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\LCDHypeWrapper.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MiniDisplayPlugin\Drivers\LCDHypeWrapper_AdvancedSetupForm.cs" />
-    <Compile Include="MiniDisplayPlugin\Drivers\LCDHypeWrapper_SetupPickerForm.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\LCDHypeWrapper_AdvancedSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MiniDisplayPlugin\Drivers\LCDHypeWrapper_SetupPickerForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\MatrixGX.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MiniDisplayPlugin\Drivers\MatrixGX_AdvancedSetupForm.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\MatrixGX_AdvancedSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\MatrixMX.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MiniDisplayPlugin\Drivers\MatrixMX_AdvancedSetupForm.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\MatrixMX_AdvancedSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\MCEDisplay.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\MD8800.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MiniDisplayPlugin\Drivers\MD8800_AdvancedSetupForm.cs" />
-    <Compile Include="MiniDisplayPlugin\Drivers\VLSYS_AdvancedSetupForm.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\MD8800_AdvancedSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MiniDisplayPlugin\Drivers\VLSYS_AdvancedSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\VLSYS_Mplay.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="MiniDisplayPlugin\Drivers\xPL_Connector.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MiniDisplayPlugin\Drivers\xPL_Connector_AdvancedSetupForm.cs" />
+    <Compile Include="MiniDisplayPlugin\Drivers\xPL_Connector_AdvancedSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\IDisplay.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MiniDisplayPlugin\MessageEditForm.cs" />
+    <Compile Include="MiniDisplayPlugin\MessageEditForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Structures.cs" />
     <Compile Include="MiniDisplayPlugin\Properties\Resources.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MiniDisplayPlugin\PropertyBrowser.cs" />
+    <Compile Include="MiniDisplayPlugin\PropertyBrowser.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MiniDisplayPlugin\Settings.cs">
       <SubType>Code</SubType>
     </Compile>

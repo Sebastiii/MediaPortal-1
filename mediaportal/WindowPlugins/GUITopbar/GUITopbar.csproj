@@ -219,7 +219,9 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="TopBarSetup.cs" />
-    <Compile Include="TopBarSetupForm.cs" />
+    <Compile Include="TopBarSetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <EmbeddedResource Include="Properties\Resources.resx">
       <SubType>Designer</SubType>
       <Generator>ResXFileCodeGenerator</Generator>

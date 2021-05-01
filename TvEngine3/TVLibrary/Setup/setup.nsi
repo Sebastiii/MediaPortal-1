@@ -1,6 +1,6 @@
-#region Copyright (C) 2005-2020 Team MediaPortal
+#region Copyright (C) 2005-2021 Team MediaPortal
 /*
-// Copyright (C) 2005-2020 Team MediaPortal
+// Copyright (C) 2005-2021 Team MediaPortal
 // http://www.team-mediaportal.com
 // 
 // MediaPortal is free software: you can redistribute it and/or modify
@@ -460,6 +460,7 @@ ${MementoSection} "MediaPortal TV Server" SecServer
   ${LOG_TEXT} "INFO" "Terminating processes ..."
   ${StopService} "TVservice"
   ${KillProcess} "SetupTv.exe"
+  ${KillProcess} "WatchDogService.exe"
   ; ffmpeg
   ${KillProcess} "ffmpeg.exe"
   ; MPEI installer / MPEI maker
@@ -480,6 +481,10 @@ ${MementoSection} "MediaPortal TV Server" SecServer
     ${LOG_TEXT} "INFO" "Uninstalling TVService"
     ExecWait '"$InstallPath\TVService.exe" /uninstall'
     ${LOG_TEXT} "INFO" "Finished uninstalling TVService"
+    ${LOG_TEXT} "INFO" "Uninstalling WatchDogService"
+    ExecWait '"$InstallPath\WatchDogService.exe" /uninstall'
+    ${LOG_TEXT} "INFO" "Finished uninstalling WatchDogService"
+
   ${EndIf}
 
   Pop $0
@@ -531,7 +536,7 @@ ${MementoSection} "MediaPortal TV Server" SecServer
   File "${git_TVServer}\TvService\bin\${BUILD_TYPE}\TvService.exe.config"
   File "${git_TVServer}\SetupControls\bin\${BUILD_TYPE}\SetupControls.dll"
   File "${git_TVServer}\TVLibrary.Utils\bin\${BUILD_TYPE}\TVLibrary.Utils.dll"
-  ;File "${git_TVServer}\TVLibrary.Utils\bin\${BUILD_TYPE}\Interop.SHDocVw.dll"
+ ;File "${git_TVServer}\TVLibrary.Utils\bin\${BUILD_TYPE}\Interop.SHDocVw.dll"
 
   ; MP2 assemblies
   File "${TVSERVER.BASE}\HttpServer.dll"
@@ -547,13 +552,18 @@ ${MementoSection} "MediaPortal TV Server" SecServer
   File "${TVSERVER.BASE}\tevii.dll"
   File "${TVSERVER.BASE}\Ionic.Zip.dll"
 
+  ; WatchDogService
+  File "${git_Common_MP_TVE3}\WatchDogService.Interface\bin\${BUILD_TYPE}\WatchDogService.Interface.dll"
+  File "${git_TVServer}\WatchDogService\bin\${BUILD_TYPE}\WatchDogService.exe"
+
+
   ; MediaInfo
   SetOutPath "$INSTDIR"
-  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.1\build\native\x86\MediaInfo.dll"
-  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.1\build\native\x86\libcrypto-1_1.dll"
-  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.1\build\native\x86\libcurl.dll"
-  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.1\build\native\x86\libssl-1_1.dll"
-  File "${git_ROOT}\Packages\MediaInfo.Wrapper.20.9.2\lib\net40\MediaInfo.Wrapper.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Native.21.3.0\build\native\x86\MediaInfo.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Native.21.3.0\build\native\x86\libcrypto-3.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Native.21.3.0\build\native\x86\libcurl.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Native.21.3.0\build\native\x86\libssl-3.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Wrapper.21.3.1\lib\net40\MediaInfo.Wrapper.dll"
 
   ; thumbnail software
   ${If} ${RunningX64}
@@ -625,6 +635,11 @@ ${MementoSection} "MediaPortal TV Server" SecServer
   ExecWait '"$INSTDIR\TVService.exe" /install'
   ${LOG_TEXT} "INFO" "Finished Installing TVService"
 
+  ${LOG_TEXT} "INFO" "Installing WatchDogService"
+  ExecWait '"$INSTDIR\WatchDogService.exe" /install'
+  ExecWait 'net start WatchDogService'
+  ${LOG_TEXT} "INFO" "Finished Installing WatchDogService"
+
   SetOutPath $INSTDIR
   ${If} $noDesktopSC != 1
     CreateShortCut "$DESKTOP\TV-Server Configuration.lnk" "$INSTDIR\SetupTV.exe" "" "$INSTDIR\SetupTV.exe" 0 "" "" "MediaPortal TV Server"
@@ -651,6 +666,7 @@ ${MementoSectionEnd}
   ; Kill running Programs
   ${LOG_TEXT} "INFO" "Terminating processes ..."
   ${StopService} "TVservice"
+  ${StopService} "WatchDogService"
   ${KillProcess} "SetupTv.exe"
   ; ffmpeg
   ${KillProcess} "ffmpeg.exe"
@@ -669,6 +685,9 @@ ${MementoSectionEnd}
   ${LOG_TEXT} "INFO" "DeInstalling TVService"
   ExecWait '"$INSTDIR\TVService.exe" /uninstall'
   ${LOG_TEXT} "INFO" "Finished DeInstalling TVService"
+  ${LOG_TEXT} "INFO" "DeInstalling WatchDogService"
+  ExecWait '"$INSTDIR\WatchDogService.exe" /uninstall'
+  ${LOG_TEXT} "INFO" "Finished DeInstalling WatchDogService"
 
   #---------------------------------------------------------------------------
   # FILTER UNREGISTRATION     for TVServer
@@ -746,6 +765,8 @@ ${MementoSectionEnd}
   Delete "$INSTDIR\TvService.exe"
   Delete "$INSTDIR\TvService.exe.config"
   Delete "$INSTDIR\SetupControls.dll"
+  Delete "$INSTDIR\WatchDogService.exe"
+  Delete "$INSTDIR\WatchDogService.Interface.dll"
 
   ; MP2 assemblies
   Delete "$INSTDIR\HttpServer.dll"

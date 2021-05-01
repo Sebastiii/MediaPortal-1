@@ -1,6 +1,6 @@
-#region Copyright (C) 2005-2020 Team MediaPortal
+#region Copyright (C) 2005-2021 Team MediaPortal
 /*
-// Copyright (C) 2005-2020 Team MediaPortal
+// Copyright (C) 2005-2021 Team MediaPortal
 // http://www.team-mediaportal.com
 // 
 // MediaPortal is free software: you can redistribute it and/or modify
@@ -548,6 +548,7 @@ Section "MediaPortal core files (required)" SecCore
   File "${git_MP}\ProcessPlugins\MusicShareWatcher\MusicShareWatcherHelper\bin\${BUILD_TYPE}\MusicShareWatcherHelper.dll"
   ; WatchDog
   File "${git_MP}\WatchDog\bin\${BUILD_TYPE}\WatchDog.exe"
+File "${git_Common_MP_TVE3}\WatchDogService.Interface\bin\${BUILD_TYPE}\WatchDogService.Interface.dll"
   File "${git_MP}\WatchDog\bin\${BUILD_TYPE}\DaggerLib.dll"
   File "${git_MP}\WatchDog\bin\${BUILD_TYPE}\DaggerLib.DSGraphEdit.dll"
   File "${git_MP}\WatchDog\bin\${BUILD_TYPE}\DirectShowLib-2005.dll"
@@ -595,11 +596,11 @@ Section "MediaPortal core files (required)" SecCore
   ${EndIf}
   ; NuGet binaries MediaInfo
   SetOutPath "$MPdir.Base\"
-  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.1\build\native\x86\MediaInfo.dll"
-  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.1\build\native\x86\libcrypto-1_1.dll"
-  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.1\build\native\x86\libcurl.dll"
-  File "${git_ROOT}\Packages\MediaInfo.Native.20.9.1\build\native\x86\libssl-1_1.dll"
-  File "${git_ROOT}\Packages\MediaInfo.Wrapper.20.9.2\lib\net40\MediaInfo.Wrapper.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Native.21.3.0\build\native\x86\MediaInfo.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Native.21.3.0\build\native\x86\libcrypto-3.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Native.21.3.0\build\native\x86\libcurl.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Native.21.3.0\build\native\x86\libssl-3.dll"
+  File "${git_ROOT}\Packages\MediaInfo.Wrapper.21.3.1\lib\net40\MediaInfo.Wrapper.dll"
   ; NuGet binaries Sqlite
   SetOutPath "$MPdir.Base\"
   File "${git_ROOT}\Packages\Sqlite.3.33.0\sqlite.dll"
@@ -897,6 +898,7 @@ SectionEnd
   Delete "$MPdir.Base\MusicShareWatcherHelper.dll"
   ; WatchDog
   Delete "$MPdir.Base\WatchDog.exe"
+  Delete "$MPdir.Base\WatchDogService.Interface.dll"
   Delete "$MPdir.Base\DaggerLib.dll"
   Delete "$MPdir.Base\DaggerLib.DSGraphEdit.dll"
   Delete "$MPdir.Base\DirectShowLib-2005.dll"

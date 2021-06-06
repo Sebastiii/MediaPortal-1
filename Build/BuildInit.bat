@@ -55,4 +55,4 @@ REM copy BuildReport resources
 xcopy /I /Y .\BuildReport\_BuildReport_Files .\_BuildReport_Files
 
 REM Download NuGet packages
-REM @"%MSBUILD_PATH%" RestorePackages.targets
+@"%MSBUILD_PATH%" RestorePackages.targets

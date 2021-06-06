@@ -655,7 +655,7 @@ namespace MediaPortal.Player
 
     public int PresentImage(Int16 width, Int16 height, Int16 arWidth, Int16 arHeight, uint pTexture, uint pSurface)
     {
-      //lock (GUIGraphicsContext.RenderLock)
+      lock (GUIGraphicsContext.RenderLock)
       {
         try
         {
@@ -2055,7 +2055,7 @@ namespace MediaPortal.Player
       }
       unsafe
       {
-        IntPtr ptr = new IntPtr(texAddr);
+        UIntPtr ptr = new UIntPtr(texAddr);
         DXNative.FontEngineSetTexture(ptr.ToPointer());
 
         DXNative.FontEngineSetSamplerState(0, (int)D3DSAMPLERSTATETYPE.D3DSAMP_MINFILTER, (int)D3DTEXTUREFILTERTYPE.D3DTEXF_LINEAR);

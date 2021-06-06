@@ -171,8 +171,8 @@ REM xcopy %1\..\Packages\MediaInfo.Native.20.8.1\build\native\x86\MediaInfo.dll 
 REM xcopy %1\..\Packages\MediaInfo.Native.20.8.1\build\native\x86\lib*.dll . /Y /D
 
 REM Exif
-xcopy %1\..\Packages\MetadataExtractor.2.4.3\lib\net35\MetadataExtractor.dll . /Y /D
-xcopy %1\..\Packages\XmpCore.6.1.10\lib\net35\XmpCore.dll . /Y /D
+xcopy %1\..\Packages\MetadataExtractor.2.5.0\lib\net35\MetadataExtractor.dll . /Y /D
+xcopy %1\..\Packages\XmpCore.6.1.10.1\lib\net35\XmpCore.dll . /Y /D
 
 REM ffmpeg 
 xcopy %1\..\Packages\FFmpeg.Win32.Static.4.1.1.1\ffmpeg\ffmpeg.exe MovieThumbnailer\ /Y /D
@@ -200,7 +200,7 @@ xcopy %1\..\Packages\MediaPortal-iMON-Display.1.1.0\lib\iMONDisplay.dll . /Y /D
 xcopy %1\..\Packages\MediaPortal-iMON-Display.1.1.0\lib\iMONDisplayWrapper.dll . /Y /D
 
 REM taglib-sharp
-xcopy %1\..\Packages\MediaPortal.TagLib.2.3.0\lib\net40\TagLibSharp.dll ./Y /D
+xcopy %1\..\Packages\MediaPortal.TagLib.2.3.1\lib\net40\TagLibSharp.dll ./Y /D
 
 REM SharpLibHid
 REM Provided with Nuget to bin folder during build

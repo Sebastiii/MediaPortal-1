@@ -278,6 +278,7 @@ namespace MediaPortal.Configuration.Sections
         String strSelectOption = xmlreader.GetValueAsString("musicfiles", "selectOption", "play");
         cmbSelectOption.Text = strSelectOption == "play" ? "Play" : "Queue";
         chkAddAllTracks.Checked = xmlreader.GetValueAsBool("musicfiles", "addall", true);
+        playlistNumberOfSongsTextBox.Text = xmlreader.GetValueAsString("musicfiles", "numberOfSongsToLoad", "1000");
 
         #endregion
 
@@ -400,6 +401,7 @@ namespace MediaPortal.Configuration.Sections
         //Play behaviour
         xmlwriter.SetValue("musicfiles", "selectOption", cmbSelectOption.Text.ToLowerInvariant());
         xmlwriter.SetValueAsBool("musicfiles", "addall", chkAddAllTracks.Checked);
+        xmlwriter.SetValue("musicfiles", "numberOfSongsToLoad", playlistNumberOfSongsTextBox.Text);
 
         #endregion
 
